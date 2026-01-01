@@ -826,15 +826,21 @@
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
         <button class="btn btn-warning" onclick="doYunClear()">🔒 一键清账</button>
         <span id="yunClearStatus" style="font-size:12px;font-weight:600;"></span>
+        <span id="yunClearCumulative" style="font-size:12px;font-weight:700;"></span>
       </div>
       <div id="yunClearHistory" style="font-size:11px;color:var(--text-light);"></div>
     </div>
 
     <!-- 记录表格 -->
-    <div class="toolbar">
-      <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="yunSearch" placeholder="搜索备注..." oninput="renderYunTable()"></div>
+    <div class="toolbar" style="flex-wrap:nowrap;">
+      <div class="search-box" style="flex:0 0 auto;width:50%;min-width:0;"><span class="search-icon">🔍</span><input type="text" id="yunSearch" placeholder="搜索备注..." oninput="yunPage=1;renderYunTable()"></div>
+      <div style="flex:0 0 auto;"><select id="yunYear" onchange="yunPage=1;renderYunTable()" style="padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;background:var(--card);outline:none;"></select></div>
     </div>
-    <div class="table-wrapper"><div class="table-scroll">
+    <div class="toolbar" id="yunPagerBar" style="display:none;margin-top:-4px;">
+      <span id="yunPagerInfo" style="font-size:11px;color:var(--text-light);"></span>
+      <select id="yunPageSel" onchange="yunPage=parseInt(this.value)||1;renderYunTable()" style="flex:1;min-width:0;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:11px;background:var(--card);outline:none;"></select>
+    </div>
+    <div class="table-wrapper"><div class="table-scroll" style="max-height:none;">
       <table>
         <thead><tr>
           <th style="width:32px;">#</th><th style="width:52px;min-width:52px;max-width:52px;">日期</th><th style="width:69px;min-width:69px;max-width:69px;">金额</th><th style="width:52px;min-width:52px;max-width:52px;">方向</th><th>来源</th><th>清账状态</th><th style="width:156px;min-width:156px;max-width:156px;">备注</th><th>操作</th>
@@ -3887,9 +3893,41 @@ function updateInvProdFilter() {
 // ========== 云账本（yun） ==========
 // ==========================================
 let editingYunId = null;
+let yunPage = 1;
+const YUN_PAGE_SIZE = 40;
 // yunClearBatches: [{ id, clearedAt, fromDate, toDate, recordCount, inSum, outSum, net }]
 let yunClearBatches = [];
 try { yunClearBatches = JSON.parse(localStorage.getItem('yun_clear_batches') || '[]'); } catch(e) { yunClearBatches = []; }
+
+// 历史累计净额 = 各次清账净额依次累加（每次只在上次累计基础上加本次净额，不回溯更早明细）
+function yunCumulativeNet() {
+  let cum = 0;
+  yunClearBatches.forEach(b => { cum += (b.net || 0); });
+  return cum;
+}
+// 「谁欠谁」文案
+function yunOweText(net) {
+  if (net > 0) return { txt: `你欠雲 ¥${formatNum(net)}`, color: 'var(--danger)' };
+  if (net < 0) return { txt: `雲欠你 ¥${formatNum(Math.abs(net))}`, color: 'var(--info)' };
+  return { txt: '已平', color: 'var(--success)' };
+}
+
+// 年份下拉：默认「当年」，另含数据中出现的各年份（如 2026年）
+function renderYunYearOptions() {
+  const sel = document.getElementById('yunYear');
+  if (!sel) return;
+  const cur = sel.value || 'current';
+  const curYear = todayStr().split('-')[0];
+  const years = new Set();
+  yunRecords.forEach(r => { if (r.date) years.add(('' + r.date).split('-')[0]); });
+  years.add(curYear);
+  const sorted = Array.from(years).filter(Boolean).sort((a, b) => b.localeCompare(a));
+  let html = '<option value="all">全部年份</option><option value="current">当年</option>';
+  sorted.forEach(y => { html += `<option value="${y}">${y}年</option>`; });
+  sel.innerHTML = html;
+  sel.value = cur;
+  if (!sel.value) sel.value = 'current';
+}
 
 function openYunModal(editId) {
   editingYunId = editId || null;
@@ -4003,22 +4041,41 @@ function renderYunTable() {
   const tbody = document.getElementById('yunTableBody');
   const search = (document.getElementById('yunSearch')?.value || '').toLowerCase();
 
+  // 年份下拉选项（保留当前选择）
+  renderYunYearOptions();
+  const yearSel = document.getElementById('yunYear')?.value || 'current';
+  const curYear = todayStr().split('-')[0];
+
   let rows = [...yunRecords];
   if (search) {
     rows = rows.filter(r => (r.remark || '').toLowerCase().includes(search) || r.source.includes(search));
+  }
+  if (yearSel === 'current') {
+    rows = rows.filter(r => (r.date || '').slice(0, 4) === curYear);
+  } else if (yearSel !== 'all') {
+    rows = rows.filter(r => (r.date || '').slice(0, 4) === yearSel);
   }
   rows.sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
 
   // 更新清账状态显示
   updateYunClearStatus();
 
-  if (!rows.length) {
+  // 分页：每页 40 条，下拉框翻页
+  const total = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total / YUN_PAGE_SIZE));
+  if (yunPage > totalPages) yunPage = totalPages;
+  if (yunPage < 1) yunPage = 1;
+  const startIdx = (yunPage - 1) * YUN_PAGE_SIZE;
+  const pageRows = rows.slice(startIdx, startIdx + YUN_PAGE_SIZE);
+  renderYunPager(total, totalPages);
+
+  if (!total) {
     tbody.innerHTML = `<tr><td colspan="8"><div class="empty-row"><div class="icon">💳</div><div>暂无账本记录</div></div></td></tr>`;
     updateYunStats();
     return;
   }
 
-  tbody.innerHTML = rows.map((r, i) => {
+  tbody.innerHTML = pageRows.map((r, i) => {
     const isIn = r.type === 'in';
     const amtColor = isIn ? 'color:var(--success);' : 'color:var(--danger);';
     const typeLabel = isIn ? '<span style="color:var(--success);font-weight:600;">雲转来</span>' : '<span style="color:var(--danger);font-weight:600;">转给雲</span>';
@@ -4029,7 +4086,7 @@ function renderYunTable() {
       clearedHtml = `<span style="color:var(--success);font-size:10px;font-weight:600;" title="清账批次：${batchLabel}">✅ 账已清</span>`;
     }
     return `<tr>
-      <td>${i + 1}</td>
+      <td>${startIdx + i + 1}</td>
       <td style="width:52px;min-width:52px;max-width:52px;">${r.date ? fmtMDY(r.date) : '-'}</td>
       <td style="width:69px;min-width:69px;max-width:69px;font-weight:700;${amtColor}">${isIn ? '+' : '-'}¥${formatNum(r.amount)}</td>
       <td style="width:52px;min-width:52px;max-width:52px;">${typeLabel}</td>
@@ -4044,6 +4101,27 @@ function renderYunTable() {
   }).join('');
   updateYunStats();
 }
+
+// 翻页条：共 N 条 / 第 X 页，下拉框可直接跳到任意页
+function renderYunPager(total, totalPages) {
+  const bar = document.getElementById('yunPagerBar');
+  const info = document.getElementById('yunPagerInfo');
+  const sel = document.getElementById('yunPageSel');
+  if (!bar || !info || !sel) return;
+  if (total <= YUN_PAGE_SIZE) { bar.style.display = 'none'; info.textContent = ''; sel.innerHTML = ''; return; }
+  bar.style.display = 'flex';
+  info.textContent = `共 ${total} 条 · 每页 ${YUN_PAGE_SIZE} 条 · 第 ${yunPage}/${totalPages} 页`;
+  const cur = yunPage;
+  let html = '';
+  for (let p = 1; p <= totalPages; p++) {
+    const s = (p - 1) * YUN_PAGE_SIZE + 1;
+    const e = Math.min(p * YUN_PAGE_SIZE, total);
+    html += `<option value="${p}" ${p === cur ? 'selected' : ''}>第${p}页（${s}-${e}条）</option>`;
+  }
+  sel.innerHTML = html;
+  sel.value = String(cur);
+}
+
 
 // 自动同步雲博的燕窝订单到账本
 function syncYunboOrders() {
@@ -4100,6 +4178,18 @@ function updateYunClearStatus() {
   const uncleared = yunRecords.filter(r => !r.clearBatchId);
   const statusEl = document.getElementById('yunClearStatus');
   const historyEl = document.getElementById('yunClearHistory');
+  const cumEl = document.getElementById('yunClearCumulative');
+
+  // 历史累计净额（上次累计 + 本次净额，逐次累加，不回溯更早明细）
+  if (cumEl) {
+    if (yunClearBatches.length > 0) {
+      const cum = yunCumulativeNet();
+      const owe = yunOweText(cum);
+      cumEl.innerHTML = `<span style="color:var(--text-light);font-weight:600;">📊 历史累计：</span><span style="color:var(--text-light);font-weight:600;">总共</span><span style="color:${owe.color};">${owe.txt}</span>`;
+    } else {
+      cumEl.innerHTML = '';
+    }
+  }
 
   // 清账历史（最近3条）
   if (yunClearBatches.length > 0) {
