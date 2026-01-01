@@ -2611,7 +2611,7 @@ function saveZaPur() {
     items.push({ name: iname, rate, hkdPrice, qty, rmb: parseFloat((hkdPrice * qty * rate).toFixed(2)) });
   });
 
-  const rec = { date, name, rmb, hkd, rate, supplier, items };
+  const rec = { date, name: '', rmb, hkd, rate, supplier, items };
   if (editingZaPurId) {
     const idx = zaPurchases.findIndex(r => r.id === editingZaPurId);
     if (idx >= 0) zaPurchases[idx] = Object.assign({}, zaPurchases[idx], rec);
