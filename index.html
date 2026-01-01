@@ -176,6 +176,13 @@
   #page-orders .table-scroll thead th,
   #page-za .table-scroll thead th,
   #page-purchase .table-scroll thead th { background: var(--bg); }
+  /* 同行(比价)平台：固定列宽，所有列统一为 2 个字宽 */
+  #page-compare table { table-layout: fixed; width: auto; }
+  #page-compare table th, #page-compare table td {
+    width: 2.2em; min-width: 2.2em; max-width: 2.2em;
+    padding: 5px 1px; overflow: hidden;
+  }
+  #page-compare table th textarea { font-size: 10px; line-height: 1.2; }
   #compareDiffModal .table-scroll thead { position: sticky; top: 0; z-index: 5; background: var(--bg); }
   .inv-check-scroll { max-height: 260px; overflow-y: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); }
   .inv-check-scroll table { width: 100%; border-collapse: collapse; }
@@ -214,6 +221,15 @@
   .product-tag.cat-huajiao { background: #E8F0F0; color: #2C5F5F; }
   .product-tag.cat-chongcao { background: #F5E6F0; color: #6B2D5B; }
   .product-tag.cat-other { background: #F0F0E8; color: #5F5F3C; }
+  /* 杂货待采购清单：未采购行淡绿底+深绿字，已采购行划线灰字 */
+  .za-pending-unchecked { background: #e8f5e9; }
+  .za-pending-unchecked td { color: #1b5e20; font-size: 14px; }
+  .za-pending-unchecked td:nth-child(2) { font-size: 15px; font-weight: 600; }
+  .za-pending-unchecked td:nth-child(3) { color: var(--danger); font-weight: 700; }
+  .za-pending-unchecked td input[type="checkbox"] { accent-color: var(--success); }
+  .za-pending-checked { background: transparent; }
+  .za-pending-checked td { color: var(--text-light); text-decoration: line-through; }
+  .za-pending-checked td:nth-child(3) { color: var(--text-light); }
 
   .ship-progress { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10px; }
   .ship-progress .bar-bg { width: 36px; height: 4px; background: #EEE; border-radius: 2px; overflow: hidden; }
@@ -554,7 +570,7 @@
     <div class="table-wrapper"><div class="table-scroll">
       <table>
         <thead id="compareTableHead"><tr>
-          <th style="width:32px;">#</th><th style="width:52px;">品种</th>
+          <th>#</th><th>品种</th>
         </tr></thead>
         <tbody id="compareTableBody"></tbody>
       </table>
@@ -2273,10 +2289,10 @@ function renderCompareTable() {
 
   // 渲染表头
   thead.innerHTML = `<tr>
-    <th style="width:32px;">#</th><th style="width:52px;white-space:normal;word-break:break-word;text-align:center;">品种</th>
-    ${suppliers.map((s,i) => `<th style="min-width:80px;position:relative;padding:6px 4px;white-space:normal;word-break:break-word;">
-      <textarea rows="2" onchange="updateCompareSupplier(${i},this.value)" style="width:calc(100% - 18px);border:none;background:transparent;font-weight:600;color:var(--text-light);font-size:11px;text-align:center;resize:none;overflow:hidden;white-space:normal;word-break:break-word;line-height:1.3;" placeholder="供应商">${s}</textarea>
-      <button onclick="deleteCompareSupplier(${i})" style="position:absolute;top:2px;right:4px;background:none;border:none;cursor:pointer;font-size:10px;color:var(--danger);" title="删除">✕</button>
+    <th>#</th><th style="white-space:normal;word-break:break-word;text-align:center;">品种</th>
+    ${suppliers.map((s,i) => `<th style="position:relative;padding:5px 1px;white-space:normal;word-break:break-word;">
+      <textarea rows="2" onchange="updateCompareSupplier(${i},this.value)" style="width:100%;border:none;background:transparent;font-weight:600;color:var(--text-light);font-size:10px;text-align:center;resize:none;overflow:hidden;white-space:normal;word-break:break-word;line-height:1.2;" placeholder="供应商">${s}</textarea>
+      <button onclick="deleteCompareSupplier(${i})" style="position:absolute;top:1px;right:1px;background:none;border:none;cursor:pointer;font-size:9px;color:var(--danger);" title="删除">✕</button>
     </th>`).join('')}
   </tr>`;
 
@@ -2301,7 +2317,7 @@ function renderCompareTable() {
     }).join('');
     return `<tr>
       <td>${i+1}</td>
-      <td style="max-width:52px;overflow-wrap:break-word;"><span class="product-tag cat-${PRODUCT_CATEGORY[prod]||'yanwo'}">${prod}</span></td>
+      <td style="overflow-wrap:break-word;"><span class="product-tag cat-${PRODUCT_CATEGORY[prod]||'yanwo'}">${prod}</span></td>
       ${cells}
     </tr>`;
   }).join('');
@@ -2832,12 +2848,12 @@ function openZaPendingPurchase() {
     tbody.innerHTML = list.map(([name, qty], i) => {
       const id = 'zaPending_' + i;
       const isChecked = checkedMarks.includes(name);
-      const lineStyle = isChecked ? 'text-decoration:line-through;color:var(--text-light);' : '';
+      const rowClass = isChecked ? 'za-pending-checked' : 'za-pending-unchecked';
       const chkAttr = isChecked ? ' checked' : '';
-      return `<tr id="${id}">
-        <td>${i+1}</td>
-        <td style="font-weight:500;${lineStyle}" id="${id}_name">${name}</td>
-        <td style="font-weight:700;color:var(--danger);text-align:center;">${qty}</td>
+      return `<tr id="${id}" class="${rowClass}">
+        <td style="text-align:center;">${i+1}</td>
+        <td style="font-weight:500;" id="${id}_name">${name}</td>
+        <td style="font-weight:700;text-align:center;">${qty}</td>
         <td style="text-align:center;"><input type="checkbox" onchange="toggleZaPendingCheck(this, '${name.replace(/'/g,"\\'")}', '${id}')"${chkAttr} style="width:16px;height:16px;cursor:pointer;"></td>
       </tr>`;
     }).join('');
@@ -2847,16 +2863,17 @@ function openZaPendingPurchase() {
 function closeZaPendingPurchase() { document.getElementById('zaPendingModal').classList.remove('show'); }
 
 function toggleZaPendingCheck(cb, productName, rowId) {
+  const row = document.getElementById(rowId);
   const nameCell = document.getElementById(rowId + '_name');
   let marks = getZaPurchasedMarks();
   if (cb.checked) {
     marks.push(productName);
-    nameCell.style.textDecoration = 'line-through';
-    nameCell.style.color = 'var(--text-light)';
+    row.classList.remove('za-pending-unchecked');
+    row.classList.add('za-pending-checked');
   } else {
     marks = marks.filter(m => m !== productName);
-    nameCell.style.textDecoration = '';
-    nameCell.style.color = '';
+    row.classList.remove('za-pending-checked');
+    row.classList.add('za-pending-unchecked');
   }
   setZaPurchasedMarks(marks);
 }
