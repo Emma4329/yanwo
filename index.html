@@ -214,6 +214,14 @@
   .product-tag.cat-huajiao { background: #E8F0F0; color: #2C5F5F; }
   .product-tag.cat-chongcao { background: #F5E6F0; color: #6B2D5B; }
   .product-tag.cat-other { background: #F0F0E8; color: #5F5F3C; }
+  /* 杂货待采购清单：未采购行淡绿底+深绿字，已采购行划线灰字 */
+  .za-pending-unchecked { background: #e8f5e9; }
+  .za-pending-unchecked td { color: #1b5e20; }
+  .za-pending-unchecked td:nth-child(3) { color: var(--danger); font-weight: 700; }
+  .za-pending-unchecked td input[type="checkbox"] { accent-color: var(--success); }
+  .za-pending-checked { background: transparent; }
+  .za-pending-checked td { color: var(--text-light); text-decoration: line-through; }
+  .za-pending-checked td:nth-child(3) { color: var(--text-light); }
 
   .ship-progress { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10px; }
   .ship-progress .bar-bg { width: 36px; height: 4px; background: #EEE; border-radius: 2px; overflow: hidden; }
@@ -2832,12 +2840,12 @@ function openZaPendingPurchase() {
     tbody.innerHTML = list.map(([name, qty], i) => {
       const id = 'zaPending_' + i;
       const isChecked = checkedMarks.includes(name);
-      const lineStyle = isChecked ? 'text-decoration:line-through;color:var(--text-light);' : '';
+      const rowClass = isChecked ? 'za-pending-checked' : 'za-pending-unchecked';
       const chkAttr = isChecked ? ' checked' : '';
-      return `<tr id="${id}">
-        <td>${i+1}</td>
-        <td style="font-weight:500;${lineStyle}" id="${id}_name">${name}</td>
-        <td style="font-weight:700;color:var(--danger);text-align:center;">${qty}</td>
+      return `<tr id="${id}" class="${rowClass}">
+        <td style="text-align:center;">${i+1}</td>
+        <td style="font-weight:500;" id="${id}_name">${name}</td>
+        <td style="font-weight:700;text-align:center;">${qty}</td>
         <td style="text-align:center;"><input type="checkbox" onchange="toggleZaPendingCheck(this, '${name.replace(/'/g,"\\'")}', '${id}')"${chkAttr} style="width:16px;height:16px;cursor:pointer;"></td>
       </tr>`;
     }).join('');
@@ -2847,16 +2855,17 @@ function openZaPendingPurchase() {
 function closeZaPendingPurchase() { document.getElementById('zaPendingModal').classList.remove('show'); }
 
 function toggleZaPendingCheck(cb, productName, rowId) {
+  const row = document.getElementById(rowId);
   const nameCell = document.getElementById(rowId + '_name');
   let marks = getZaPurchasedMarks();
   if (cb.checked) {
     marks.push(productName);
-    nameCell.style.textDecoration = 'line-through';
-    nameCell.style.color = 'var(--text-light)';
+    row.classList.remove('za-pending-unchecked');
+    row.classList.add('za-pending-checked');
   } else {
     marks = marks.filter(m => m !== productName);
-    nameCell.style.textDecoration = '';
-    nameCell.style.color = '';
+    row.classList.remove('za-pending-checked');
+    row.classList.add('za-pending-unchecked');
   }
   setZaPurchasedMarks(marks);
 }
