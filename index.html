@@ -246,6 +246,12 @@
   .za-pending-checked { background: transparent; }
   .za-pending-checked td { color: var(--text-light); text-decoration: line-through; }
   .za-pending-checked td:nth-child(3) { color: var(--text-light); }
+  /* 库存/账本核对：未核对行字体大且同色，已核对行划线灰字（仿杂货待采购清单） */
+  .verify-unchecked td { color: var(--text); font-size: 15px; }
+  .verify-unchecked td:nth-child(2) { font-weight: 600; }
+  .verify-unchecked td input[type="checkbox"] { accent-color: var(--primary); }
+  .verify-checked td { color: var(--text-light); text-decoration: line-through; }
+  .verify-checked td:nth-child(2) { color: var(--text-light); }
 
   .ship-progress { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10px; }
   .ship-progress .bar-bg { width: 36px; height: 4px; background: #EEE; border-radius: 2px; overflow: hidden; }
@@ -528,6 +534,7 @@
         <div class="sub">实时库存 · 入库/出库追踪 · 自动汇总</div>
       </div>
       <div class="header-actions">
+        <button class="btn btn-outline" onclick="openInventoryVerify()">✅ 库存核对</button>
         <button class="btn btn-primary" onclick="openInventoryModal()">➕ 入库记录</button>
       </div>
     </div>
@@ -784,6 +791,7 @@
         <div class="sub">与雲的进出账 · 雲博订单自动同步</div>
       </div>
       <div class="header-actions">
+        <button class="btn btn-outline" onclick="openYunVerify()">✅ 账本核对</button>
         <button class="btn btn-primary" onclick="openYunModal()">+ 新增记录</button>
       </div>
     </div>
@@ -818,6 +826,20 @@
   </div>
 
 </div><!-- /main -->
+
+<!-- ====== 账本核对弹窗 ====== -->
+<div class="modal-overlay" id="yunVerifyModal"><div class="modal" style="max-width:520px;">
+  <div class="modal-header"><h2>✅ 账本核对</h2><button class="modal-close" onclick="closeYunVerify()">✕</button></div>
+  <div class="modal-body">
+    <div class="table-wrapper"><div class="table-scroll">
+      <table>
+        <thead><tr><th style="width:32px;">#</th><th>类型</th><th style="width:60px;">待核对</th></tr></thead>
+        <tbody id="yunVerifyBody"></tbody>
+      </table>
+    </div></div>
+  </div>
+  <div class="modal-footer"><div></div><div class="modal-footer-right"><button class="btn btn-secondary" onclick="closeYunVerify()">关闭</button></div></div>
+</div></div>
 
 <!-- ====== 云账本弹窗 ====== -->
 <div class="modal-overlay" id="yunModal"><div class="modal">
@@ -1012,6 +1034,20 @@
     <div class="form-row"><div class="form-group flex1"><label>备注</label><input type="text" id="fInvRemark" placeholder="来源/批次..."></div></div>
   </div>
   <div class="modal-footer"><div></div><div class="modal-footer-right"><button class="btn btn-secondary" onclick="closeInventoryModal()">取消</button><button class="btn btn-primary" onclick="saveInventory()">💾 确认入库</button></div></div>
+</div></div>
+
+<!-- ====== 库存核对弹窗 ====== -->
+<div class="modal-overlay" id="invVerifyModal"><div class="modal" style="max-width:520px;">
+  <div class="modal-header"><h2>✅ 库存核对</h2><button class="modal-close" onclick="closeInventoryVerify()">✕</button></div>
+  <div class="modal-body">
+    <div class="table-wrapper"><div class="table-scroll">
+      <table>
+        <thead><tr><th style="width:32px;">#</th><th>品种名</th><th>在家库存数量</th><th style="width:60px;">待核对</th></tr></thead>
+        <tbody id="invVerifyBody"></tbody>
+      </table>
+    </div></div>
+  </div>
+  <div class="modal-footer"><div></div><div class="modal-footer-right"><button class="btn btn-secondary" onclick="closeInventoryVerify()">关闭</button></div></div>
 </div></div>
 
 <!-- ====== 比价弹窗 ====== -->
@@ -2920,6 +2956,110 @@ function toggleZaPendingCheck(cb, productName, rowId) {
     row.classList.add('za-pending-unchecked');
   }
   setZaPurchasedMarks(marks);
+}
+
+// --- 库存核对弹窗（逻辑仿杂货待采购清单） ---
+function getInventoryVerifyMarks() {
+  try { return JSON.parse(localStorage.getItem('inv_verify_marks') || '[]'); } catch(e) { return []; }
+}
+function setInventoryVerifyMarks(arr) {
+  localStorage.setItem('inv_verify_marks', JSON.stringify(arr));
+}
+function buildInventoryVerifyMap() {
+  const invMap = {};
+  ALL_PRODUCT_LIST.forEach(p => { invMap[p] = { product: p, totalIn: 0, totalOut: 0 }; });
+  purchases.forEach(p => { p.items.forEach(item => {
+    if (invMap[item.product]) {
+      const records = item.inRecords || [];
+      records.forEach(r => { invMap[item.product].totalIn += (r.qty || 0); });
+    }
+  });});
+  inventoryLog.forEach(log => { if (invMap[log.product]) invMap[log.product].totalIn += log.quantity; });
+  orders.forEach(o => { o.items.forEach(item => { if (invMap[item.product]) invMap[item.product].totalOut += (item.shipped || 0); }); });
+  return invMap;
+}
+function openInventoryVerify() {
+  const invMap = buildInventoryVerifyMap();
+  const list = Object.values(invMap).filter(v => v.totalIn > 0 || v.totalOut > 0);
+  const sortOrder = {};
+  ALL_PRODUCT_LIST.forEach((p, i) => { sortOrder[p] = i; });
+  list.sort((a, b) => (sortOrder[a.product] ?? 999) - (sortOrder[b.product] ?? 999));
+  const checkedMarks = getInventoryVerifyMarks();
+  const tbody = document.getElementById('invVerifyBody');
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="4"><div class="empty-row"><div class="icon">📊</div><div>暂无库存数据</div></div></td></tr>';
+  } else {
+    tbody.innerHTML = list.map((v, i) => {
+      const name = v.product;
+      const current = v.totalIn - v.totalOut;
+      const id = 'invVerify_' + i;
+      const isChecked = checkedMarks.includes(name);
+      const rowClass = isChecked ? 'verify-checked' : 'verify-unchecked';
+      const chkAttr = isChecked ? ' checked' : '';
+      return `<tr id="${id}" class="${rowClass}">
+        <td style="text-align:center;">${i+1}</td>
+        <td id="${id}_name">${name}</td>
+        <td style="text-align:center;">${current}</td>
+        <td style="text-align:center;"><input type="checkbox" onchange="toggleInventoryVerify(this, '${name.replace(/'/g, "\\'")}', '${id}')"${chkAttr} style="width:16px;height:16px;cursor:pointer;"></td>
+      </tr>`;
+    }).join('');
+  }
+  document.getElementById('invVerifyModal').classList.add('show');
+}
+function closeInventoryVerify() { document.getElementById('invVerifyModal').classList.remove('show'); }
+function toggleInventoryVerify(cb, name, rowId) {
+  const row = document.getElementById(rowId);
+  let marks = getInventoryVerifyMarks();
+  if (cb.checked) {
+    if (!marks.includes(name)) marks.push(name);
+    row.classList.remove('verify-unchecked');
+    row.classList.add('verify-checked');
+  } else {
+    marks = marks.filter(m => m !== name);
+    row.classList.remove('verify-checked');
+    row.classList.add('verify-unchecked');
+  }
+  setInventoryVerifyMarks(marks);
+}
+
+// --- 账本核对弹窗（逻辑仿杂货待采购清单，类型为固定 11 项） ---
+const YUN_VERIFY_TYPES = ['工商', '工商（社保卡）', '平安', '支付寶', '微信（楼上）', '微信（童年）', '現金', '代買（香港）', '代買（華強北）', '代付给同行（玥儿爸）', '代付给其他同行（小天，灵灵等）'];
+function getYunVerifyMarks() {
+  try { return JSON.parse(localStorage.getItem('yun_verify_marks') || '[]'); } catch(e) { return []; }
+}
+function setYunVerifyMarks(arr) {
+  localStorage.setItem('yun_verify_marks', JSON.stringify(arr));
+}
+function openYunVerify() {
+  const checkedMarks = getYunVerifyMarks();
+  const tbody = document.getElementById('yunVerifyBody');
+  tbody.innerHTML = YUN_VERIFY_TYPES.map((name, i) => {
+    const id = 'yunVerify_' + i;
+    const isChecked = checkedMarks.includes(name);
+    const rowClass = isChecked ? 'verify-checked' : 'verify-unchecked';
+    const chkAttr = isChecked ? ' checked' : '';
+    return `<tr id="${id}" class="${rowClass}">
+      <td style="text-align:center;">${i+1}</td>
+      <td id="${id}_name">${name}</td>
+      <td style="text-align:center;"><input type="checkbox" onchange="toggleYunVerify(this, '${name.replace(/'/g, "\\'")}', '${id}')"${chkAttr} style="width:16px;height:16px;cursor:pointer;"></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('yunVerifyModal').classList.add('show');
+}
+function closeYunVerify() { document.getElementById('yunVerifyModal').classList.remove('show'); }
+function toggleYunVerify(cb, name, rowId) {
+  const row = document.getElementById(rowId);
+  let marks = getYunVerifyMarks();
+  if (cb.checked) {
+    if (!marks.includes(name)) marks.push(name);
+    row.classList.remove('verify-unchecked');
+    row.classList.add('verify-checked');
+  } else {
+    marks = marks.filter(m => m !== name);
+    row.classList.remove('verify-checked');
+    row.classList.add('verify-unchecked');
+  }
+  setYunVerifyMarks(marks);
 }
 
 // ==========================================
