@@ -494,9 +494,9 @@
     </div>
 
     <div class="stats">
-      <div class="stat-card info"><div class="label">进货下单总数量</div><div class="value" id="purStatTotalQty">0</div></div>
+      <div class="stat-card info"><div class="label">进货下单总两数</div><div class="value" id="purStatTotalQty">0</div></div>
       <div class="stat-card warning"><div class="label">进货总金额</div><div class="value" id="purStatAmount">¥0</div></div>
-      <div class="stat-card" style="border-left-color:var(--danger);"><div class="label calc-label" onclick="showCalcTip(event,'待入库 = 下单数 - 已入库数')">待入库数量</div><div class="value" id="purStatPending">0</div></div>
+      <div class="stat-card" style="border-left-color:var(--danger);"><div class="label calc-label" onclick="showCalcTip(event,'待入库 = 下单数 - 已入库数')">待入库两数</div><div class="value" id="purStatPending">0</div></div>
     </div>
 
     <div class="toolbar">
@@ -551,6 +551,9 @@
     <div class="filter-bar">
       <div class="filter-item">
         <span>品种：</span><select id="invFilterProduct" onchange="renderInventoryTable()"><option value="">全部</option></select>
+      </div>
+      <div class="filter-item">
+        <span>库存状态：</span><select id="invFilterStatus" onchange="renderInventoryTable()"><option value="正常" selected>正常</option><option value="缺货">缺货</option><option value="">全部</option></select>
       </div>
     </div>
 
@@ -3639,6 +3642,15 @@ function renderInventoryTable() {
 
   let list = Object.values(invMap).filter(v => v.totalIn > 0 || v.totalOut > 0 || v.pendingIn > 0);
   if (filterProd) list = list.filter(v => v.product === filterProd);
+  // 库存状态筛选（默认「正常」）：缺货 = 能卖库存 <= 0
+  const filterStatusEl = document.getElementById('invFilterStatus');
+  const filterStatus = filterStatusEl ? filterStatusEl.value : '';
+  if (filterStatus) {
+    list = list.filter(v => {
+      const sellable = v.totalIn - v.totalOut + v.pendingIn - v.pendingShip;
+      return filterStatus === '缺货' ? sellable <= 0 : sellable > 0;
+    });
+  }
   if (!list.length) { tbody.innerHTML = `<tr><td colspan="11"><div class="empty-row"><div class="icon">📊</div><div>暂无库存数据，点击「入库记录」添加</div></div></td></tr>`; updateInvStats(); updateInvProdFilter(); return; }
 
   // 按 ALL_PRODUCT_LIST 固定顺序排列
