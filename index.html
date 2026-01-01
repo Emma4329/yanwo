@@ -177,6 +177,13 @@
   #page-za .table-scroll thead th,
   #page-purchase .table-scroll thead th { background: var(--bg); }
   #compareDiffModal .table-scroll thead { position: sticky; top: 0; z-index: 5; background: var(--bg); }
+  .inv-check-scroll { max-height: 260px; overflow-y: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); }
+  .inv-check-scroll table { width: 100%; border-collapse: collapse; }
+  .inv-check-scroll th { position: sticky; top: 0; z-index: 5; background: var(--bg); font-size: 12px; color: var(--text-light); padding: 8px; text-align: left; font-weight: 600; border-bottom: 1px solid var(--border); }
+  .inv-check-scroll td { padding: 8px; font-size: 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .inv-check-scroll tr:last-child td { border-bottom: none; }
+  .inv-check-date { font-weight: 700; color: var(--primary); white-space: nowrap; }
+  .inv-check-items { color: var(--text); line-height: 1.6; }
   #compareDiffModal .table-scroll thead th { background: var(--bg); }
   table { width: 100%; border-collapse: collapse; font-size: 12px; }
   thead { background: var(--bg); }
@@ -514,6 +521,21 @@
         <tbody id="invTableBody"></tbody>
       </table>
     </div></div>
+
+    <!-- 库存对账记录 -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-top:12px;box-shadow:var(--shadow);">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:nowrap;margin-bottom:10px;">
+        <span style="font-size:15px;font-weight:700;color:var(--text);">📋 库存对账记录</span>
+        <button class="btn btn-primary" onclick="saveInventoryCheck()">✅ 库存已对账</button>
+      </div>
+      <div class="inv-check-scroll">
+        <table>
+          <thead><tr><th style="width:110px;min-width:110px;">日期</th><th>在家库存品种数量</th></tr></thead>
+          <tbody id="invCheckBody"></tbody>
+        </table>
+      </div>
+      <div class="hint">点击按钮保存今日在家库存快照，记录永久保存，下滑查看更多历史。</div>
+    </div>
   </div>
 
   <!-- ========== 比价系统 ========== -->
@@ -756,7 +778,7 @@
     <div class="table-wrapper"><div class="table-scroll">
       <table>
         <thead><tr>
-          <th style="width:32px;">#</th><th style="width:52px;min-width:52px;max-width:52px;">日期</th><th style="width:69px;min-width:69px;max-width:69px;">金额</th><th style="width:52px;min-width:52px;max-width:52px;">方向</th><th>来源</th><th style="width:156px;min-width:156px;max-width:156px;">备注</th><th>清账状态</th><th>操作</th>
+          <th style="width:32px;">#</th><th style="width:52px;min-width:52px;max-width:52px;">日期</th><th style="width:69px;min-width:69px;max-width:69px;">金额</th><th style="width:52px;min-width:52px;max-width:52px;">方向</th><th>来源</th><th>清账状态</th><th style="width:156px;min-width:156px;max-width:156px;">备注</th><th>操作</th>
         </tr></thead>
         <tbody id="yunTableBody"></tbody>
       </table>
@@ -1061,6 +1083,7 @@ const KEY_GROWTH = 'yw_growth_v1';
 const KEY_YUN = 'yw_yun_v1';
 const KEY_MOMENTS = 'yw_moments_v1';
 const KEY_REVIEW = 'yw_review_v1';
+const KEY_INV_CHECK = 'yw_inv_check_v1';
 const KEY_BACKUP = 'yw_last_backup';
 const KEY_BACKUP_REMINDER = 'yw_backup_reminder_date';
 const BACKUP_INTERVAL = 15;
@@ -1071,6 +1094,7 @@ let compareData = { suppliers: [], prices: {} }; // 比价独立数据
 let zaOrders = []; // 杂平台独立数据
 let growthRecords = []; // 个人成长打卡数据
 let yunRecords = []; // 云账本数据
+let invChecks = []; // 库存对账记录 [{id, date:'YYYY-MM-DD', items:[{product,qty}]}]
 let momentsRecords = []; // 每日朋友圈打卡记录 [{date, items:[...]}]
 let reviewRecords = []; // 燕窝和杂货已复查打卡记录 [{date:'YYYY-MM-DD', ts}]
 let momentCustom = []; // 朋友圈自定义品种
@@ -1154,7 +1178,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
 // 通用导入导出
 // ==========================================
 function exportAll() {
-  const data = { orders, purchases, inventoryLog, compareData, zaOrders, growthRecords, yunRecords, momentsRecords, momentCustom, reviewRecords };
+  const data = { orders, purchases, inventoryLog, compareData, zaOrders, growthRecords, yunRecords, invChecks, momentsRecords, momentCustom, reviewRecords };
   const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1184,6 +1208,7 @@ function importAll(event) {
           if (data.zaOrders) zaOrders = data.zaOrders;
           if (data.growthRecords) growthRecords = data.growthRecords;
           if (data.yunRecords) yunRecords = data.yunRecords;
+          if (data.invChecks) invChecks = data.invChecks;
           if (data.momentsRecords) momentsRecords = data.momentsRecords;
           if (data.momentCustom) momentCustom = data.momentCustom;
           if (data.reviewRecords) reviewRecords = data.reviewRecords;
@@ -1193,6 +1218,7 @@ function importAll(event) {
           if (data.zaOrders) zaOrders = zaOrders.concat(data.zaOrders || []);
           if (data.growthRecords) growthRecords = growthRecords.concat(data.growthRecords || []);
           if (data.yunRecords) yunRecords = yunRecords.concat(data.yunRecords || []);
+          if (data.invChecks) invChecks = invChecks.concat(data.invChecks || []);
           if (data.momentsRecords) momentsRecords = momentsRecords.concat(data.momentsRecords || []);
           if (data.momentCustom) momentCustom = momentCustom.concat(data.momentCustom || []);
           if (data.reviewRecords) reviewRecords = reviewRecords.concat(data.reviewRecords || []);
@@ -1216,6 +1242,7 @@ function saveAll() {
   localStorage.setItem(KEY_YUN, JSON.stringify(yunRecords));
   localStorage.setItem(KEY_MOMENTS, JSON.stringify({ records: momentsRecords, custom: momentCustom }));
   localStorage.setItem(KEY_REVIEW, JSON.stringify(reviewRecords));
+  localStorage.setItem(KEY_INV_CHECK, JSON.stringify(invChecks));
 }
 
 function refreshAll() {
@@ -1234,6 +1261,7 @@ function init() {
   try { zaOrders = JSON.parse(localStorage.getItem(KEY_ZA) || '[]'); } catch(e) { zaOrders = []; }
   try { growthRecords = JSON.parse(localStorage.getItem(KEY_GROWTH) || '[]'); } catch(e) { growthRecords = []; }
   try { yunRecords = JSON.parse(localStorage.getItem(KEY_YUN) || '[]'); } catch(e) { yunRecords = []; }
+  try { invChecks = JSON.parse(localStorage.getItem(KEY_INV_CHECK) || '[]'); } catch(e) { invChecks = []; }
   try { const m = JSON.parse(localStorage.getItem(KEY_MOMENTS) || '{}'); momentsRecords = m.records || []; momentCustom = m.custom || []; } catch(e) { momentsRecords = []; momentCustom = []; }
   try { reviewRecords = JSON.parse(localStorage.getItem(KEY_REVIEW) || '[]'); } catch(e) { reviewRecords = []; }
 
@@ -3416,6 +3444,59 @@ function renderInventoryTable() {
   }).join('');
   updateInvStats();
   updateInvProdFilter();
+  renderInvChecks();
+}
+
+function saveInventoryCheck(){
+  const invMap = {};
+  ALL_PRODUCT_LIST.forEach(p => { invMap[p] = { totalIn: 0, totalOut: 0 }; });
+  // 进货入库
+  purchases.forEach(p => { p.items.forEach(item => {
+    if (invMap[item.product]) {
+      const records = item.inRecords || [];
+      records.forEach(r => { invMap[item.product].totalIn += (r.qty || 0); });
+    }
+  });});
+  // 手动入库
+  inventoryLog.forEach(log => { if (invMap[log.product]) invMap[log.product].totalIn += log.quantity; });
+  // 出库
+  orders.forEach(o => { o.items.forEach(item => { if (invMap[item.product]) invMap[item.product].totalOut += (item.shipped || 0); }); });
+
+  const date = todayStr();
+  const items = Object.entries(invMap)
+    .map(([product, v]) => ({ product, qty: v.totalIn - v.totalOut }))
+    .filter(x => x.qty > 0)
+    .sort((a, b) => (ALL_PRODUCT_LIST.indexOf(a.product) || 999) - (ALL_PRODUCT_LIST.indexOf(b.product) || 999));
+
+  const idx = invChecks.findIndex(c => c.date === date);
+  if (idx >= 0) {
+    if (!confirm('今天已保存过库存对账，是否覆盖？')) return;
+    invChecks[idx] = { id: invChecks[idx].id, date, items };
+  } else {
+    invChecks.push({ id: Date.now(), date, items });
+  }
+  invChecks.sort((a, b) => b.date.localeCompare(a.date));
+  saveAll();
+  renderInvChecks();
+  alert('库存对账已保存：' + fmtMDY(date));
+}
+
+function renderInvChecks(){
+  const tbody = document.getElementById('invCheckBody');
+  if (!tbody) return;
+  if (!invChecks.length) {
+    tbody.innerHTML = `<tr><td colspan="2"><div class="empty-row"><div class="icon">📋</div><div>暂无库存对账记录</div></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = invChecks.map(c => {
+    const itemsText = c.items && c.items.length
+      ? c.items.map(x => `${x.product}${formatNum(x.qty)}两`).join('，')
+      : '无库存';
+    return `<tr>
+      <td><span class="inv-check-date">${fmtMDY(c.date)}</span></td>
+      <td class="inv-check-items">${itemsText}</td>
+    </tr>`;
+  }).join('');
 }
 
 function updateInvStats() {
@@ -3607,8 +3688,8 @@ function renderYunTable() {
       <td style="width:69px;min-width:69px;max-width:69px;font-weight:700;${amtColor}">${isIn ? '+' : '-'}¥${formatNum(r.amount)}</td>
       <td style="width:52px;min-width:52px;max-width:52px;">${typeLabel}</td>
       <td>${r.source}</td>
-      <td style="max-width:156px;white-space:normal;font-size:10px;color:var(--text-light);">${r.remark || '-'}</td>
       <td>${clearedHtml}</td>
+      <td style="max-width:156px;white-space:normal;font-size:10px;color:var(--text-light);">${r.remark || '-'}</td>
       <td><div class="row-actions">
         <button class="icon-btn" title="编辑" onclick="openYunModal(${r.id})">✏️</button>
         <button class="icon-btn" title="删除" onclick="deleteYunRecord(${r.id})">🗑️</button>
