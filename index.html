@@ -435,13 +435,12 @@
 
     <div style="margin-bottom:10px;">
       <div class="stats" style="margin-bottom:8px;">
-        <div class="stat-card info"><div class="label calc-label" onclick="showCalcTip(event,'待发客 = 有未发货订单的客户数\n待发数 = 下单数 - 已发数')">待发客 / 待发数</div><div class="value" id="statItems">0 / 0</div></div>
+        <div class="stat-card info"><div class="label calc-label" onclick="showCalcTip(event,'待发客 = 有未发货订单的客户数\n待发两 = 下单数 - 已发数')">待发客 / 待发两</div><div class="value" id="statItems">0 / 0</div></div>
         <div class="stat-card" id="statPendingCard"><div class="label">待收尾款</div><div class="value" id="statPending">¥0</div></div>
         <div class="stat-card info"><div class="label calc-label" onclick="showCalcTip(event,'预估利润/月 = 当月（与预估总利润/年同口径）\nΣ((售价 - 库存均价) × 下单数 - 运费)，库存均价>0才计')">预估利润/月</div><div class="value" id="statEstProfitMonth">¥0</div></div>
       </div>
       <div class="stats">
-        <div class="stat-card"><div class="label">年订单总笔数</div><div class="value" id="statTotal">0 <span class="unit">笔</span></div></div>
-        <div class="stat-card"><div class="label">年订单总两数</div><div class="value" id="statTotalLiang">0 <span class="unit">两</span></div></div>
+        <div class="stat-card"><div class="label">年订单总笔数/总两数</div><div class="value" id="statTotal">0 <span class="unit">笔</span> / 0 <span class="unit">两</span></div></div>
         <div class="stat-card"><div class="label">订单总金额/年</div><div class="value" id="statTotalAmount">¥0</div></div>
         <div class="stat-card warning"><div class="label calc-label" onclick="showCalcTip(event,'预估总利润 = Σ((售价 - 库存均价) × 下单数 - 运费)\n仅限当年')">预估总利润/年</div><div class="value" id="statEstProfit">¥0</div></div>
       </div>
@@ -730,8 +729,8 @@
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
         <button class="btn btn-outline btn-sm" onclick="changeGrowthMonth(-1)">◀ 上月</button>
         <span id="growthMonthLabel" style="font-size:14px;font-weight:600;min-width:100px;text-align:center;"></span>
-        <span id="growthMonthSellLiang" style="font-size:13px;font-weight:600;color:var(--primary);white-space:nowrap;"></span>
         <button class="btn btn-outline btn-sm" onclick="changeGrowthMonth(1)">下月 ▶</button>
+        <span id="growthMonthSellLiang" style="font-size:16px;font-weight:700;color:var(--primary);white-space:nowrap;background:#e8f5e9;padding:5px 12px;border-radius:6px;"></span>
       </div>
       <div class="stats" style="margin-bottom:14px;">
         <div class="stat-card success"><div class="label calc-label" onclick="showCalcTip(event,'本月燕窝利润 = 本月燕窝接单平台中下单的利润合计')">本月燕窝利润</div><div class="value" id="growthMonthSellProfit">¥0</div></div>
@@ -2013,9 +2012,10 @@ function updateYearFilter() {
 function updateOrderStats() {
   const filterYear = document.getElementById('filterYear').value;
   const statsOrders = filterYear ? orders.filter(o => (o.orderDate||'').substring(0,4) === filterYear) : orders;
-  const total = statsOrders.length;
+  const validOrders = statsOrders.filter(o => (o.customer || '') !== '胡雲博');
+  const total = validOrders.length;
   let totalLiang = 0;
-  statsOrders.forEach(o => o.items.forEach(item => { totalLiang += (item.quantity || 0); }));
+  validOrders.forEach(o => o.items.forEach(item => { totalLiang += (item.quantity || 0); }));
   let pendingCustomers = new Set(), pendingQty = 0, pendingAmount = 0, totalAmount = 0, estProfit = 0;
   statsOrders.forEach(o => {
     let orderHasPending = false;
@@ -2034,8 +2034,7 @@ function updateOrderStats() {
     if (orderHasPending) pendingCustomers.add(o.customer);
     if (o.payment === '定金') pendingAmount += (parseFloat(o.deposit)||0) * (o.items.length - 1);
   });
-  document.getElementById('statTotal').innerHTML = `${total} <span class="unit">笔</span>`;
-  document.getElementById('statTotalLiang').innerHTML = `${formatNum(totalLiang)} <span class="unit">两</span>`;
+  document.getElementById('statTotal').innerHTML = `${total} <span class="unit">笔</span> / ${formatNum(totalLiang)} <span class="unit">两</span>`;
   document.getElementById('statItems').innerHTML = `${pendingCustomers.size} / ${pendingQty}`;
   document.getElementById('statPending').textContent = '¥' + formatNum(Math.max(0, pendingAmount));
   // 待收尾款 > 0 时卡片变红
@@ -3529,10 +3528,10 @@ function renderGrowthMonth() {
   document.getElementById('growthMonthSellProfit').textContent = '¥' + formatNum(sellProfit);
   document.getElementById('growthMonthZaProfit').textContent = '¥' + formatNum(zaProfit);
   document.getElementById('growthMonthTotalProfit').textContent = '¥' + formatNum(total);
-  // 本月燕窝下单数（两）= 本月燕窝接单平台所有订单的 items.quantity 之和
+  // 本月燕窝下单数（两）= 本月燕窝接单平台所有订单的 items.quantity 之和（不含客户「胡雲博」）
   let sellLiang = 0;
   orders.forEach(o => {
-    if (o.orderDate >= start && o.orderDate <= end) {
+    if (o.orderDate >= start && o.orderDate <= end && (o.customer || '') !== '胡雲博') {
       o.items.forEach(item => { sellLiang += (item.quantity || 0); });
     }
   });
