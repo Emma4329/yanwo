@@ -2009,10 +2009,16 @@ function updateYearFilter() {
   if (isFirst) sel.removeAttribute('data-first');
 }
 
+// 需排除的客户：这类订单不参与「年订单总笔/总两数」「订单总金额/年」「本月下单数」等统计
+function isExcludedCustomer(name) {
+  const n = (name || '').trim();
+  return n.indexOf('胡雲博') >= 0 || n.indexOf('自己') >= 0;
+}
+
 function updateOrderStats() {
   const filterYear = document.getElementById('filterYear').value;
   const statsOrders = filterYear ? orders.filter(o => (o.orderDate||'').substring(0,4) === filterYear) : orders;
-  const validOrders = statsOrders.filter(o => (o.customer || '') !== '胡雲博');
+  const validOrders = statsOrders.filter(o => !isExcludedCustomer(o.customer));
   const total = validOrders.length;
   let totalLiang = 0;
   validOrders.forEach(o => o.items.forEach(item => { totalLiang += (item.quantity || 0); }));
@@ -2023,7 +2029,7 @@ function updateOrderStats() {
       const shipped = item.shipped || 0;
       const remain = item.quantity - shipped;
       if (remain > 0) { orderHasPending = true; pendingQty += remain; }
-      const sub = item.quantity * item.unitPrice; totalAmount += sub;
+      const sub = item.quantity * item.unitPrice; if (!isExcludedCustomer(o.customer)) totalAmount += sub;
       // 预估利润：定向进货用之，否则库存均价 - 运费
       const itemCost = getItemCost(item);
       if (itemCost > 0) {
@@ -3528,10 +3534,10 @@ function renderGrowthMonth() {
   document.getElementById('growthMonthSellProfit').textContent = '¥' + formatNum(sellProfit);
   document.getElementById('growthMonthZaProfit').textContent = '¥' + formatNum(zaProfit);
   document.getElementById('growthMonthTotalProfit').textContent = '¥' + formatNum(total);
-  // 本月燕窝下单数（两）= 本月燕窝接单平台所有订单的 items.quantity 之和（不含客户「胡雲博」）
+  // 本月燕窝下单数（两）= 本月燕窝接单平台所有订单的 items.quantity 之和（不含客户「胡雲博」「自己」）
   let sellLiang = 0;
   orders.forEach(o => {
-    if (o.orderDate >= start && o.orderDate <= end && (o.customer || '') !== '胡雲博') {
+    if (o.orderDate >= start && o.orderDate <= end && !isExcludedCustomer(o.customer)) {
       o.items.forEach(item => { sellLiang += (item.quantity || 0); });
     }
   });
