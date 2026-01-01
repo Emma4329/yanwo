@@ -541,17 +541,17 @@
     </div></div>
 
     <!-- ====== 杂货进货（独立区域） ====== -->
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-top:16px;box-shadow:var(--shadow);">
+    <div style="margin-top:18px;padding-top:14px;border-top:1px dashed var(--border);">
       <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:10px;">🧺 杂货进货</div>
-      <div class="toolbar" style="flex-wrap:wrap;">
-        <div class="search-box" style="flex:0 0 50%;max-width:50%;min-width:0;"><span class="search-icon">🔍</span><input type="text" id="zaPurSearch" placeholder="搜索商品名、供应商..." oninput="renderZaPurTable()"></div>
-        <div style="flex:0 0 auto;"><select id="zaPurYear" data-first="1" onchange="renderZaPurTable()" style="padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;background:var(--card);outline:none;"><option value="">全部</option></select></div>
-        <button class="btn btn-primary" onclick="openZaPurModal()" style="flex:1 1 auto;min-width:120px;justify-content:center;padding:9px 14px;font-size:13px;">➕ 新增杂货</button>
+      <div class="toolbar" style="flex-wrap:nowrap;">
+        <div class="search-box" style="flex:1 1 auto;min-width:0;max-width:50%;"><span class="search-icon">🔍</span><input type="text" id="zaPurSearch" placeholder="搜索商品名、供应商..." oninput="renderZaPurTable()"></div>
+        <div style="flex:0 0 auto;"><select id="zaPurYear" data-first="1" onchange="renderZaPurTable()" style="padding:8px 8px;border:1px solid var(--border);border-radius:7px;font-size:12px;background:var(--card);outline:none;"><option value="">全部</option></select></div>
+        <button class="btn btn-primary" onclick="openZaPurModal()" style="flex:0 0 auto;white-space:nowrap;padding:8px 10px;font-size:12px;">➕ 新增杂货</button>
       </div>
       <div class="table-wrapper"><div class="table-scroll" style="max-height:none;">
         <table>
           <thead><tr>
-            <th style="width:32px;">#</th><th>日期</th><th>商品名</th><th>人民币金额</th><th>港币金额</th><th>汇率</th><th>供应商</th><th style="width:64px;">操作</th>
+            <th style="width:32px;">#</th><th style="width:62px;min-width:62px;">日期</th><th style="width:60px;min-width:60px;">供应商</th><th style="width:110px;min-width:110px;">商品名</th><th style="width:88px;min-width:88px;">人民币金额</th><th style="width:88px;min-width:88px;">港币金额</th><th style="width:76px;min-width:76px;">汇率</th><th style="width:60px;">操作</th>
           </tr></thead>
           <tbody id="zaPurTableBody"></tbody>
         </table>
@@ -1081,15 +1081,12 @@
   <div class="modal-body">
     <div class="form-row">
       <div class="form-group w140"><label>日期 <span class="required">*</span></label><input type="date" id="fZaPurDate"></div>
-      <div class="form-group flex1"><label>商品名</label><input type="text" id="fZaPurName" placeholder="选填，如：超市采购"></div>
+      <div class="form-group flex1"><label>供应商</label><input type="text" id="fZaPurSupplier" placeholder="供应商"></div>
     </div>
     <div class="form-row nowrap-row">
       <div class="form-group third"><label>人民币金额(¥) <span class="required">*</span></label><input type="number" id="fZaPurRmb" min="0" step="0.01" placeholder="0.00" oninput="updateZaPurRate('rmb')"></div>
       <div class="form-group third"><label>港币金额(HK$) <span class="required">*</span></label><input type="number" id="fZaPurHkd" min="0" step="0.01" placeholder="0.00" oninput="updateZaPurRate('hkd')"></div>
-      <div class="form-group third"><label>汇率</label><input type="number" id="fZaPurRate" min="0" step="0.0001" placeholder="自动" oninput="updateZaPurRate('rate')"></div>
-    </div>
-    <div class="form-row">
-      <div class="form-group flex1"><label>供应商</label><input type="text" id="fZaPurSupplier" placeholder="供应商"></div>
+      <div class="form-group third"><label>汇率</label><input type="number" id="fZaPurRate" min="0" step="0.000001" placeholder="自动" oninput="updateZaPurRate('rate')"></div>
     </div>
     <div class="items-section">
       <h3>🛒 商品明细 <button class="btn btn-outline btn-sm" onclick="addZaPurItemRow()">+ 新增商品</button></h3>
@@ -2499,7 +2496,6 @@ function openZaPurModal(editId) {
   zaPurRateManual = false;
   document.getElementById('zaPurModalTitle').textContent = editId ? '编辑杂货' : '新增杂货';
   document.getElementById('fZaPurDate').value = todayStr();
-  document.getElementById('fZaPurName').value = '';
   document.getElementById('fZaPurRmb').value = '';
   document.getElementById('fZaPurHkd').value = '';
   document.getElementById('fZaPurRate').value = '';
@@ -2509,7 +2505,6 @@ function openZaPurModal(editId) {
     const rec = zaPurchases.find(r => r.id === editId);
     if (rec) {
       document.getElementById('fZaPurDate').value = rec.date || todayStr();
-      document.getElementById('fZaPurName').value = rec.name || '';
       document.getElementById('fZaPurRmb').value = (rec.rmb || rec.rmb === 0) ? rec.rmb : '';
       document.getElementById('fZaPurHkd').value = (rec.hkd || rec.hkd === 0) ? rec.hkd : '';
       document.getElementById('fZaPurRate').value = (rec.rate || rec.rate === 0) ? rec.rate : '';
@@ -2521,25 +2516,24 @@ function openZaPurModal(editId) {
   document.getElementById('zaPurModal').classList.add('show');
 }
 
-// 新增一条商品明细：商品名 / 汇率(自动) / 港币单价 / 数量 / 人民币金额(自动)
+// 新增一条商品明细：商品名 / 港币单价 / 数量 / 人民币金额(自动)
 function addZaPurItemRow(data) {
   const container = document.getElementById('zaPurItemsContainer');
   if (!container) return;
   const div = document.createElement('div'); div.className = 'item-row';
   const inputCss = 'width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;';
   div.innerHTML = `
-    <div class="form-group" style="width:130px;"><label>商品名</label><input type="text" class="zapur-iname" value="${data && data.name ? String(data.name).replace(/"/g,'&quot;') : ''}" placeholder="商品名" oninput="updateZaPurItems()" style="${inputCss}"></div>
-    <div class="form-group" style="width:64px;"><label>汇率</label><span class="zapur-irate" style="display:block;padding:8px 0;font-size:12px;font-weight:600;color:var(--text-light);">-</span></div>
-    <div class="form-group" style="width:82px;"><label>港币单价</label><input type="number" class="zapur-ihkd" value="${data && data.hkdPrice ? data.hkdPrice : ''}" min="0" step="0.01" placeholder="HK$" oninput="updateZaPurItems()" style="${inputCss}"></div>
-    <div class="form-group" style="width:64px;"><label>数量</label><input type="number" class="zapur-iqty" value="${data && data.qty ? data.qty : ''}" min="0" step="0.01" placeholder="数量" oninput="updateZaPurItems()" style="${inputCss}"></div>
-    <div class="form-group" style="width:90px;"><label>人民币金额</label><span class="zapur-irmb" style="display:block;padding:8px 0;font-size:12px;font-weight:600;color:var(--primary);">¥0.00</span></div>
+    <div class="form-group" style="width:150px;"><label>商品名</label><input type="text" class="zapur-iname" value="${data && data.name ? String(data.name).replace(/"/g,'&quot;') : ''}" placeholder="商品名" oninput="updateZaPurItems()" style="${inputCss}"></div>
+    <div class="form-group" style="width:90px;"><label>港币单价</label><input type="number" class="zapur-ihkd" value="${data && data.hkdPrice ? data.hkdPrice : ''}" min="0" step="0.01" placeholder="HK$" oninput="updateZaPurItems()" style="${inputCss}"></div>
+    <div class="form-group" style="width:70px;"><label>数量</label><input type="number" class="zapur-iqty" value="${data && data.qty ? data.qty : ''}" min="0" step="0.01" placeholder="数量" oninput="updateZaPurItems()" style="${inputCss}"></div>
+    <div class="form-group" style="width:92px;"><label>人民币金额</label><span class="zapur-irmb" style="display:block;padding:8px 0;font-size:12px;font-weight:600;color:var(--primary);">¥0.00</span></div>
     <div style="padding-top:20px;"><button class="btn btn-danger btn-sm" onclick="this.closest('.item-row').remove();updateZaPurItems();">✕</button></div>
   `;
   container.appendChild(div);
   updateZaPurItems();
 }
 
-// 明细里：汇率取上方汇率，人民币金额 = 港币单价 × 数量 × 汇率
+// 明细里：人民币金额 = 港币单价 × 数量 × 汇率(取上方汇率)
 function updateZaPurItems() {
   const container = document.getElementById('zaPurItemsContainer');
   if (!container) return;
@@ -2549,8 +2543,6 @@ function updateZaPurItems() {
     const hkdPrice = parseFloat(row.querySelector('.zapur-ihkd')?.value) || 0;
     const qty = parseFloat(row.querySelector('.zapur-iqty')?.value) || 0;
     const rmb = hkdPrice * qty * rate;
-    const rateEl = row.querySelector('.zapur-irate');
-    if (rateEl) rateEl.textContent = rate > 0 ? String(parseFloat(rate.toFixed(4))) : '-';
     const rmbEl = row.querySelector('.zapur-irmb');
     if (rmbEl) rmbEl.textContent = '¥' + fmtMoney(rmb);
     total += rmb;
@@ -2593,14 +2585,13 @@ function updateZaPurRate(source) {
   } else {
     // 人民币/港币都填了才自动算汇率，否则保留手输的汇率
     zaPurRateManual = false;
-    if (rmb > 0 && hkd > 0) rateEl.value = parseFloat((rmb / hkd).toFixed(4));
+    if (rmb > 0 && hkd > 0) rateEl.value = parseFloat((rmb / hkd).toFixed(6));
   }
   updateZaPurItems();
 }
 
 function saveZaPur() {
   const date = document.getElementById('fZaPurDate').value;
-  const name = document.getElementById('fZaPurName').value.trim(); // 选填
   const rmb = parseFloat(document.getElementById('fZaPurRmb').value) || 0;
   const hkd = parseFloat(document.getElementById('fZaPurHkd').value) || 0;
   const supplier = document.getElementById('fZaPurSupplier').value.trim();
@@ -2608,7 +2599,7 @@ function saveZaPur() {
   if (!date) { alert('请填写日期'); return; }
   if (!(rmb > 0)) { alert('请填写人民币金额'); return; }
   if (!(hkd > 0)) { alert('请填写港币金额'); return; }
-  if (!(rate > 0)) rate = parseFloat((rmb / hkd).toFixed(4));
+  if (!(rate > 0)) rate = parseFloat((rmb / hkd).toFixed(6));
 
   // 读取商品明细（商品名为选填，空行忽略）
   const items = [];
@@ -2676,21 +2667,47 @@ function renderZaPurTable() {
     tbody.innerHTML = `<tr><td colspan="8"><div class="empty-row"><div class="icon">🧺</div><div>暂无杂货进货记录</div></div></td></tr>`;
     return;
   }
-  tbody.innerHTML = rows.map((r, i) => {
+  const out = [];
+  rows.forEach((r, i) => {
     const rate = (r.rate > 0) ? r.rate : (r.hkd > 0 ? (r.rmb / r.hkd) : 0);
-    const itemNames = (r.items || []).map(it => it.name).filter(n => n && n.trim());
-    const nameText = itemNames.length ? itemNames.join('，') : (r.name || '-');
-    return `<tr>
-      <td>${i + 1}</td>
-      <td>${r.date ? fmtMDY(r.date) : '-'}</td>
-      <td style="font-weight:600;">${nameText}</td>
+    const supplier = r.supplier || '-';
+    const items = (r.items || []).filter(it => it && (it.name || it.hkdPrice || it.qty));
+    if (!items.length) {
+      // 无商品明细：单行显示（商品名取记录名）
+      out.push(`<tr>
+        <td>${i + 1}</td>
+        <td>${r.date ? fmtMDY(r.date) : '-'}</td>
+        <td style="font-weight:600;">${supplier}</td>
+        <td>${r.name || '-'}</td>
+        <td>¥${fmtMoney(r.rmb)}</td>
+        <td>HK$${fmtMoney(r.hkd)}</td>
+        <td>${rate > 0 ? parseFloat(rate.toFixed(6)) : '-'}</td>
+        <td><div class="row-actions"><button class="icon-btn" title="编辑" onclick="openZaPurModal(${r.id})">✏️</button><button class="icon-btn" title="删除" onclick="deleteZaPur(${r.id})">🗑️</button></div></td>
+      </tr>`);
+      return;
+    }
+    // 有商品明细：分组行（第一行商品名空白）+ 每个商品一行
+    const span = items.length + 1;
+    out.push(`<tr class="order-group-start">
+      <td rowspan="${span}">${i + 1}</td>
+      <td rowspan="${span}">${r.date ? fmtMDY(r.date) : '-'}</td>
+      <td rowspan="${span}" style="font-weight:600;">${supplier}</td>
+      <td></td>
       <td>¥${fmtMoney(r.rmb)}</td>
       <td>HK$${fmtMoney(r.hkd)}</td>
-      <td>${rate > 0 ? parseFloat(rate.toFixed(4)) : '-'}</td>
-      <td>${r.supplier || '-'}</td>
-      <td><div class="row-actions"><button class="icon-btn" title="编辑" onclick="openZaPurModal(${r.id})">✏️</button><button class="icon-btn" title="删除" onclick="deleteZaPur(${r.id})">🗑️</button></div></td>
-    </tr>`;
-  }).join('');
+      <td rowspan="${span}">${rate > 0 ? parseFloat(rate.toFixed(6)) : '-'}</td>
+      <td rowspan="${span}"><div class="row-actions"><button class="icon-btn" title="编辑" onclick="openZaPurModal(${r.id})">✏️</button><button class="icon-btn" title="删除" onclick="deleteZaPur(${r.id})">🗑️</button></div></td>
+    </tr>`);
+    items.forEach(it => {
+      const itHkd = (it.hkdPrice || 0) * (it.qty || 0);
+      out.push(`<tr class="merged-row">
+        <td>${it.name || '-'}</td>
+        <td>¥${fmtMoney(it.rmb || 0)}</td>
+        <td>HK$${fmtMoney(itHkd)}</td>
+      </tr>`);
+    });
+  });
+  tbody.innerHTML = out.join('');
 }
 
 // ==========================================
