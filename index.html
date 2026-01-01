@@ -176,13 +176,29 @@
   #page-orders .table-scroll thead th,
   #page-za .table-scroll thead th,
   #page-purchase .table-scroll thead th { background: var(--bg); }
-  /* 同行(比价)平台：固定列宽，所有列统一为 2 个字宽 */
+  /* 同行(比价)平台：固定列宽，所有列统一为 3 个字宽 */
   #page-compare table { table-layout: fixed; width: auto; }
   #page-compare table th, #page-compare table td {
-    width: 2.2em; min-width: 2.2em; max-width: 2.2em;
+    width: 3em; min-width: 3em; max-width: 3em;
     padding: 5px 1px; overflow: hidden;
   }
   #page-compare table th textarea { font-size: 10px; line-height: 1.2; }
+  /* 品种列冻结：横向滚动时始终固定在左侧，不被其他列遮挡 */
+  #page-compare table th.cmp-pin, #page-compare table td.cmp-pin {
+    position: sticky; left: 0;
+    background: var(--card);
+    box-shadow: 2px 0 3px -2px rgba(0,0,0,0.25);
+  }
+  #page-compare table th.cmp-pin { background: var(--bg); z-index: 6; }
+  #page-compare table td.cmp-pin { z-index: 4; }
+  #page-compare tbody tr:hover td.cmp-pin { background: #FDF9F3; }
+  /* 供应商列排序控件（◀▶ 左右移动列，鼠标可拖拽换位） */
+  #page-compare table th.cmp-sup-col { cursor: grab; }
+  #page-compare table th.cmp-sup-col:active { cursor: grabbing; }
+  .cmp-sup-ctrl { display: flex; justify-content: center; gap: 1px; margin-top: 2px; }
+  .cmp-sup-ctrl button { font-size: 9px; line-height: 1; padding: 1px 2px; border: none; background: rgba(0,0,0,0.06); border-radius: 3px; cursor: pointer; color: var(--text-light); }
+  .cmp-sup-ctrl button:hover { background: var(--primary); color: #fff; }
+  .cmp-sup-del { position: absolute; top: 1px; right: 1px; background: none; border: none; cursor: pointer; font-size: 9px; color: var(--danger); }
   #compareDiffModal .table-scroll thead { position: sticky; top: 0; z-index: 5; background: var(--bg); }
   .inv-check-scroll { max-height: 260px; overflow-y: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); }
   .inv-check-scroll table { width: 100%; border-collapse: collapse; }
@@ -2289,10 +2305,14 @@ function renderCompareTable() {
 
   // 渲染表头
   thead.innerHTML = `<tr>
-    <th>#</th><th style="white-space:normal;word-break:break-word;text-align:center;">品种</th>
-    ${suppliers.map((s,i) => `<th style="position:relative;padding:5px 1px;white-space:normal;word-break:break-word;">
+    <th>#</th><th class="cmp-pin" style="white-space:normal;word-break:break-word;text-align:center;">品种</th>
+    ${suppliers.map((s,i) => `<th class="cmp-sup-col" draggable="true" ondragstart="dragCompareSupplier(event,${i})" ondragover="event.preventDefault()" ondrop="dropCompareSupplier(event,${i})" style="position:relative;padding:5px 1px;white-space:normal;word-break:break-word;">
       <textarea rows="2" onchange="updateCompareSupplier(${i},this.value)" style="width:100%;border:none;background:transparent;font-weight:600;color:var(--text-light);font-size:10px;text-align:center;resize:none;overflow:hidden;white-space:normal;word-break:break-word;line-height:1.2;" placeholder="供应商">${s}</textarea>
-      <button onclick="deleteCompareSupplier(${i})" style="position:absolute;top:1px;right:1px;background:none;border:none;cursor:pointer;font-size:9px;color:var(--danger);" title="删除">✕</button>
+      <div class="cmp-sup-ctrl">
+        <button onclick="moveCompareSupplier(${i},-1)" title="左移一列">◀</button>
+        <button onclick="moveCompareSupplier(${i},1)" title="右移一列">▶</button>
+      </div>
+      <button onclick="deleteCompareSupplier(${i})" class="cmp-sup-del" title="删除">✕</button>
     </th>`).join('')}
   </tr>`;
 
@@ -2317,12 +2337,36 @@ function renderCompareTable() {
     }).join('');
     return `<tr>
       <td>${i+1}</td>
-      <td style="overflow-wrap:break-word;"><span class="product-tag cat-${PRODUCT_CATEGORY[prod]||'yanwo'}">${prod}</span></td>
+      <td class="cmp-pin" style="overflow-wrap:break-word;"><span class="product-tag cat-${PRODUCT_CATEGORY[prod]||'yanwo'}">${prod}</span></td>
       ${cells}
     </tr>`;
   }).join('');
 }
 
+// 供应商列排序：价格以供应商名为键存储，重排 suppliers 数组即可，价格自动跟随
+function moveCompareSupplier(i, dir){
+  const j = i + dir;
+  if(j < 0 || j >= compareData.suppliers.length) return;
+  const arr = compareData.suppliers;
+  const t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+  saveAll(); renderCompareTable();
+}
+let _dragFrom = -1;
+function dragCompareSupplier(e, i){
+  _dragFrom = i;
+  try{ e.dataTransfer.setData('text/plain', String(i)); e.dataTransfer.effectAllowed = 'move'; }catch(_){}
+}
+function dropCompareSupplier(e, i){
+  e.preventDefault();
+  let from = _dragFrom;
+  if(from < 0){ try{ from = parseInt(e.dataTransfer.getData('text/plain')||'-1',10); }catch(_){ from = -1; } }
+  _dragFrom = -1;
+  if(from < 0 || from === i) return;
+  const arr = compareData.suppliers;
+  const moved = arr.splice(from, 1)[0];
+  arr.splice(i, 0, moved);
+  saveAll(); renderCompareTable();
+}
 function addCompareSupplier() {
   const name = prompt('请输入供应商名称：');
   if (!name || !name.trim()) return;
