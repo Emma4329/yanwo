@@ -3131,17 +3131,16 @@ function addZaItemRow(data) {
   const div = document.createElement('div'); div.className = 'item-row'; div.style.position = 'relative';
   const inputCss = 'width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;';
   div.innerHTML = `
-    <div class="form-group" style="width:150px;position:relative;"><label>商品名 <span class="required">*</span></label><input type="text" class="za-iname" value="${data?data.product:''}" placeholder="输入商品名" autocomplete="off" oninput="suggestZaItemName(this);updateZaCostHint(this)" onfocus="suggestZaItemName(this);updateZaCostHint(this)" onblur="setTimeout(hideZaNameSuggestion,200)" style="${inputCss}"><div class="za-name-suggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:0 0 6px 6px;max-height:160px;overflow-y:auto;z-index:20;box-shadow:0 4px 12px rgba(0,0,0,0.12);"></div></div>
+    <div class="form-group" style="width:150px;position:relative;"><label>商品名 <span class="required">*</span></label><input type="text" class="za-iname" value="${data?data.product:''}" placeholder="输入商品名" autocomplete="off" oninput="suggestZaItemName(this);hideZaCostTip()" onfocus="suggestZaItemName(this);hideZaCostTip()" onblur="setTimeout(hideZaNameSuggestion,200)" style="${inputCss}"><div class="za-name-suggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:0 0 6px 6px;max-height:160px;overflow-y:auto;z-index:20;box-shadow:0 4px 12px rgba(0,0,0,0.12);"></div></div>
     <div class="form-group" style="width:75px;"><label>下单数量</label><input type="number" value="${data?data.quantity:''}" min="0.1" step="0.1" placeholder="数量" oninput="updateZaTotal()" style="${inputCss}"></div>
     <div class="za-del-wrap" style="padding-top:20px;margin-left:auto;"><button class="btn btn-danger btn-sm" onclick="this.closest('.item-row').remove();updateZaTotal();">✕</button></div>
     <div class="form-group" style="width:85px;"><label>售价(元)</label><input type="number" value="${data?data.unitPrice:''}" min="0" step="0.01" placeholder="售价" oninput="updateZaTotal()" style="${inputCss}"></div>
     <div class="form-group" style="width:85px;"><label>总价</label><span class="item-subtotal" style="font-weight:600;color:var(--primary);padding:8px 0;display:block;">¥0.00</span></div>
-    <div class="form-group" style="width:85px;"><label>成本(元)</label><input type="number" class="za-icost" value="${data?data.cost:''}" min="0" step="0.01" placeholder="成本" onfocus="updateZaCostHint(this.closest('.item-row'))" onclick="updateZaCostHint(this.closest('.item-row'))" oninput="updateZaTotal()" style="${inputCss}"></div>
+    <div class="form-group" style="width:85px;"><label>成本(元)</label><input type="number" class="za-icost" value="${data?data.cost:''}" min="0" step="0.01" placeholder="成本" onfocus="updateZaCostHint(this.closest('.item-row'))" onclick="updateZaCostHint(this.closest('.item-row'))" onblur="hideZaCostTip()" oninput="updateZaTotal()" style="${inputCss}"></div>
     <div class="form-group" style="width:85px;"><label>运费(元)</label><input type="number" value="${data?data.freight:''}" min="0" step="0.01" placeholder="运费" oninput="updateZaTotal()" style="${inputCss}"></div>
     <div class="form-group" style="width:85px;"><label>利润</label><span class="item-profit" style="font-weight:600;color:var(--success);padding:8px 0;display:block;">¥0.00</span></div>
   `;
   container.appendChild(div);
-  if (data && data.product) updateZaCostHint(div);
   updateZaTotal();
 }
 
@@ -3200,14 +3199,17 @@ function updateZaCostHint(row) {
   const d = last.date ? fmtMonthDayCN(last.date) : '';
   tip.innerHTML = `📌 上次进货：<b style="color:var(--primary);">¥${fmtMoney(parseFloat(last.unit.toFixed(2)))}</b>${d ? '，' + d : ''}${last.supplier ? '（' + last.supplier + '）' : ''}`;
   tip.style.display = 'block';
-  // 定位到成本输入框下方（贴右边缘），用 fixed 定位不受滚动/换行影响
+  // 定位到成本输入框正下方（左边缘对齐），并夹紧在可视区域内
   const r = costEl.getBoundingClientRect();
-  const tipW = tip.offsetWidth;
-  let left = r.right - tipW;
+  const tipW = tip.offsetWidth, tipH = tip.offsetHeight;
+  let left = r.left;
+  const maxLeft = window.innerWidth - tipW - 8;
+  if (left > maxLeft) left = maxLeft;
   if (left < 8) left = 8;
   let top = r.bottom + 4;
-  const maxTop = window.innerHeight - tip.offsetHeight - 8;
-  if (top > maxTop) top = r.top - tip.offsetHeight - 4; // 空间不足则显示在输入框上方
+  const maxTop = window.innerHeight - tipH - 8;
+  if (top > maxTop) top = r.top - tipH - 4; // 下方空间不足则显示在输入框上方
+  if (top < 8) top = 8;
   tip.style.left = left + 'px';
   tip.style.top = top + 'px';
 }
