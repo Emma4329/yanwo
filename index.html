@@ -323,6 +323,18 @@
   .form-group.w100 { width: 100px; } .form-group.w120 { width: 120px; }
   .form-group.w140 { width: 140px; } .form-group.w160 { width: 160px; }
   .form-group.flex1 { flex: 1; min-width: 100px; }
+  /* 尾款 / 已收合计 / 订单总价：强制同一行三列平分 */
+  .form-row.nowrap-row { flex-wrap: nowrap; }
+  .form-row.nowrap-row .form-group.third { flex: 1 1 0; width: auto; min-width: 0; }
+  .form-group.third input, .form-group.third .calc-readout { width: 100%; box-sizing: border-box; }
+  /* 只读计算展示（已收合计 / 订单总价） */
+  .calc-readout {
+    padding: 8px 9px; border: 1px dashed var(--border); border-radius: 6px;
+    font-size: 12px; font-weight: 700; color: var(--primary);
+    background: var(--bg); min-height: 33px; display: flex; align-items: center;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .calc-readout.matched { color: var(--success); border-color: var(--success); border-style: solid; }
 
   .items-section { background: var(--bg); border-radius: 8px; padding: 14px; margin-top: 10px; }
   .items-section h3 { font-size: 13px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
@@ -882,7 +894,12 @@
       <div class="form-group w140"><label>下单日期 <span class="required">*</span></label><input type="date" id="fZaDate"></div>
       <div class="form-group w160" style="position:relative;"><label>客户姓名 <span class="required">*</span></label><input type="text" id="fZaCustomer" placeholder="输入姓名自动提示" autocomplete="off" oninput="suggestZaCustomer()" onfocus="suggestZaCustomer()" onblur="setTimeout(()=>hideZaSuggestion(),200)"><div id="zaCustomerSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:0 0 6px 6px;max-height:160px;overflow-y:auto;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div></div>
       <div class="form-group w140"><label>付款状态 <span class="required">*</span></label><select id="fZaPayment"><option value="定金">定金</option><option value="已结清">已结清</option></select></div>
-      <div class="form-group w140"><label>定金金额(元)</label><input type="number" id="fZaDeposit" min="0" step="0.01" placeholder="定金状态填写"></div>
+      <div class="form-group w140"><label>定金金额(元)</label><input type="number" id="fZaDeposit" min="0" step="0.01" placeholder="定金状态填写" oninput="syncZaPayment()"></div>
+    </div>
+    <div class="form-row nowrap-row">
+      <div class="form-group third"><label>尾款(元)</label><input type="number" id="fZaBalance" min="0" step="0.01" placeholder="尾款填写" oninput="updateZaTotal()"></div>
+      <div class="form-group third"><label>已收合计</label><div class="calc-readout" id="fZaReceivedTotal">¥0.00</div></div>
+      <div class="form-group third"><label>订单总价</label><div class="calc-readout" id="fZaOrderTotal">¥0.00</div></div>
     </div>
     <div class="form-row"><div class="form-group flex1"><label>备注</label><input type="text" id="fZaRemark" placeholder="订单备注..."></div></div>
     <div class="items-section">
@@ -935,7 +952,12 @@
         <div id="customerSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:0 0 6px 6px;max-height:160px;overflow-y:auto;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>
       </div>
       <div class="form-group w140"><label>付款状态 <span class="required">*</span></label><select id="fPayment"><option value="定金">定金</option><option value="已结清">已结清</option></select></div>
-      <div class="form-group w140"><label>定金金额(元)</label><input type="number" id="fDeposit" min="0" step="0.01" placeholder="定金状态填写"></div>
+      <div class="form-group w140"><label>定金金额(元)</label><input type="number" id="fDeposit" min="0" step="0.01" placeholder="定金状态填写" oninput="syncOrderPayment()"></div>
+    </div>
+    <div class="form-row nowrap-row">
+      <div class="form-group third"><label>尾款(元)</label><input type="number" id="fBalance" min="0" step="0.01" placeholder="尾款填写" oninput="updateOrderTotal()"></div>
+      <div class="form-group third"><label>已收合计</label><div class="calc-readout" id="fReceivedTotal">¥0.00</div></div>
+      <div class="form-group third"><label>订单总价</label><div class="calc-readout" id="fOrderTotal">¥0.00</div></div>
     </div>
     <div class="form-row"><div class="form-group flex1"><label>备注</label><input type="text" id="fRemark" placeholder="订单备注..."></div></div>
     <div class="items-section">
@@ -1494,12 +1516,14 @@ function openOrderModal(id) {
   document.getElementById('orderModalTitle').textContent = id ? '编辑订单' : '新增订单';
   document.getElementById('fOrderDate').value = todayStr();
   document.getElementById('fCustomer').value = ''; document.getElementById('fPayment').value = '定金';
-  document.getElementById('fDeposit').value = ''; document.getElementById('fRemark').value = '';
+  document.getElementById('fDeposit').value = ''; document.getElementById('fBalance').value = '';
+  document.getElementById('fRemark').value = '';
   document.getElementById('itemsContainer').innerHTML = '';
   if (id) {
     const o = orders.find(x => x.id === id); if (!o) return;
     document.getElementById('fOrderDate').value = o.orderDate || ''; document.getElementById('fCustomer').value = o.customer || '';
     document.getElementById('fPayment').value = o.payment || '定金'; document.getElementById('fDeposit').value = o.deposit || '';
+    document.getElementById('fBalance').value = o.balance || '';
     document.getElementById('fRemark').value = o.remark || '';
     o.items.forEach(item => addItemRow(item));
   }
@@ -1751,6 +1775,42 @@ function updateOrderTotal() {
     grandTotal += sub;
   });
   document.getElementById('orderTotalPreview').textContent = '¥' + formatNum(grandTotal);
+  syncOrderPayment(grandTotal);
+}
+
+// 已收合计 = 定金 + 尾款；当已收合计 = 订单总价时自动切换付款状态为「已结清」
+function syncOrderPayment(grandTotal) {
+  const depositEl = document.getElementById('fDeposit'), balanceEl = document.getElementById('fBalance');
+  const payEl = document.getElementById('fPayment');
+  if (!payEl) return;
+  const deposit = parseFloat(depositEl?.value) || 0;
+  const balance = parseFloat(balanceEl?.value) || 0;
+  const received = deposit + balance;
+  const total = (grandTotal === undefined) ? readOrderGrandTotal() : grandTotal;
+  const recEl = document.getElementById('fReceivedTotal'), totEl = document.getElementById('fOrderTotal');
+  if (recEl) recEl.textContent = '¥' + formatNum(received);
+  if (totEl) totEl.textContent = '¥' + formatNum(total);
+  const matched = total > 0 && Math.abs(received - total) < 0.005;
+  if (recEl) recEl.classList.toggle('matched', matched);
+  if (totEl) totEl.classList.toggle('matched', matched);
+  payEl.value = matched ? '已结清' : '定金';
+}
+// 读取当前商品行合计（供单独输入定金/尾款时使用）
+function readOrderGrandTotal() {
+  let t = 0;
+  document.querySelectorAll('#itemsContainer .item-row').forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    t += (parseFloat(inputs[0]?.value) || 0) * (parseFloat(inputs[1]?.value) || 0);
+  });
+  return t;
+}
+function readZaGrandTotal() {
+  let t = 0;
+  document.querySelectorAll('#zaItemsContainer .item-row').forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    t += (parseFloat(inputs[1]?.value) || 0) * (parseFloat(inputs[2]?.value) || 0);
+  });
+  return t;
 }
 
 // 定向进货：勾选后显示批次下拉，按当前品种填充可选批次
@@ -1779,7 +1839,8 @@ function syncDirected(sel) { /* 选中值将在保存时读取，此处占位以
 
 function saveOrder() {
   const orderDate = document.getElementById('fOrderDate').value, customer = document.getElementById('fCustomer').value.trim();
-  const payment = document.getElementById('fPayment').value, deposit = parseFloat(document.getElementById('fDeposit').value) || 0;
+  let payment = document.getElementById('fPayment').value, deposit = parseFloat(document.getElementById('fDeposit').value) || 0;
+  const balance = parseFloat(document.getElementById('fBalance').value) || 0;
   const remark = document.getElementById('fRemark').value.trim();
   if (!orderDate) { alert('请选择下单日期'); return; }
   if (!customer) { alert('请输入客户姓名'); return; }
@@ -1805,7 +1866,11 @@ function saveOrder() {
   if (!valid) { alert('请完整填写每个品种的品名、数量和售价'); return; }
   if (items.length === 0) { alert('请至少添加一个品种'); return; }
 
-  const order = { id: editingOrderId || Date.now(), orderDate, customer, payment, deposit, remark, items };
+  // 保存前按「已收合计 = 订单总价」最终判定付款状态
+  const savedTotal = items.reduce((s, it) => s + it.quantity * it.unitPrice, 0);
+  if (savedTotal > 0 && Math.abs((deposit + balance) - savedTotal) < 0.005) payment = '已结清';
+
+  const order = { id: editingOrderId || Date.now(), orderDate, customer, payment, deposit, balance, remark, items };
   if (editingOrderId) {
     const oldOrder = orders.find(x => x.id === editingOrderId);
     if (oldOrder) {
@@ -1908,7 +1973,11 @@ function deleteOrder(id) {
 }
 function markPaid(id) {
   const o = orders.find(x => x.id === id); if (!o) return;
-  o.payment = '已结清'; o.deposit = 0; saveAll(); renderOrderTable();
+  // 结清时把尾款补足，使「已收合计(=定金+尾款)=订单总价」
+  const total = (o.items || []).reduce((s, it) => s + it.quantity * it.unitPrice, 0);
+  o.payment = '已结清';
+  o.balance = Math.max(0, +(total - (o.deposit || 0)).toFixed(2));
+  saveAll(); renderOrderTable();
 }
 
 // --- 接单表格 ---
@@ -1954,7 +2023,10 @@ function renderOrderTable() {
     const itemCost = getItemCost(item);
     const profit = (item.unitPrice * shipped) - itemCost * shipped;
     const profitClass = profit >= 0 ? 'color:var(--success);' : 'color:var(--danger);';
-    const depositInfo = (o.payment==='定金'&&o.deposit>0) ? `<div style="font-size:9px;color:var(--text-light);">定金 ¥${formatNum(o.deposit)}</div>` : '';
+    const received = (o.deposit || 0) + (o.balance || 0);
+    const orderTotal = (o.items || []).reduce((s, it) => s + it.quantity * it.unitPrice, 0);
+    const depositInfo = (o.payment==='定金' && received > 0)
+      ? `<div style="font-size:9px;color:var(--text-light);">已收 ¥${formatNum(received)}/${formatNum(orderTotal)}</div>` : '';
     return `<tr class="${isNewGroup?'order-group-start':'merged-row'}">
       <td class="za-sticky" style="left:0;width:18px;min-width:18px;max-width:18px;">${rowNum}</td><td class="za-sticky" style="left:18px;width:50px;min-width:50px;max-width:50px;">${isNewGroup?(o.orderDate?fmtMDY(o.orderDate):'-'):''}</td>
       <td class="za-sticky" style="left:68px;width:46px;min-width:46px;max-width:46px;overflow-wrap:break-word;"><span class="order-customer">${isNewGroup?(o.customer||'-'):''}</span></td>
@@ -2568,7 +2640,10 @@ function renderZaTable() {
     if (shipped >= item.quantity) { shipBarClass=''; shipTextClass='done'; shipLabel='已发完'; }
     else if (shipped > 0) { shipBarClass='partial'; shipTextClass='partial'; shipLabel=`${shipped}/${item.quantity}`; }
     const isNewGroup = (o.id !== lastOrderId); lastOrderId = o.id; rowNum++;
-    const depositInfo = (o.payment==='定金'&&o.deposit>0) ? `<div style="font-size:9px;color:var(--text-light);">定金 ¥${formatNum(o.deposit)}</div>` : '';
+    const received = (o.deposit || 0) + (o.balance || 0);
+    const orderTotal = (o.items || []).reduce((s, it) => s + it.quantity * it.unitPrice, 0);
+    const depositInfo = (o.payment==='定金' && received > 0)
+      ? `<div style="font-size:9px;color:var(--text-light);">已收 ¥${formatNum(received)}/${formatNum(orderTotal)}</div>` : '';
     return `<tr class="${isNewGroup?'order-group-start':'merged-row'}">
       <td class="za-sticky" style="left:0;width:18px;min-width:18px;max-width:18px;">${rowNum}</td><td class="za-sticky" style="left:18px;width:50px;min-width:50px;max-width:50px;">${isNewGroup?(o.orderDate?fmtMDY(o.orderDate):'-'):''}</td>
       <td class="za-sticky" style="left:68px;width:46px;min-width:46px;max-width:46px;overflow-wrap:break-word;"><span class="order-customer">${isNewGroup?(o.customer||'-'):''}</span></td>
@@ -2667,12 +2742,14 @@ function openZaModal(id) {
   document.getElementById('zaModalTitle').textContent = id ? '编辑订单' : '新增订单';
   document.getElementById('fZaDate').value = todayStr();
   document.getElementById('fZaCustomer').value = ''; document.getElementById('fZaPayment').value = '定金';
-  document.getElementById('fZaDeposit').value = ''; document.getElementById('fZaRemark').value = '';
+  document.getElementById('fZaDeposit').value = ''; document.getElementById('fZaBalance').value = '';
+  document.getElementById('fZaRemark').value = '';
   document.getElementById('zaItemsContainer').innerHTML = '';
   if (id) {
     const o = zaOrders.find(x => x.id === id); if (!o) return;
     document.getElementById('fZaDate').value = o.orderDate || ''; document.getElementById('fZaCustomer').value = o.customer || '';
     document.getElementById('fZaPayment').value = o.payment || '定金'; document.getElementById('fZaDeposit').value = o.deposit || '';
+    document.getElementById('fZaBalance').value = o.balance || '';
     document.getElementById('fZaRemark').value = o.remark || '';
     o.items.forEach(item => addZaItemRow(item));
   }
@@ -2714,11 +2791,31 @@ function updateZaTotal() {
     row.querySelector('.item-profit').textContent = '¥' + formatNum(profit);
   });
   document.getElementById('zaTotalPreview').textContent = '¥' + formatNum(total);
+  syncZaPayment(total);
+}
+
+// 杂货平台：已收合计 = 定金 + 尾款；等于订单总价时自动「已结清」
+function syncZaPayment(grandTotal) {
+  const depositEl = document.getElementById('fZaDeposit'), balanceEl = document.getElementById('fZaBalance');
+  const payEl = document.getElementById('fZaPayment');
+  if (!payEl) return;
+  const deposit = parseFloat(depositEl?.value) || 0;
+  const balance = parseFloat(balanceEl?.value) || 0;
+  const received = deposit + balance;
+  const total = (grandTotal === undefined) ? readZaGrandTotal() : grandTotal;
+  const recEl = document.getElementById('fZaReceivedTotal'), totEl = document.getElementById('fZaOrderTotal');
+  if (recEl) recEl.textContent = '¥' + formatNum(received);
+  if (totEl) totEl.textContent = '¥' + formatNum(total);
+  const matched = total > 0 && Math.abs(received - total) < 0.005;
+  if (recEl) recEl.classList.toggle('matched', matched);
+  if (totEl) totEl.classList.toggle('matched', matched);
+  payEl.value = matched ? '已结清' : '定金';
 }
 
 function saveZaOrder() {
   const orderDate = document.getElementById('fZaDate').value, customer = document.getElementById('fZaCustomer').value.trim();
-  const payment = document.getElementById('fZaPayment').value, deposit = parseFloat(document.getElementById('fZaDeposit').value) || 0;
+  let payment = document.getElementById('fZaPayment').value, deposit = parseFloat(document.getElementById('fZaDeposit').value) || 0;
+  const balance = parseFloat(document.getElementById('fZaBalance').value) || 0;
   const remark = document.getElementById('fZaRemark').value.trim();
   if (!orderDate) { alert('请选择下单日期'); return; }
   if (!customer) { alert('请输入客户姓名'); return; }
@@ -2735,7 +2832,11 @@ function saveZaOrder() {
   if (!valid) { alert('请完整填写每个商品名、数量和售价'); return; }
   if (items.length === 0) { alert('请至少添加一个商品'); return; }
 
-  const order = { id: editingZaOrderId || Date.now(), orderDate, customer, payment, deposit, remark, items };
+  // 保存前按「已收合计 = 订单总价」最终判定付款状态
+  const savedTotal = items.reduce((s, it) => s + it.quantity * it.unitPrice, 0);
+  if (savedTotal > 0 && Math.abs((deposit + balance) - savedTotal) < 0.005) payment = '已结清';
+
+  const order = { id: editingZaOrderId || Date.now(), orderDate, customer, payment, deposit, balance, remark, items };
   if (editingZaOrderId) {
     const oldOrder = zaOrders.find(x => x.id === editingZaOrderId);
     if (oldOrder) {
@@ -2764,7 +2865,11 @@ function deleteZaOrder(id) {
 
 function markZaPaid(id) {
   const o = zaOrders.find(x => x.id === id); if (!o) return;
-  o.payment = '已结清'; saveAll(); renderZaTable();
+  // 结清时把尾款补足，使「已收合计(=定金+尾款)=订单总价」
+  const total = (o.items || []).reduce((s, it) => s + it.quantity * it.unitPrice, 0);
+  o.payment = '已结清';
+  o.balance = Math.max(0, +(total - (o.deposit || 0)).toFixed(2));
+  saveAll(); renderZaTable();
 }
 
 function openZaShipModal(orderId, itemIndex) {
