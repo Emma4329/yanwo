@@ -247,6 +247,7 @@
   .za-pending-checked td { color: var(--text-light); text-decoration: line-through; }
   .za-pending-checked td:nth-child(3) { color: var(--text-light); }
   /* 库存/账本核对：未核对行字体大且同色，已核对行划线灰字（仿杂货待采购清单） */
+  .verify-unchecked { background: #e8f5e9; }
   .verify-unchecked td { color: var(--text); font-size: 15px; }
   .verify-unchecked td:nth-child(2) { font-weight: 600; }
   .verify-unchecked td input[type="checkbox"] { accent-color: var(--primary); }
@@ -531,10 +532,10 @@
     <div class="page-header">
       <div>
         <h1>📊 库存平台</h1>
-        <div class="sub">实时库存 · 入库/出库追踪 · 自动汇总</div>
+        <div class="sub">实时库存</div>
       </div>
       <div class="header-actions">
-        <button class="btn btn-outline" onclick="openInventoryVerify()">✅ 库存核对</button>
+        <button class="btn btn-outline" onclick="openInventoryVerify()" style="color:#fff;border-color:#fff;">🔎 库存核对</button>
         <button class="btn btn-primary" onclick="openInventoryModal()">➕ 入库记录</button>
       </div>
     </div>
@@ -788,10 +789,10 @@
     <div class="page-header">
       <div>
         <h1>💳 雲的账本</h1>
-        <div class="sub">与雲的进出账 · 雲博订单自动同步</div>
+        <div class="sub">与雲的进出账</div>
       </div>
       <div class="header-actions">
-        <button class="btn btn-outline" onclick="openYunVerify()">✅ 账本核对</button>
+        <button class="btn btn-outline" onclick="openYunVerify()" style="color:#fff;border-color:#fff;">🔎 账本核对</button>
         <button class="btn btn-primary" onclick="openYunModal()">+ 新增记录</button>
       </div>
     </div>
@@ -829,7 +830,7 @@
 
 <!-- ====== 账本核对弹窗 ====== -->
 <div class="modal-overlay" id="yunVerifyModal"><div class="modal" style="max-width:520px;">
-  <div class="modal-header"><h2>✅ 账本核对</h2><button class="modal-close" onclick="closeYunVerify()">✕</button></div>
+  <div class="modal-header"><h2>🔎 账本核对</h2><button class="modal-close" onclick="closeYunVerify()">✕</button></div>
   <div class="modal-body">
     <div class="table-wrapper"><div class="table-scroll">
       <table>
@@ -1038,7 +1039,7 @@
 
 <!-- ====== 库存核对弹窗 ====== -->
 <div class="modal-overlay" id="invVerifyModal"><div class="modal" style="max-width:520px;">
-  <div class="modal-header"><h2>✅ 库存核对</h2><button class="modal-close" onclick="closeInventoryVerify()">✕</button></div>
+  <div class="modal-header"><h2>🔎 库存核对</h2><button class="modal-close" onclick="closeInventoryVerify()">✕</button></div>
   <div class="modal-body">
     <div class="table-wrapper"><div class="table-scroll">
       <table>
@@ -2980,7 +2981,8 @@ function buildInventoryVerifyMap() {
 }
 function openInventoryVerify() {
   const invMap = buildInventoryVerifyMap();
-  const list = Object.values(invMap).filter(v => v.totalIn > 0 || v.totalOut > 0);
+  // 只显示在家库存数量 > 0 的品种（在家库存 = 入库累计 - 出库累计）
+  const list = Object.values(invMap).filter(v => (v.totalIn - v.totalOut) > 0);
   const sortOrder = {};
   ALL_PRODUCT_LIST.forEach((p, i) => { sortOrder[p] = i; });
   list.sort((a, b) => (sortOrder[a.product] ?? 999) - (sortOrder[b.product] ?? 999));
