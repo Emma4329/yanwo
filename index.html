@@ -543,8 +543,8 @@
     </div>
 
     <div class="stats">
-      <div class="stat-card"><div class="label calc-label" onclick="showCalcTip(event,'库存品种数 = 有入库或有出货记录的品种数量')">库存品种数</div><div class="value" id="invStatTypes">0</div></div>
-      <div class="stat-card"><div class="label calc-label" onclick="showCalcTip(event,'燕窝库存两数 = 仅燕窝类品种的在家库存之和')">燕窝库存两数</div><div class="value" id="invStatTotal">0</div></div>
+      <div class="stat-card"><div class="label calc-label" onclick="showCalcTip(event,'在家库存品种数 = 在家库存 > 0 的品种数量')">在家库存品种数</div><div class="value" id="invStatTypes">0</div></div>
+      <div class="stat-card"><div class="label calc-label" onclick="showCalcTip(event,'燕窝库存两数 = 仅燕窝类品种的在家库存之和')">燕窝库存两数</div><div class="value" id="invStatTotal">0 <span class="unit">两</span></div></div>
       <div class="stat-card info"><div class="label">库存总价值(成本)</div><div class="value" id="invStatValue">¥0</div></div>
     </div>
 
@@ -2044,7 +2044,7 @@ function updateOrderStats() {
     if (o.payment === '定金') pendingAmount += (parseFloat(o.deposit)||0) * (o.items.length - 1);
   });
   document.getElementById('statTotal').innerHTML = `${total} <span class="unit">笔</span> / ${formatNum(totalLiang)} <span class="unit">两</span>`;
-  document.getElementById('statItems').innerHTML = `${pendingCustomers.size} / ${pendingQty}`;
+  document.getElementById('statItems').innerHTML = `${pendingCustomers.size} <span class="unit">笔</span> / ${pendingQty} <span class="unit">两</span>`;
   document.getElementById('statPending').textContent = '¥' + formatNum(Math.max(0, pendingAmount));
   // 待收尾款 > 0 时卡片变红
   const pendingCard = document.getElementById('statPendingCard');
@@ -2298,9 +2298,9 @@ function updatePurStats() {
     const totalIn = inRecords.reduce((s, r) => s + (r.qty || 0), 0);
     pendingQty += Math.max(0, item.quantity - totalIn);
   }); });
-  document.getElementById('purStatTotalQty').textContent = totalQty;
+  document.getElementById('purStatTotalQty').innerHTML = `${totalQty} <span class="unit">两</span>`;
   document.getElementById('purStatAmount').textContent = '¥' + formatNum(totalAmount);
-  document.getElementById('purStatPending').textContent = pendingQty;
+  document.getElementById('purStatPending').innerHTML = `${pendingQty} <span class="unit">两</span>`;
 }
 
 function updatePurSupplierFilter() {
@@ -3759,8 +3759,8 @@ function updateInvStats() {
     // 用剩余批次计算实际价值
     (batches[v.product] || []).forEach(b => { if (b.remaining > 0) totalValue += b.remaining * b.price; });
   });
-  document.getElementById('invStatTypes').textContent = list.length;
-  document.getElementById('invStatTotal').textContent = totalStock;
+  document.getElementById('invStatTypes').textContent = list.filter(v => (v.totalIn - v.totalOut) > 0).length;
+  document.getElementById('invStatTotal').innerHTML = `${totalStock} <span class="unit">两</span>`;
   document.getElementById('invStatValue').textContent = '¥' + formatNum(totalValue);
 }
 
