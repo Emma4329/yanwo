@@ -870,6 +870,28 @@
 
 </div><!-- /main -->
 
+<!-- ====== 导入方式选择弹窗 ====== -->
+<div class="modal-overlay" id="importChoiceModal"><div class="modal" style="max-width:430px;">
+  <div class="modal-header"><h2>📥 导入数据</h2><button class="modal-close" onclick="closeImportChoice()">✕</button></div>
+  <div class="modal-body">
+    <div id="importChoiceSummary" style="font-size:12px;line-height:1.7;background:var(--bg);border-radius:6px;padding:8px 10px;margin-bottom:12px;color:var(--text);"></div>
+    <div id="importChoiceInfo" style="font-size:12px;line-height:1.9;color:var(--text-light);">
+      <div style="margin-bottom:10px;">请选择导入方式：</div>
+      <div><b style="color:var(--danger);">覆盖</b>：用备份数据替换现有全部数据（现有数据会被清除）</div>
+      <div><b style="color:var(--primary);">合并</b>：把备份数据追加到现有数据（重复项自动去重，两份共存）</div>
+      <div><b>取消</b>：不导入，保持现状</div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <div></div>
+    <div class="modal-footer-right">
+      <button class="btn btn-danger" onclick="doImport('overwrite')">覆盖</button>
+      <button class="btn btn-secondary" onclick="closeImportChoice()">取消</button>
+      <button class="btn btn-primary" onclick="doImport('merge')">合并</button>
+    </div>
+  </div>
+</div></div>
+
 <!-- ====== 账本核对弹窗 ====== -->
 <div class="modal-overlay" id="yunVerifyModal"><div class="modal" style="max-width:520px;">
   <div class="modal-header"><h2>🔎 账本核对</h2><button class="modal-close" onclick="closeYunVerify()">✕</button></div>
@@ -1394,36 +1416,115 @@ function mergeCompare(cur, imp) {
   const prices = Object.assign({}, out.prices || {}, imp.prices || {});
   return { suppliers, prices };
 }
+let __importData = null;
+
 function importAll(event) {
   const file = event.target.files[0]; if (!file) return;
   const reader = new FileReader();
   reader.onload = function(e) {
     try {
-      const data = JSON.parse(e.target.result);
-      if (Array.isArray(data)) {
-        // 旧格式：只有订单数组，按 id 合并
-        orders = mergeById(orders, data);
-      } else {
-        // 按唯一键合并共存（不会覆盖本地原有数据）
-        orders = mergeById(orders, data.orders);
-        purchases = mergeById(purchases, data.purchases);
-        inventoryLog = mergeById(inventoryLog, data.inventoryLog);
-        zaOrders = mergeById(zaOrders, data.zaOrders);
-        zaPurchases = mergeById(zaPurchases, data.zaPurchases);
-        yunRecords = mergeById(yunRecords, data.yunRecords);
-        invChecks = mergeById(invChecks, data.invChecks);
-        growthRecords = mergeByKey(growthRecords, data.growthRecords, 'date');
-        momentsRecords = mergeByKey(momentsRecords, data.momentsRecords, 'date');
-        reviewRecords = mergeByKey(reviewRecords, data.reviewRecords, 'ts');
-        momentCustom = uniqueStrings(momentCustom, data.momentCustom);
-        compareData = mergeCompare(compareData, data.compareData);
-      }
-      saveAll(); refreshAll();
-      alert('导入成功！已与本地数据合并共存（不会覆盖原有数据）');
-    } catch(err) { alert('导入失败：文件格式不正确'); }
+      __importData = JSON.parse(e.target.result);
+    } catch (err) {
+      __importData = null;
+      alert('导入失败：文件格式不正确');
+      event.target.value = '';
+      return;
+    }
+    openImportChoice();
   };
   reader.readAsText(file);
   event.target.value = '';
+}
+
+function openImportChoice() {
+  const d = __importData;
+  const n = a => Array.isArray(a) ? a.length : 0;
+  let summary = '';
+  if (Array.isArray(d)) {
+    summary = '备份内容：' + d.length + ' 条订单（旧版备份格式）';
+  } else if (d && typeof d === 'object') {
+    summary = '备份内容：订单 ' + n(d.orders) + ' 条 · 采购 ' + n(d.purchases) + ' 条 · 杂货订单 ' + n(d.zaOrders) + ' 条'
+      + '<br>雲账本 ' + n(d.yunRecords) + ' 条 · 库存 ' + n(d.inventoryLog) + ' 条 · 盘点 ' + n(d.invChecks) + ' 条'
+      + '<br>成长 ' + n(d.growthRecords) + ' 天 · 朋友圈 ' + n(d.momentsRecords) + ' 天 · 复查 ' + n(d.reviewRecords) + ' 次';
+  }
+  const sm = document.getElementById('importChoiceSummary');
+  if (sm) sm.innerHTML = summary;
+  const info = document.getElementById('importChoiceInfo');
+  if (info) {
+    info.innerHTML = '<div style="margin-bottom:8px;">请选择导入方式：</div>'
+      + '<div><b style="color:var(--danger);">覆盖</b>：用备份替换现有全部数据，现有数据会被清除</div>'
+      + '<div><b style="color:var(--primary);">合并</b>：把备份追加到现有数据，重复项自动去重，两份共存</div>'
+      + '<div><b>取消</b>：不导入，保持现状</div>';
+  }
+  document.getElementById('importChoiceModal').classList.add('show');
+}
+
+function closeImportChoice() {
+  document.getElementById('importChoiceModal').classList.remove('show');
+  __importData = null;
+}
+
+function doImport(mode) {
+  const data = __importData;
+  if (data === null || data === undefined) { closeImportChoice(); return; }
+  try {
+    if (mode === 'overwrite') {
+      applyOverwrite(data);
+    } else {
+      applyMerge(data);
+    }
+    __importData = null;
+    document.getElementById('importChoiceModal').classList.remove('show');
+    saveAll(); refreshAll();
+    alert(mode === 'overwrite'
+      ? '导入成功：已用备份数据覆盖现有数据'
+      : '导入成功：已与本地数据合并共存（原有数据保留）');
+  } catch (err) {
+    __importData = null;
+    document.getElementById('importChoiceModal').classList.remove('show');
+    alert('导入失败：' + (err && err.message ? err.message : '未知错误'));
+  }
+}
+
+// 合并：按唯一键合并共存（不删除本地原有数据）
+function applyMerge(data) {
+  if (Array.isArray(data)) {
+    orders = mergeById(orders, data);
+    return;
+  }
+  orders = mergeById(orders, data.orders);
+  purchases = mergeById(purchases, data.purchases);
+  inventoryLog = mergeById(inventoryLog, data.inventoryLog);
+  zaOrders = mergeById(zaOrders, data.zaOrders);
+  zaPurchases = mergeById(zaPurchases, data.zaPurchases);
+  yunRecords = mergeById(yunRecords, data.yunRecords);
+  invChecks = mergeById(invChecks, data.invChecks);
+  growthRecords = mergeByKey(growthRecords, data.growthRecords, 'date');
+  momentsRecords = mergeByKey(momentsRecords, data.momentsRecords, 'date');
+  reviewRecords = mergeByKey(reviewRecords, data.reviewRecords, 'ts');
+  momentCustom = uniqueStrings(momentCustom, data.momentCustom);
+  compareData = mergeCompare(compareData, data.compareData);
+}
+
+// 覆盖：完全用备份数据替换现有数据
+function applyOverwrite(data) {
+  if (Array.isArray(data)) {
+    orders = data;
+    return;
+  }
+  const arr = v => Array.isArray(v) ? v : [];
+  orders = arr(data.orders);
+  purchases = arr(data.purchases);
+  inventoryLog = arr(data.inventoryLog);
+  zaOrders = arr(data.zaOrders);
+  zaPurchases = arr(data.zaPurchases);
+  yunRecords = arr(data.yunRecords);
+  invChecks = arr(data.invChecks);
+  growthRecords = arr(data.growthRecords);
+  momentsRecords = arr(data.momentsRecords);
+  reviewRecords = arr(data.reviewRecords);
+  momentCustom = arr(data.momentCustom);
+  if (data.compareData && typeof data.compareData === 'object') compareData = data.compareData;
 }
 
 function saveAll() {
