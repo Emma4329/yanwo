@@ -1345,18 +1345,55 @@ document.querySelectorAll('.nav-item').forEach(item => {
 // ==========================================
 // 通用导入导出
 // ==========================================
+function fileStamp() {
+  const d = new Date(); const p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate());
+}
 function exportAll() {
   const data = { orders, purchases, inventoryLog, compareData, zaOrders, growthRecords, yunRecords, invChecks, momentsRecords, momentCustom, reviewRecords, zaPurchases };
   const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `HP工作台数据_${todayStr()}.json`;
+  a.download = `燕窝杂货数据${fileStamp()}.json`;
   a.click();
   URL.revokeObjectURL(url);
   localStorage.setItem(KEY_BACKUP, todayStr());
 }
 
+function mergeById(cur, imp) {
+  const out = (cur || []).slice();
+  (imp || []).forEach(it => {
+    if (!it || it.id === undefined) { if (it) out.push(it); return; }
+    const idx = out.findIndex(x => x && x.id === it.id);
+    if (idx >= 0) out[idx] = it;   // 同一 id 用导入的较新记录覆盖
+    else out.push(it);
+  });
+  return out;
+}
+function mergeByKey(cur, imp, key) {
+  const out = (cur || []).slice();
+  (imp || []).forEach(it => {
+    if (!it || it[key] === undefined) { if (it) out.push(it); return; }
+    const idx = out.findIndex(x => x && x[key] === it[key]);
+    if (idx >= 0) out[idx] = it;
+    else out.push(it);
+  });
+  return out;
+}
+function uniqueStrings(cur, imp) {
+  const set = new Set(cur || []);
+  (imp || []).forEach(s => set.add(s));
+  return Array.from(set);
+}
+function mergeCompare(cur, imp) {
+  if (!imp || typeof imp !== 'object') return (cur || { suppliers: [], prices: {} });
+  const out = (cur && typeof cur === 'object') ? cur : { suppliers: [], prices: {} };
+  const suppliers = (out.suppliers || []).slice();
+  (imp.suppliers || []).forEach(s => { if (suppliers.indexOf(s) < 0) suppliers.push(s); });
+  const prices = Object.assign({}, out.prices || {}, imp.prices || {});
+  return { suppliers, prices };
+}
 function importAll(event) {
   const file = event.target.files[0]; if (!file) return;
   const reader = new FileReader();
@@ -1364,38 +1401,25 @@ function importAll(event) {
     try {
       const data = JSON.parse(e.target.result);
       if (Array.isArray(data)) {
-        // 旧格式：只有订单数组
-        if (confirm('检测到旧版备份，仅导入订单数据？\n（点击取消则放弃导入）')) {
-          orders = data; saveAll(); refreshAll();
-        }
+        // 旧格式：只有订单数组，按 id 合并
+        orders = mergeById(orders, data);
       } else {
-        if (confirm('即将导入全部数据，是否覆盖现有数据？\n（点击取消则追加到现有数据）')) {
-          orders = data.orders || []; purchases = data.purchases || [];
-          inventoryLog = data.inventoryLog || [];
-          if (data.compareData) compareData = data.compareData;
-          if (data.zaOrders) zaOrders = data.zaOrders;
-          if (data.growthRecords) growthRecords = data.growthRecords;
-          if (data.yunRecords) yunRecords = data.yunRecords;
-          if (data.invChecks) invChecks = data.invChecks;
-          if (data.momentsRecords) momentsRecords = data.momentsRecords;
-          if (data.momentCustom) momentCustom = data.momentCustom;
-          if (data.reviewRecords) reviewRecords = data.reviewRecords;
-          if (data.zaPurchases) zaPurchases = data.zaPurchases;
-        } else {
-          orders = orders.concat(data.orders || []); purchases = purchases.concat(data.purchases || []);
-          inventoryLog = inventoryLog.concat(data.inventoryLog || []);
-          if (data.zaOrders) zaOrders = zaOrders.concat(data.zaOrders || []);
-          if (data.growthRecords) growthRecords = growthRecords.concat(data.growthRecords || []);
-          if (data.yunRecords) yunRecords = yunRecords.concat(data.yunRecords || []);
-          if (data.invChecks) invChecks = invChecks.concat(data.invChecks || []);
-          if (data.momentsRecords) momentsRecords = momentsRecords.concat(data.momentsRecords || []);
-          if (data.momentCustom) momentCustom = momentCustom.concat(data.momentCustom || []);
-          if (data.reviewRecords) reviewRecords = reviewRecords.concat(data.reviewRecords || []);
-          if (data.zaPurchases) zaPurchases = zaPurchases.concat(data.zaPurchases || []);
-        }
-        saveAll(); refreshAll();
+        // 按唯一键合并共存（不会覆盖本地原有数据）
+        orders = mergeById(orders, data.orders);
+        purchases = mergeById(purchases, data.purchases);
+        inventoryLog = mergeById(inventoryLog, data.inventoryLog);
+        zaOrders = mergeById(zaOrders, data.zaOrders);
+        zaPurchases = mergeById(zaPurchases, data.zaPurchases);
+        yunRecords = mergeById(yunRecords, data.yunRecords);
+        invChecks = mergeById(invChecks, data.invChecks);
+        growthRecords = mergeByKey(growthRecords, data.growthRecords, 'date');
+        momentsRecords = mergeByKey(momentsRecords, data.momentsRecords, 'date');
+        reviewRecords = mergeByKey(reviewRecords, data.reviewRecords, 'ts');
+        momentCustom = uniqueStrings(momentCustom, data.momentCustom);
+        compareData = mergeCompare(compareData, data.compareData);
       }
-      alert('导入成功！');
+      saveAll(); refreshAll();
+      alert('导入成功！已与本地数据合并共存（不会覆盖原有数据）');
     } catch(err) { alert('导入失败：文件格式不正确'); }
   };
   reader.readAsText(file);
