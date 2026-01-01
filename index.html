@@ -253,6 +253,8 @@
   .verify-unchecked td input[type="checkbox"] { accent-color: var(--primary); }
   .verify-checked td { color: var(--text-light); text-decoration: line-through; }
   .verify-checked td:nth-child(2) { color: var(--text-light); }
+  /* 库存核对弹窗标题右侧的合计盒数 */
+  .verify-total { margin-left: auto; margin-right: 10px; font-size: 13px; font-weight: 700; color: var(--primary); white-space: nowrap; }
 
   .ship-progress { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10px; }
   .ship-progress .bar-bg { width: 36px; height: 4px; background: #EEE; border-radius: 2px; overflow: hidden; }
@@ -1039,11 +1041,11 @@
 
 <!-- ====== 库存核对弹窗 ====== -->
 <div class="modal-overlay" id="invVerifyModal"><div class="modal" style="max-width:520px;">
-  <div class="modal-header"><h2>🔎 库存核对</h2><button class="modal-close" onclick="closeInventoryVerify()">✕</button></div>
+  <div class="modal-header"><h2>🔎 库存核对</h2><span id="invVerifyTotal" class="verify-total"></span><button class="modal-close" onclick="closeInventoryVerify()">✕</button></div>
   <div class="modal-body">
     <div class="table-wrapper"><div class="table-scroll">
       <table>
-        <thead><tr><th style="width:32px;">#</th><th>品种名</th><th>在家库存数量</th><th style="width:60px;">待核对</th></tr></thead>
+        <thead><tr><th style="width:32px;">#</th><th>品种名</th><th>在家库存盒数</th><th style="width:60px;">待核对</th></tr></thead>
         <tbody id="invVerifyBody"></tbody>
       </table>
     </div></div>
@@ -2988,6 +2990,11 @@ function openInventoryVerify() {
   list.sort((a, b) => (sortOrder[a.product] ?? 999) - (sortOrder[b.product] ?? 999));
   const checkedMarks = getInventoryVerifyMarks();
   const tbody = document.getElementById('invVerifyBody');
+  // 盒数 = 在家库存数量 / 2
+  const toBoxes = n => Number.isInteger(n) ? String(n) : String(parseFloat(n.toFixed(2)));
+  const totalBoxes = toBoxes(list.reduce((s, v) => s + (v.totalIn - v.totalOut), 0) / 2);
+  const totalEl = document.getElementById('invVerifyTotal');
+  if (totalEl) totalEl.textContent = list.length ? ('一共 ' + totalBoxes + ' 盒') : '';
   if (!list.length) {
     tbody.innerHTML = '<tr><td colspan="4"><div class="empty-row"><div class="icon">📊</div><div>暂无库存数据</div></div></td></tr>';
   } else {
@@ -3001,7 +3008,7 @@ function openInventoryVerify() {
       return `<tr id="${id}" class="${rowClass}">
         <td style="text-align:center;">${i+1}</td>
         <td id="${id}_name">${name}</td>
-        <td style="text-align:center;">${current}</td>
+        <td style="text-align:center;">${toBoxes(current / 2)}</td>
         <td style="text-align:center;"><input type="checkbox" onchange="toggleInventoryVerify(this, '${name.replace(/'/g, "\\'")}', '${id}')"${chkAttr} style="width:16px;height:16px;cursor:pointer;"></td>
       </tr>`;
     }).join('');
