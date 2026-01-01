@@ -176,13 +176,29 @@
   #page-orders .table-scroll thead th,
   #page-za .table-scroll thead th,
   #page-purchase .table-scroll thead th { background: var(--bg); }
-  /* 同行(比价)平台：固定列宽，所有列统一为 2 个字宽 */
+  /* 同行(比价)平台：固定列宽，所有列统一为 3 个字宽 */
   #page-compare table { table-layout: fixed; width: auto; }
   #page-compare table th, #page-compare table td {
-    width: 2.2em; min-width: 2.2em; max-width: 2.2em;
+    width: 3em; min-width: 3em; max-width: 3em;
     padding: 5px 1px; overflow: hidden;
   }
   #page-compare table th textarea { font-size: 10px; line-height: 1.2; }
+  /* 品种列冻结：横向滚动时始终固定在左侧，不被其他列遮挡 */
+  #page-compare table th.cmp-pin, #page-compare table td.cmp-pin {
+    position: sticky; left: 0;
+    background: var(--card);
+    box-shadow: 2px 0 3px -2px rgba(0,0,0,0.25);
+  }
+  #page-compare table th.cmp-pin { background: var(--bg); z-index: 6; }
+  #page-compare table td.cmp-pin { z-index: 4; }
+  #page-compare tbody tr:hover td.cmp-pin { background: #FDF9F3; }
+  /* 供应商列排序控件（◀▶ 左右移动列，鼠标可拖拽换位） */
+  #page-compare table th.cmp-sup-col { cursor: grab; }
+  #page-compare table th.cmp-sup-col:active { cursor: grabbing; }
+  .cmp-sup-ctrl { display: flex; justify-content: center; gap: 1px; margin-top: 2px; }
+  .cmp-sup-ctrl button { font-size: 9px; line-height: 1; padding: 1px 2px; border: none; background: rgba(0,0,0,0.06); border-radius: 3px; cursor: pointer; color: var(--text-light); }
+  .cmp-sup-ctrl button:hover { background: var(--primary); color: #fff; }
+  .cmp-sup-del { position: absolute; top: 1px; right: 1px; background: none; border: none; cursor: pointer; font-size: 9px; color: var(--danger); }
   #compareDiffModal .table-scroll thead { position: sticky; top: 0; z-index: 5; background: var(--bg); }
   .inv-check-scroll { max-height: 260px; overflow-y: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); }
   .inv-check-scroll table { width: 100%; border-collapse: collapse; }
@@ -230,6 +246,15 @@
   .za-pending-checked { background: transparent; }
   .za-pending-checked td { color: var(--text-light); text-decoration: line-through; }
   .za-pending-checked td:nth-child(3) { color: var(--text-light); }
+  /* 库存/账本核对：未核对行字体大且同色，已核对行划线灰字（仿杂货待采购清单） */
+  .verify-unchecked { background: #e8f5e9; }
+  .verify-unchecked td { color: var(--text); font-size: 15px; }
+  .verify-unchecked td:nth-child(2) { font-weight: 600; }
+  .verify-unchecked td input[type="checkbox"] { accent-color: var(--primary); }
+  .verify-checked td { color: var(--text-light); text-decoration: line-through; }
+  .verify-checked td:nth-child(2) { color: var(--text-light); }
+  /* 库存核对弹窗标题右侧的合计盒数 */
+  .verify-total { margin-left: auto; margin-right: 10px; font-size: 13px; font-weight: 700; color: var(--primary); white-space: nowrap; }
 
   .ship-progress { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10px; }
   .ship-progress .bar-bg { width: 36px; height: 4px; background: #EEE; border-radius: 2px; overflow: hidden; }
@@ -298,6 +323,18 @@
   .form-group.w100 { width: 100px; } .form-group.w120 { width: 120px; }
   .form-group.w140 { width: 140px; } .form-group.w160 { width: 160px; }
   .form-group.flex1 { flex: 1; min-width: 100px; }
+  /* 尾款 / 已收合计 / 订单总价：强制同一行三列平分 */
+  .form-row.nowrap-row { flex-wrap: nowrap; }
+  .form-row.nowrap-row .form-group.third { flex: 1 1 0; width: auto; min-width: 0; }
+  .form-group.third input, .form-group.third .calc-readout { width: 100%; box-sizing: border-box; }
+  /* 只读计算展示（已收合计 / 订单总价） */
+  .calc-readout {
+    padding: 8px 9px; border: 1px dashed var(--border); border-radius: 6px;
+    font-size: 12px; font-weight: 700; color: var(--primary);
+    background: var(--bg); min-height: 33px; display: flex; align-items: center;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .calc-readout.matched { color: var(--success); border-color: var(--success); border-style: solid; }
 
   .items-section { background: var(--bg); border-radius: 8px; padding: 14px; margin-top: 10px; }
   .items-section h3 { font-size: 13px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
@@ -410,12 +447,12 @@
 
     <div style="margin-bottom:10px;">
       <div class="stats" style="margin-bottom:8px;">
-        <div class="stat-card info"><div class="label calc-label" onclick="showCalcTip(event,'待发客 = 有未发货订单的客户数\n待发数 = 下单数 - 已发数')">待发客 / 待发数</div><div class="value" id="statItems">0 / 0</div></div>
+        <div class="stat-card info"><div class="label calc-label" onclick="showCalcTip(event,'待发客 = 有未发货订单的客户数\n待发两 = 下单数 - 已发数')">待发客 / 待发两</div><div class="value" id="statItems">0 / 0</div></div>
         <div class="stat-card" id="statPendingCard"><div class="label">待收尾款</div><div class="value" id="statPending">¥0</div></div>
         <div class="stat-card info"><div class="label calc-label" onclick="showCalcTip(event,'预估利润/月 = 当月（与预估总利润/年同口径）\nΣ((售价 - 库存均价) × 下单数 - 运费)，库存均价>0才计')">预估利润/月</div><div class="value" id="statEstProfitMonth">¥0</div></div>
       </div>
       <div class="stats">
-        <div class="stat-card"><div class="label">订单总数/年</div><div class="value" id="statTotal">0 <span class="unit">单</span></div></div>
+        <div class="stat-card"><div class="label">年订单总笔/总两数</div><div class="value" id="statTotal">0 <span class="unit">笔</span> / 0 <span class="unit">两</span></div></div>
         <div class="stat-card"><div class="label">订单总金额/年</div><div class="value" id="statTotalAmount">¥0</div></div>
         <div class="stat-card warning"><div class="label calc-label" onclick="showCalcTip(event,'预估总利润 = Σ((售价 - 库存均价) × 下单数 - 运费)\n仅限当年')">预估总利润/年</div><div class="value" id="statEstProfit">¥0</div></div>
       </div>
@@ -469,9 +506,9 @@
     </div>
 
     <div class="stats">
-      <div class="stat-card info"><div class="label">进货下单总数量</div><div class="value" id="purStatTotalQty">0</div></div>
+      <div class="stat-card info"><div class="label">进货下单总两数</div><div class="value" id="purStatTotalQty">0</div></div>
       <div class="stat-card warning"><div class="label">进货总金额</div><div class="value" id="purStatAmount">¥0</div></div>
-      <div class="stat-card" style="border-left-color:var(--danger);"><div class="label calc-label" onclick="showCalcTip(event,'待入库 = 下单数 - 已入库数')">待入库数量</div><div class="value" id="purStatPending">0</div></div>
+      <div class="stat-card" style="border-left-color:var(--danger);"><div class="label calc-label" onclick="showCalcTip(event,'待入库 = 下单数 - 已入库数')">待入库两数</div><div class="value" id="purStatPending">0</div></div>
     </div>
 
     <div class="toolbar">
@@ -509,22 +546,26 @@
     <div class="page-header">
       <div>
         <h1>📊 库存平台</h1>
-        <div class="sub">实时库存 · 入库/出库追踪 · 自动汇总</div>
+        <div class="sub">实时库存</div>
       </div>
       <div class="header-actions">
+        <button class="btn btn-outline" onclick="openInventoryVerify()" style="color:#fff;border-color:#fff;">🔎 库存核对</button>
         <button class="btn btn-primary" onclick="openInventoryModal()">➕ 入库记录</button>
       </div>
     </div>
 
     <div class="stats">
-      <div class="stat-card"><div class="label calc-label" onclick="showCalcTip(event,'库存品种数 = 有入库或有出货记录的品种数量')">库存品种数</div><div class="value" id="invStatTypes">0</div></div>
-      <div class="stat-card"><div class="label calc-label" onclick="showCalcTip(event,'燕窝库存两数 = 仅燕窝类品种的在家库存之和')">燕窝库存两数</div><div class="value" id="invStatTotal">0</div></div>
+      <div class="stat-card"><div class="label calc-label" onclick="showCalcTip(event,'在家库存品种数 = 在家库存 > 0 的品种数量')">在家库存品种数</div><div class="value" id="invStatTypes">0</div></div>
+      <div class="stat-card"><div class="label calc-label" onclick="showCalcTip(event,'燕窝库存两数 = 仅燕窝类品种的在家库存之和')">燕窝库存两数</div><div class="value" id="invStatTotal">0 <span class="unit">两</span></div></div>
       <div class="stat-card info"><div class="label">库存总价值(成本)</div><div class="value" id="invStatValue">¥0</div></div>
     </div>
 
     <div class="filter-bar">
       <div class="filter-item">
         <span>品种：</span><select id="invFilterProduct" onchange="renderInventoryTable()"><option value="">全部</option></select>
+      </div>
+      <div class="filter-item">
+        <span>库存状态：</span><select id="invFilterStatus" onchange="renderInventoryTable()"><option value="正常" selected>正常</option><option value="缺货">缺货</option><option value="">全部</option></select>
       </div>
     </div>
 
@@ -704,6 +745,7 @@
         <button class="btn btn-outline btn-sm" onclick="changeGrowthMonth(-1)">◀ 上月</button>
         <span id="growthMonthLabel" style="font-size:14px;font-weight:600;min-width:100px;text-align:center;"></span>
         <button class="btn btn-outline btn-sm" onclick="changeGrowthMonth(1)">下月 ▶</button>
+        <span id="growthMonthSellLiang" style="font-size:16px;font-weight:700;color:var(--primary);white-space:nowrap;background:#e8f5e9;padding:5px 12px;border-radius:6px;"></span>
       </div>
       <div class="stats" style="margin-bottom:14px;">
         <div class="stat-card success"><div class="label calc-label" onclick="showCalcTip(event,'本月燕窝利润 = 本月燕窝接单平台中下单的利润合计')">本月燕窝利润</div><div class="value" id="growthMonthSellProfit">¥0</div></div>
@@ -765,9 +807,10 @@
     <div class="page-header">
       <div>
         <h1>💳 雲的账本</h1>
-        <div class="sub">与雲的进出账 · 雲博订单自动同步</div>
+        <div class="sub">与雲的进出账</div>
       </div>
       <div class="header-actions">
+        <button class="btn btn-outline" onclick="openYunVerify()" style="color:#fff;border-color:#fff;">🔎 账本核对</button>
         <button class="btn btn-primary" onclick="openYunModal()">+ 新增记录</button>
       </div>
     </div>
@@ -803,6 +846,20 @@
 
 </div><!-- /main -->
 
+<!-- ====== 账本核对弹窗 ====== -->
+<div class="modal-overlay" id="yunVerifyModal"><div class="modal" style="max-width:520px;">
+  <div class="modal-header"><h2>🔎 账本核对</h2><button class="modal-close" onclick="closeYunVerify()">✕</button></div>
+  <div class="modal-body">
+    <div class="table-wrapper"><div class="table-scroll">
+      <table>
+        <thead><tr><th style="width:32px;">#</th><th>类型</th><th style="width:60px;">待核对</th></tr></thead>
+        <tbody id="yunVerifyBody"></tbody>
+      </table>
+    </div></div>
+  </div>
+  <div class="modal-footer"><div></div><div class="modal-footer-right"><button class="btn btn-secondary" onclick="closeYunVerify()">关闭</button></div></div>
+</div></div>
+
 <!-- ====== 云账本弹窗 ====== -->
 <div class="modal-overlay" id="yunModal"><div class="modal">
   <div class="modal-header"><h2 id="yunModalTitle">新增记录</h2><button class="modal-close" onclick="closeYunModal()">✕</button></div>
@@ -837,7 +894,12 @@
       <div class="form-group w140"><label>下单日期 <span class="required">*</span></label><input type="date" id="fZaDate"></div>
       <div class="form-group w160" style="position:relative;"><label>客户姓名 <span class="required">*</span></label><input type="text" id="fZaCustomer" placeholder="输入姓名自动提示" autocomplete="off" oninput="suggestZaCustomer()" onfocus="suggestZaCustomer()" onblur="setTimeout(()=>hideZaSuggestion(),200)"><div id="zaCustomerSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:0 0 6px 6px;max-height:160px;overflow-y:auto;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div></div>
       <div class="form-group w140"><label>付款状态 <span class="required">*</span></label><select id="fZaPayment"><option value="定金">定金</option><option value="已结清">已结清</option></select></div>
-      <div class="form-group w140"><label>定金金额(元)</label><input type="number" id="fZaDeposit" min="0" step="0.01" placeholder="定金状态填写"></div>
+      <div class="form-group w140"><label>定金金额(元)</label><input type="number" id="fZaDeposit" min="0" step="0.01" placeholder="定金状态填写" oninput="syncZaPayment()"></div>
+    </div>
+    <div class="form-row nowrap-row">
+      <div class="form-group third"><label>尾款(元)</label><input type="number" id="fZaBalance" min="0" step="0.01" placeholder="尾款填写" oninput="updateZaTotal()"></div>
+      <div class="form-group third"><label>已收合计</label><div class="calc-readout" id="fZaReceivedTotal">¥0.00</div></div>
+      <div class="form-group third"><label>订单总价</label><div class="calc-readout" id="fZaOrderTotal">¥0.00</div></div>
     </div>
     <div class="form-row"><div class="form-group flex1"><label>备注</label><input type="text" id="fZaRemark" placeholder="订单备注..."></div></div>
     <div class="items-section">
@@ -890,7 +952,12 @@
         <div id="customerSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:0 0 6px 6px;max-height:160px;overflow-y:auto;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>
       </div>
       <div class="form-group w140"><label>付款状态 <span class="required">*</span></label><select id="fPayment"><option value="定金">定金</option><option value="已结清">已结清</option></select></div>
-      <div class="form-group w140"><label>定金金额(元)</label><input type="number" id="fDeposit" min="0" step="0.01" placeholder="定金状态填写"></div>
+      <div class="form-group w140"><label>定金金额(元)</label><input type="number" id="fDeposit" min="0" step="0.01" placeholder="定金状态填写" oninput="syncOrderPayment()"></div>
+    </div>
+    <div class="form-row nowrap-row">
+      <div class="form-group third"><label>尾款(元)</label><input type="number" id="fBalance" min="0" step="0.01" placeholder="尾款填写" oninput="updateOrderTotal()"></div>
+      <div class="form-group third"><label>已收合计</label><div class="calc-readout" id="fReceivedTotal">¥0.00</div></div>
+      <div class="form-group third"><label>订单总价</label><div class="calc-readout" id="fOrderTotal">¥0.00</div></div>
     </div>
     <div class="form-row"><div class="form-group flex1"><label>备注</label><input type="text" id="fRemark" placeholder="订单备注..."></div></div>
     <div class="items-section">
@@ -996,6 +1063,20 @@
     <div class="form-row"><div class="form-group flex1"><label>备注</label><input type="text" id="fInvRemark" placeholder="来源/批次..."></div></div>
   </div>
   <div class="modal-footer"><div></div><div class="modal-footer-right"><button class="btn btn-secondary" onclick="closeInventoryModal()">取消</button><button class="btn btn-primary" onclick="saveInventory()">💾 确认入库</button></div></div>
+</div></div>
+
+<!-- ====== 库存核对弹窗 ====== -->
+<div class="modal-overlay" id="invVerifyModal"><div class="modal" style="max-width:520px;">
+  <div class="modal-header"><h2>🔎 库存核对</h2><span id="invVerifyTotal" class="verify-total"></span><button class="modal-close" onclick="closeInventoryVerify()">✕</button></div>
+  <div class="modal-body">
+    <div class="table-wrapper"><div class="table-scroll">
+      <table>
+        <thead><tr><th style="width:32px;">#</th><th>品种名</th><th>在家库存（盒数）</th><th style="width:60px;">待核对</th></tr></thead>
+        <tbody id="invVerifyBody"></tbody>
+      </table>
+    </div></div>
+  </div>
+  <div class="modal-footer"><div></div><div class="modal-footer-right"><button class="btn btn-secondary" onclick="closeInventoryVerify()">关闭</button></div></div>
 </div></div>
 
 <!-- ====== 比价弹窗 ====== -->
@@ -1435,12 +1516,14 @@ function openOrderModal(id) {
   document.getElementById('orderModalTitle').textContent = id ? '编辑订单' : '新增订单';
   document.getElementById('fOrderDate').value = todayStr();
   document.getElementById('fCustomer').value = ''; document.getElementById('fPayment').value = '定金';
-  document.getElementById('fDeposit').value = ''; document.getElementById('fRemark').value = '';
+  document.getElementById('fDeposit').value = ''; document.getElementById('fBalance').value = '';
+  document.getElementById('fRemark').value = '';
   document.getElementById('itemsContainer').innerHTML = '';
   if (id) {
     const o = orders.find(x => x.id === id); if (!o) return;
     document.getElementById('fOrderDate').value = o.orderDate || ''; document.getElementById('fCustomer').value = o.customer || '';
     document.getElementById('fPayment').value = o.payment || '定金'; document.getElementById('fDeposit').value = o.deposit || '';
+    document.getElementById('fBalance').value = o.balance || '';
     document.getElementById('fRemark').value = o.remark || '';
     o.items.forEach(item => addItemRow(item));
   }
@@ -1692,6 +1775,42 @@ function updateOrderTotal() {
     grandTotal += sub;
   });
   document.getElementById('orderTotalPreview').textContent = '¥' + formatNum(grandTotal);
+  syncOrderPayment(grandTotal);
+}
+
+// 已收合计 = 定金 + 尾款；当已收合计 = 订单总价时自动切换付款状态为「已结清」
+function syncOrderPayment(grandTotal) {
+  const depositEl = document.getElementById('fDeposit'), balanceEl = document.getElementById('fBalance');
+  const payEl = document.getElementById('fPayment');
+  if (!payEl) return;
+  const deposit = parseFloat(depositEl?.value) || 0;
+  const balance = parseFloat(balanceEl?.value) || 0;
+  const received = deposit + balance;
+  const total = (grandTotal === undefined) ? readOrderGrandTotal() : grandTotal;
+  const recEl = document.getElementById('fReceivedTotal'), totEl = document.getElementById('fOrderTotal');
+  if (recEl) recEl.textContent = '¥' + formatNum(received);
+  if (totEl) totEl.textContent = '¥' + formatNum(total);
+  const matched = total > 0 && Math.abs(received - total) < 0.005;
+  if (recEl) recEl.classList.toggle('matched', matched);
+  if (totEl) totEl.classList.toggle('matched', matched);
+  payEl.value = matched ? '已结清' : '定金';
+}
+// 读取当前商品行合计（供单独输入定金/尾款时使用）
+function readOrderGrandTotal() {
+  let t = 0;
+  document.querySelectorAll('#itemsContainer .item-row').forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    t += (parseFloat(inputs[0]?.value) || 0) * (parseFloat(inputs[1]?.value) || 0);
+  });
+  return t;
+}
+function readZaGrandTotal() {
+  let t = 0;
+  document.querySelectorAll('#zaItemsContainer .item-row').forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    t += (parseFloat(inputs[1]?.value) || 0) * (parseFloat(inputs[2]?.value) || 0);
+  });
+  return t;
 }
 
 // 定向进货：勾选后显示批次下拉，按当前品种填充可选批次
@@ -1720,7 +1839,8 @@ function syncDirected(sel) { /* 选中值将在保存时读取，此处占位以
 
 function saveOrder() {
   const orderDate = document.getElementById('fOrderDate').value, customer = document.getElementById('fCustomer').value.trim();
-  const payment = document.getElementById('fPayment').value, deposit = parseFloat(document.getElementById('fDeposit').value) || 0;
+  let payment = document.getElementById('fPayment').value, deposit = parseFloat(document.getElementById('fDeposit').value) || 0;
+  const balance = parseFloat(document.getElementById('fBalance').value) || 0;
   const remark = document.getElementById('fRemark').value.trim();
   if (!orderDate) { alert('请选择下单日期'); return; }
   if (!customer) { alert('请输入客户姓名'); return; }
@@ -1746,7 +1866,11 @@ function saveOrder() {
   if (!valid) { alert('请完整填写每个品种的品名、数量和售价'); return; }
   if (items.length === 0) { alert('请至少添加一个品种'); return; }
 
-  const order = { id: editingOrderId || Date.now(), orderDate, customer, payment, deposit, remark, items };
+  // 保存前按「已收合计 = 订单总价」最终判定付款状态
+  const savedTotal = items.reduce((s, it) => s + it.quantity * it.unitPrice, 0);
+  if (savedTotal > 0 && Math.abs((deposit + balance) - savedTotal) < 0.005) payment = '已结清';
+
+  const order = { id: editingOrderId || Date.now(), orderDate, customer, payment, deposit, balance, remark, items };
   if (editingOrderId) {
     const oldOrder = orders.find(x => x.id === editingOrderId);
     if (oldOrder) {
@@ -1849,7 +1973,11 @@ function deleteOrder(id) {
 }
 function markPaid(id) {
   const o = orders.find(x => x.id === id); if (!o) return;
-  o.payment = '已结清'; o.deposit = 0; saveAll(); renderOrderTable();
+  // 结清时把尾款补足，使「已收合计(=定金+尾款)=订单总价」
+  const total = (o.items || []).reduce((s, it) => s + it.quantity * it.unitPrice, 0);
+  o.payment = '已结清';
+  o.balance = Math.max(0, +(total - (o.deposit || 0)).toFixed(2));
+  saveAll(); renderOrderTable();
 }
 
 // --- 接单表格 ---
@@ -1895,7 +2023,10 @@ function renderOrderTable() {
     const itemCost = getItemCost(item);
     const profit = (item.unitPrice * shipped) - itemCost * shipped;
     const profitClass = profit >= 0 ? 'color:var(--success);' : 'color:var(--danger);';
-    const depositInfo = (o.payment==='定金'&&o.deposit>0) ? `<div style="font-size:9px;color:var(--text-light);">定金 ¥${formatNum(o.deposit)}</div>` : '';
+    const received = (o.deposit || 0) + (o.balance || 0);
+    const orderTotal = (o.items || []).reduce((s, it) => s + it.quantity * it.unitPrice, 0);
+    const depositInfo = (o.payment==='定金' && received > 0)
+      ? `<div style="font-size:9px;color:var(--text-light);">已收 ¥${formatNum(received)}/${formatNum(orderTotal)}</div>` : '';
     return `<tr class="${isNewGroup?'order-group-start':'merged-row'}">
       <td class="za-sticky" style="left:0;width:18px;min-width:18px;max-width:18px;">${rowNum}</td><td class="za-sticky" style="left:18px;width:50px;min-width:50px;max-width:50px;">${isNewGroup?(o.orderDate?fmtMDY(o.orderDate):'-'):''}</td>
       <td class="za-sticky" style="left:68px;width:46px;min-width:46px;max-width:46px;overflow-wrap:break-word;"><span class="order-customer">${isNewGroup?(o.customer||'-'):''}</span></td>
@@ -1953,10 +2084,19 @@ function updateYearFilter() {
   if (isFirst) sel.removeAttribute('data-first');
 }
 
+// 需排除的客户：这类订单不参与「年订单总笔/总两数」「订单总金额/年」「本月下单数」等统计
+function isExcludedCustomer(name) {
+  const n = (name || '').trim();
+  return n.indexOf('胡雲博') >= 0 || n.indexOf('自己') >= 0;
+}
+
 function updateOrderStats() {
   const filterYear = document.getElementById('filterYear').value;
   const statsOrders = filterYear ? orders.filter(o => (o.orderDate||'').substring(0,4) === filterYear) : orders;
-  const total = statsOrders.length;
+  const validOrders = statsOrders.filter(o => !isExcludedCustomer(o.customer));
+  const total = validOrders.length;
+  let totalLiang = 0;
+  validOrders.forEach(o => o.items.forEach(item => { totalLiang += (item.quantity || 0); }));
   let pendingCustomers = new Set(), pendingQty = 0, pendingAmount = 0, totalAmount = 0, estProfit = 0;
   statsOrders.forEach(o => {
     let orderHasPending = false;
@@ -1964,7 +2104,7 @@ function updateOrderStats() {
       const shipped = item.shipped || 0;
       const remain = item.quantity - shipped;
       if (remain > 0) { orderHasPending = true; pendingQty += remain; }
-      const sub = item.quantity * item.unitPrice; totalAmount += sub;
+      const sub = item.quantity * item.unitPrice; if (!isExcludedCustomer(o.customer)) totalAmount += sub;
       // 预估利润：定向进货用之，否则库存均价 - 运费
       const itemCost = getItemCost(item);
       if (itemCost > 0) {
@@ -1975,8 +2115,8 @@ function updateOrderStats() {
     if (orderHasPending) pendingCustomers.add(o.customer);
     if (o.payment === '定金') pendingAmount += (parseFloat(o.deposit)||0) * (o.items.length - 1);
   });
-  document.getElementById('statTotal').innerHTML = `${total} <span class="unit">单</span>`;
-  document.getElementById('statItems').innerHTML = `${pendingCustomers.size} / ${pendingQty}`;
+  document.getElementById('statTotal').innerHTML = `${total} <span class="unit">笔</span> / ${formatNum(totalLiang)} <span class="unit">两</span>`;
+  document.getElementById('statItems').innerHTML = `${pendingCustomers.size} <span class="unit">笔</span> / ${pendingQty} <span class="unit">两</span>`;
   document.getElementById('statPending').textContent = '¥' + formatNum(Math.max(0, pendingAmount));
   // 待收尾款 > 0 时卡片变红
   const pendingCard = document.getElementById('statPendingCard');
@@ -2230,9 +2370,9 @@ function updatePurStats() {
     const totalIn = inRecords.reduce((s, r) => s + (r.qty || 0), 0);
     pendingQty += Math.max(0, item.quantity - totalIn);
   }); });
-  document.getElementById('purStatTotalQty').textContent = totalQty;
+  document.getElementById('purStatTotalQty').innerHTML = `${totalQty} <span class="unit">两</span>`;
   document.getElementById('purStatAmount').textContent = '¥' + formatNum(totalAmount);
-  document.getElementById('purStatPending').textContent = pendingQty;
+  document.getElementById('purStatPending').innerHTML = `${pendingQty} <span class="unit">两</span>`;
 }
 
 function updatePurSupplierFilter() {
@@ -2289,10 +2429,14 @@ function renderCompareTable() {
 
   // 渲染表头
   thead.innerHTML = `<tr>
-    <th>#</th><th style="white-space:normal;word-break:break-word;text-align:center;">品种</th>
-    ${suppliers.map((s,i) => `<th style="position:relative;padding:5px 1px;white-space:normal;word-break:break-word;">
+    <th>#</th><th class="cmp-pin" style="white-space:normal;word-break:break-word;text-align:center;">品种</th>
+    ${suppliers.map((s,i) => `<th class="cmp-sup-col" draggable="true" ondragstart="dragCompareSupplier(event,${i})" ondragover="event.preventDefault()" ondrop="dropCompareSupplier(event,${i})" style="position:relative;padding:5px 1px;white-space:normal;word-break:break-word;">
       <textarea rows="2" onchange="updateCompareSupplier(${i},this.value)" style="width:100%;border:none;background:transparent;font-weight:600;color:var(--text-light);font-size:10px;text-align:center;resize:none;overflow:hidden;white-space:normal;word-break:break-word;line-height:1.2;" placeholder="供应商">${s}</textarea>
-      <button onclick="deleteCompareSupplier(${i})" style="position:absolute;top:1px;right:1px;background:none;border:none;cursor:pointer;font-size:9px;color:var(--danger);" title="删除">✕</button>
+      <div class="cmp-sup-ctrl">
+        <button onclick="moveCompareSupplier(${i},-1)" title="左移一列">◀</button>
+        <button onclick="moveCompareSupplier(${i},1)" title="右移一列">▶</button>
+      </div>
+      <button onclick="deleteCompareSupplier(${i})" class="cmp-sup-del" title="删除">✕</button>
     </th>`).join('')}
   </tr>`;
 
@@ -2317,12 +2461,36 @@ function renderCompareTable() {
     }).join('');
     return `<tr>
       <td>${i+1}</td>
-      <td style="overflow-wrap:break-word;"><span class="product-tag cat-${PRODUCT_CATEGORY[prod]||'yanwo'}">${prod}</span></td>
+      <td class="cmp-pin" style="overflow-wrap:break-word;"><span class="product-tag cat-${PRODUCT_CATEGORY[prod]||'yanwo'}">${prod}</span></td>
       ${cells}
     </tr>`;
   }).join('');
 }
 
+// 供应商列排序：价格以供应商名为键存储，重排 suppliers 数组即可，价格自动跟随
+function moveCompareSupplier(i, dir){
+  const j = i + dir;
+  if(j < 0 || j >= compareData.suppliers.length) return;
+  const arr = compareData.suppliers;
+  const t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+  saveAll(); renderCompareTable();
+}
+let _dragFrom = -1;
+function dragCompareSupplier(e, i){
+  _dragFrom = i;
+  try{ e.dataTransfer.setData('text/plain', String(i)); e.dataTransfer.effectAllowed = 'move'; }catch(_){}
+}
+function dropCompareSupplier(e, i){
+  e.preventDefault();
+  let from = _dragFrom;
+  if(from < 0){ try{ from = parseInt(e.dataTransfer.getData('text/plain')||'-1',10); }catch(_){ from = -1; } }
+  _dragFrom = -1;
+  if(from < 0 || from === i) return;
+  const arr = compareData.suppliers;
+  const moved = arr.splice(from, 1)[0];
+  arr.splice(i, 0, moved);
+  saveAll(); renderCompareTable();
+}
 function addCompareSupplier() {
   const name = prompt('请输入供应商名称：');
   if (!name || !name.trim()) return;
@@ -2472,7 +2640,10 @@ function renderZaTable() {
     if (shipped >= item.quantity) { shipBarClass=''; shipTextClass='done'; shipLabel='已发完'; }
     else if (shipped > 0) { shipBarClass='partial'; shipTextClass='partial'; shipLabel=`${shipped}/${item.quantity}`; }
     const isNewGroup = (o.id !== lastOrderId); lastOrderId = o.id; rowNum++;
-    const depositInfo = (o.payment==='定金'&&o.deposit>0) ? `<div style="font-size:9px;color:var(--text-light);">定金 ¥${formatNum(o.deposit)}</div>` : '';
+    const received = (o.deposit || 0) + (o.balance || 0);
+    const orderTotal = (o.items || []).reduce((s, it) => s + it.quantity * it.unitPrice, 0);
+    const depositInfo = (o.payment==='定金' && received > 0)
+      ? `<div style="font-size:9px;color:var(--text-light);">已收 ¥${formatNum(received)}/${formatNum(orderTotal)}</div>` : '';
     return `<tr class="${isNewGroup?'order-group-start':'merged-row'}">
       <td class="za-sticky" style="left:0;width:18px;min-width:18px;max-width:18px;">${rowNum}</td><td class="za-sticky" style="left:18px;width:50px;min-width:50px;max-width:50px;">${isNewGroup?(o.orderDate?fmtMDY(o.orderDate):'-'):''}</td>
       <td class="za-sticky" style="left:68px;width:46px;min-width:46px;max-width:46px;overflow-wrap:break-word;"><span class="order-customer">${isNewGroup?(o.customer||'-'):''}</span></td>
@@ -2571,12 +2742,14 @@ function openZaModal(id) {
   document.getElementById('zaModalTitle').textContent = id ? '编辑订单' : '新增订单';
   document.getElementById('fZaDate').value = todayStr();
   document.getElementById('fZaCustomer').value = ''; document.getElementById('fZaPayment').value = '定金';
-  document.getElementById('fZaDeposit').value = ''; document.getElementById('fZaRemark').value = '';
+  document.getElementById('fZaDeposit').value = ''; document.getElementById('fZaBalance').value = '';
+  document.getElementById('fZaRemark').value = '';
   document.getElementById('zaItemsContainer').innerHTML = '';
   if (id) {
     const o = zaOrders.find(x => x.id === id); if (!o) return;
     document.getElementById('fZaDate').value = o.orderDate || ''; document.getElementById('fZaCustomer').value = o.customer || '';
     document.getElementById('fZaPayment').value = o.payment || '定金'; document.getElementById('fZaDeposit').value = o.deposit || '';
+    document.getElementById('fZaBalance').value = o.balance || '';
     document.getElementById('fZaRemark').value = o.remark || '';
     o.items.forEach(item => addZaItemRow(item));
   }
@@ -2618,11 +2791,31 @@ function updateZaTotal() {
     row.querySelector('.item-profit').textContent = '¥' + formatNum(profit);
   });
   document.getElementById('zaTotalPreview').textContent = '¥' + formatNum(total);
+  syncZaPayment(total);
+}
+
+// 杂货平台：已收合计 = 定金 + 尾款；等于订单总价时自动「已结清」
+function syncZaPayment(grandTotal) {
+  const depositEl = document.getElementById('fZaDeposit'), balanceEl = document.getElementById('fZaBalance');
+  const payEl = document.getElementById('fZaPayment');
+  if (!payEl) return;
+  const deposit = parseFloat(depositEl?.value) || 0;
+  const balance = parseFloat(balanceEl?.value) || 0;
+  const received = deposit + balance;
+  const total = (grandTotal === undefined) ? readZaGrandTotal() : grandTotal;
+  const recEl = document.getElementById('fZaReceivedTotal'), totEl = document.getElementById('fZaOrderTotal');
+  if (recEl) recEl.textContent = '¥' + formatNum(received);
+  if (totEl) totEl.textContent = '¥' + formatNum(total);
+  const matched = total > 0 && Math.abs(received - total) < 0.005;
+  if (recEl) recEl.classList.toggle('matched', matched);
+  if (totEl) totEl.classList.toggle('matched', matched);
+  payEl.value = matched ? '已结清' : '定金';
 }
 
 function saveZaOrder() {
   const orderDate = document.getElementById('fZaDate').value, customer = document.getElementById('fZaCustomer').value.trim();
-  const payment = document.getElementById('fZaPayment').value, deposit = parseFloat(document.getElementById('fZaDeposit').value) || 0;
+  let payment = document.getElementById('fZaPayment').value, deposit = parseFloat(document.getElementById('fZaDeposit').value) || 0;
+  const balance = parseFloat(document.getElementById('fZaBalance').value) || 0;
   const remark = document.getElementById('fZaRemark').value.trim();
   if (!orderDate) { alert('请选择下单日期'); return; }
   if (!customer) { alert('请输入客户姓名'); return; }
@@ -2639,7 +2832,11 @@ function saveZaOrder() {
   if (!valid) { alert('请完整填写每个商品名、数量和售价'); return; }
   if (items.length === 0) { alert('请至少添加一个商品'); return; }
 
-  const order = { id: editingZaOrderId || Date.now(), orderDate, customer, payment, deposit, remark, items };
+  // 保存前按「已收合计 = 订单总价」最终判定付款状态
+  const savedTotal = items.reduce((s, it) => s + it.quantity * it.unitPrice, 0);
+  if (savedTotal > 0 && Math.abs((deposit + balance) - savedTotal) < 0.005) payment = '已结清';
+
+  const order = { id: editingZaOrderId || Date.now(), orderDate, customer, payment, deposit, balance, remark, items };
   if (editingZaOrderId) {
     const oldOrder = zaOrders.find(x => x.id === editingZaOrderId);
     if (oldOrder) {
@@ -2668,7 +2865,11 @@ function deleteZaOrder(id) {
 
 function markZaPaid(id) {
   const o = zaOrders.find(x => x.id === id); if (!o) return;
-  o.payment = '已结清'; saveAll(); renderZaTable();
+  // 结清时把尾款补足，使「已收合计(=定金+尾款)=订单总价」
+  const total = (o.items || []).reduce((s, it) => s + it.quantity * it.unitPrice, 0);
+  o.payment = '已结清';
+  o.balance = Math.max(0, +(total - (o.deposit || 0)).toFixed(2));
+  saveAll(); renderZaTable();
 }
 
 function openZaShipModal(orderId, itemIndex) {
@@ -2876,6 +3077,116 @@ function toggleZaPendingCheck(cb, productName, rowId) {
     row.classList.add('za-pending-unchecked');
   }
   setZaPurchasedMarks(marks);
+}
+
+// --- 库存核对弹窗（逻辑仿杂货待采购清单） ---
+function getInventoryVerifyMarks() {
+  try { return JSON.parse(localStorage.getItem('inv_verify_marks') || '[]'); } catch(e) { return []; }
+}
+function setInventoryVerifyMarks(arr) {
+  localStorage.setItem('inv_verify_marks', JSON.stringify(arr));
+}
+function buildInventoryVerifyMap() {
+  const invMap = {};
+  ALL_PRODUCT_LIST.forEach(p => { invMap[p] = { product: p, totalIn: 0, totalOut: 0 }; });
+  purchases.forEach(p => { p.items.forEach(item => {
+    if (invMap[item.product]) {
+      const records = item.inRecords || [];
+      records.forEach(r => { invMap[item.product].totalIn += (r.qty || 0); });
+    }
+  });});
+  inventoryLog.forEach(log => { if (invMap[log.product]) invMap[log.product].totalIn += log.quantity; });
+  orders.forEach(o => { o.items.forEach(item => { if (invMap[item.product]) invMap[item.product].totalOut += (item.shipped || 0); }); });
+  return invMap;
+}
+function openInventoryVerify() {
+  const invMap = buildInventoryVerifyMap();
+  // 只显示在家库存数量 > 0 的品种（在家库存 = 入库累计 - 出库累计）
+  const list = Object.values(invMap).filter(v => (v.totalIn - v.totalOut) > 0);
+  const sortOrder = {};
+  ALL_PRODUCT_LIST.forEach((p, i) => { sortOrder[p] = i; });
+  list.sort((a, b) => (sortOrder[a.product] ?? 999) - (sortOrder[b.product] ?? 999));
+  const checkedMarks = getInventoryVerifyMarks();
+  const tbody = document.getElementById('invVerifyBody');
+  // 盒数 = 在家库存数量 / 2
+  const toBoxes = n => Number.isInteger(n) ? String(n) : String(parseFloat(n.toFixed(2)));
+  const totalBoxes = toBoxes(list.reduce((s, v) => s + (v.totalIn - v.totalOut), 0) / 2);
+  const totalEl = document.getElementById('invVerifyTotal');
+  if (totalEl) totalEl.textContent = list.length ? ('一共 ' + totalBoxes + ' 盒') : '';
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="4"><div class="empty-row"><div class="icon">📊</div><div>暂无库存数据</div></div></td></tr>';
+  } else {
+    tbody.innerHTML = list.map((v, i) => {
+      const name = v.product;
+      const current = v.totalIn - v.totalOut;
+      const id = 'invVerify_' + i;
+      const isChecked = checkedMarks.includes(name);
+      const rowClass = isChecked ? 'verify-checked' : 'verify-unchecked';
+      const chkAttr = isChecked ? ' checked' : '';
+      return `<tr id="${id}" class="${rowClass}">
+        <td style="text-align:center;">${i+1}</td>
+        <td id="${id}_name">${name}</td>
+        <td style="text-align:center;">${toBoxes(current / 2)}</td>
+        <td style="text-align:center;"><input type="checkbox" onchange="toggleInventoryVerify(this, '${name.replace(/'/g, "\\'")}', '${id}')"${chkAttr} style="width:16px;height:16px;cursor:pointer;"></td>
+      </tr>`;
+    }).join('');
+  }
+  document.getElementById('invVerifyModal').classList.add('show');
+}
+function closeInventoryVerify() { document.getElementById('invVerifyModal').classList.remove('show'); }
+function toggleInventoryVerify(cb, name, rowId) {
+  const row = document.getElementById(rowId);
+  let marks = getInventoryVerifyMarks();
+  if (cb.checked) {
+    if (!marks.includes(name)) marks.push(name);
+    row.classList.remove('verify-unchecked');
+    row.classList.add('verify-checked');
+  } else {
+    marks = marks.filter(m => m !== name);
+    row.classList.remove('verify-checked');
+    row.classList.add('verify-unchecked');
+  }
+  setInventoryVerifyMarks(marks);
+}
+
+// --- 账本核对弹窗（逻辑仿杂货待采购清单，类型为固定 11 项） ---
+const YUN_VERIFY_TYPES = ['工商', '工商（社保卡）', '平安', '支付寶', '微信（楼上）', '微信（童年）', '現金', '代買（香港）', '代買（華強北）', '代付给同行（玥儿爸）', '代付给其他同行（小天，灵灵等）'];
+function getYunVerifyMarks() {
+  try { return JSON.parse(localStorage.getItem('yun_verify_marks') || '[]'); } catch(e) { return []; }
+}
+function setYunVerifyMarks(arr) {
+  localStorage.setItem('yun_verify_marks', JSON.stringify(arr));
+}
+function openYunVerify() {
+  const checkedMarks = getYunVerifyMarks();
+  const tbody = document.getElementById('yunVerifyBody');
+  tbody.innerHTML = YUN_VERIFY_TYPES.map((name, i) => {
+    const id = 'yunVerify_' + i;
+    const isChecked = checkedMarks.includes(name);
+    const rowClass = isChecked ? 'verify-checked' : 'verify-unchecked';
+    const chkAttr = isChecked ? ' checked' : '';
+    return `<tr id="${id}" class="${rowClass}">
+      <td style="text-align:center;">${i+1}</td>
+      <td id="${id}_name">${name}</td>
+      <td style="text-align:center;"><input type="checkbox" onchange="toggleYunVerify(this, '${name.replace(/'/g, "\\'")}', '${id}')"${chkAttr} style="width:16px;height:16px;cursor:pointer;"></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('yunVerifyModal').classList.add('show');
+}
+function closeYunVerify() { document.getElementById('yunVerifyModal').classList.remove('show'); }
+function toggleYunVerify(cb, name, rowId) {
+  const row = document.getElementById(rowId);
+  let marks = getYunVerifyMarks();
+  if (cb.checked) {
+    if (!marks.includes(name)) marks.push(name);
+    row.classList.remove('verify-unchecked');
+    row.classList.add('verify-checked');
+  } else {
+    marks = marks.filter(m => m !== name);
+    row.classList.remove('verify-checked');
+    row.classList.add('verify-unchecked');
+  }
+  setYunVerifyMarks(marks);
 }
 
 // ==========================================
@@ -3331,6 +3642,15 @@ function renderGrowthMonth() {
   document.getElementById('growthMonthSellProfit').textContent = '¥' + formatNum(sellProfit);
   document.getElementById('growthMonthZaProfit').textContent = '¥' + formatNum(zaProfit);
   document.getElementById('growthMonthTotalProfit').textContent = '¥' + formatNum(total);
+  // 本月燕窝下单数（两）= 本月燕窝接单平台所有订单的 items.quantity 之和（不含客户「胡雲博」「自己」）
+  let sellLiang = 0;
+  orders.forEach(o => {
+    if (o.orderDate >= start && o.orderDate <= end && !isExcludedCustomer(o.customer)) {
+      o.items.forEach(item => { sellLiang += (item.quantity || 0); });
+    }
+  });
+  const liangEl = document.getElementById('growthMonthSellLiang');
+  if (liangEl) liangEl.textContent = '本月 ' + formatNum(sellLiang) + ' 两';
 
   // 显示当前月份（左）到过去5个月（右）
   const months = [];
@@ -3427,6 +3747,15 @@ function renderInventoryTable() {
 
   let list = Object.values(invMap).filter(v => v.totalIn > 0 || v.totalOut > 0 || v.pendingIn > 0);
   if (filterProd) list = list.filter(v => v.product === filterProd);
+  // 库存状态筛选（默认「正常」）：缺货 = 能卖库存 <= 0
+  const filterStatusEl = document.getElementById('invFilterStatus');
+  const filterStatus = filterStatusEl ? filterStatusEl.value : '';
+  if (filterStatus) {
+    list = list.filter(v => {
+      const sellable = v.totalIn - v.totalOut + v.pendingIn - v.pendingShip;
+      return filterStatus === '缺货' ? sellable <= 0 : sellable > 0;
+    });
+  }
   if (!list.length) { tbody.innerHTML = `<tr><td colspan="11"><div class="empty-row"><div class="icon">📊</div><div>暂无库存数据，点击「入库记录」添加</div></div></td></tr>`; updateInvStats(); updateInvProdFilter(); return; }
 
   // 按 ALL_PRODUCT_LIST 固定顺序排列
@@ -3535,8 +3864,8 @@ function updateInvStats() {
     // 用剩余批次计算实际价值
     (batches[v.product] || []).forEach(b => { if (b.remaining > 0) totalValue += b.remaining * b.price; });
   });
-  document.getElementById('invStatTypes').textContent = list.length;
-  document.getElementById('invStatTotal').textContent = totalStock;
+  document.getElementById('invStatTypes').textContent = list.filter(v => (v.totalIn - v.totalOut) > 0).length;
+  document.getElementById('invStatTotal').innerHTML = `${totalStock} <span class="unit">两</span>`;
   document.getElementById('invStatValue').textContent = '¥' + formatNum(totalValue);
 }
 
