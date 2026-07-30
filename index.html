@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>燕窝管理系统</title>
+<title>HP的工作台</title>
 <style>
   :root {
     --primary: #8B5A2B; --primary-light: #D4A574; --primary-dark: #6B4423;
@@ -276,8 +276,8 @@
 <!-- ====== 左侧导航 ====== -->
 <div class="sidebar">
   <div class="sidebar-logo">
-    🕊️ 燕窝管理
-    <div class="sub">YANWO SYSTEM</div>
+    📋 HP的工作台
+    <div class="sub">WORKBENCH</div>
   </div>
   <div class="nav-label">工作类别</div>
   <div class="nav-item active" data-page="orders">
@@ -1549,7 +1549,7 @@ function updateInvProdFilter() {
 // ==========================================
 function checkBackupReminder() {
   const lastBackup = localStorage.getItem(KEY_BACKUP);
-  if (!lastBackup) { if (orders.length > 0) showBackupReminder('欢迎使用燕窝管理系统！\n\n建议立即备份全部数据。'); return; }
+  if (!lastBackup) { if (orders.length > 0) showBackupReminder('欢迎使用HP的工作台！\n\n建议立即备份全部数据。'); return; }
   const diffDays = Math.floor((new Date() - new Date(lastBackup)) / 86400000);
   if (diffDays >= BACKUP_INTERVAL) showBackupReminder(`⚠️ 距上次备份已过 ${diffDays} 天\n\n建议立即导出备份！`);
 }
