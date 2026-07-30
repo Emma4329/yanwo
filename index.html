@@ -418,7 +418,7 @@
       <table>
         <thead><tr>
           <th style="width:32px;">#</th><th>品种</th><th>入库累计</th><th>出库累计</th>
-          <th>当前库存</th><th>成本价</th><th>库存价值</th><th>状态</th>
+          <th>当前库存</th><th>待入库</th><th>成本价</th><th>库存价值</th><th>状态</th>
         </tr></thead>
         <tbody id="invTableBody"></tbody>
       </table>
@@ -1303,18 +1303,17 @@ function saveInventory() {
 
 function renderInventoryTable() {
   const tbody = document.getElementById('invTableBody');
-  // 汇总：入库从进货平台取（按实际入库数量），出库从接单已发数
+  // 汇总：入库从进货平台取（只算已入库数量），出库从接单已发数
   const invMap = {};
-  ALL_PRODUCT_LIST.forEach(p => { invMap[p] = { product: p, totalIn: 0, totalOut: 0 }; });
-  // 进货入库：用每个入库批次的数量
+  ALL_PRODUCT_LIST.forEach(p => { invMap[p] = { product: p, totalIn: 0, totalOut: 0, pendingIn: 0 }; });
+  // 进货入库：只用 inRecords 中实际入库的数量
   purchases.forEach(p => { p.items.forEach(item => { 
     if (invMap[item.product]) {
       const records = item.inRecords || [];
-      if (records.length > 0) {
-        records.forEach(r => { invMap[item.product].totalIn += (r.qty || 0); });
-      } else {
-        invMap[item.product].totalIn += item.quantity;
-      }
+      records.forEach(r => { invMap[item.product].totalIn += (r.qty || 0); });
+      // 待入库 = 下单数 - 已入库数
+      const totalIn = records.reduce((s, r) => s + (r.qty || 0), 0);
+      invMap[item.product].pendingIn += Math.max(0, item.quantity - totalIn);
     }
   });});
   // 手动入库记录
@@ -1322,8 +1321,8 @@ function renderInventoryTable() {
   // 出库：接单已发数
   orders.forEach(o => { o.items.forEach(item => { if (invMap[item.product]) invMap[item.product].totalOut += (item.shipped || 0); }); });
 
-  const list = Object.values(invMap).filter(v => v.totalIn > 0 || v.totalOut > 0);
-  if (!list.length) { tbody.innerHTML = `<tr><td colspan="8"><div class="empty-row"><div class="icon">📊</div><div>暂无库存数据，点击「入库记录」添加</div></div></td></tr>`; updateInvStats(); return; }
+  const list = Object.values(invMap).filter(v => v.totalIn > 0 || v.totalOut > 0 || v.pendingIn > 0);
+  if (!list.length) { tbody.innerHTML = `<tr><td colspan="9"><div class="empty-row"><div class="icon">📊</div><div>暂无库存数据，点击「入库记录」添加</div></div></td></tr>`; updateInvStats(); return; }
 
   list.sort((a,b) => a.product.localeCompare(b.product));
   let lowCount = 0, totalValue = 0;
@@ -1343,6 +1342,7 @@ function renderInventoryTable() {
       <td>${i+1}</td><td><span class="product-tag cat-${PRODUCT_CATEGORY[v.product]||'yanwo'}">${v.product}</span></td>
       <td>${v.totalIn}</td><td>${v.totalOut}</td>
       <td style="font-weight:700;color:${current<=0?'var(--danger)':'var(--text)'};">${current}</td>
+      <td style="color:${v.pendingIn>0?'var(--warning)':'var(--text-light)'};">${v.pendingIn}</td>
       <td>${cost>0?formatNum(cost):'-'}</td><td style="font-weight:600;color:var(--primary);">${value>0?formatNum(value):'-'}</td>
       <td><span class="badge ${badgeClass}">${status}</span></td>
     </tr>`;
@@ -1355,11 +1355,7 @@ function updateInvStats() {
   purchases.forEach(p => { p.items.forEach(item => { 
     if (invMap[item.product]) {
       const records = item.inRecords || [];
-      if (records.length > 0) {
-        records.forEach(r => { invMap[item.product].totalIn += (r.qty || 0); });
-      } else {
-        invMap[item.product].totalIn += item.quantity;
-      }
+      records.forEach(r => { invMap[item.product].totalIn += (r.qty || 0); });
     }
   });});
   inventoryLog.forEach(log => { if (invMap[log.product]) invMap[log.product].totalIn += log.quantity; });
