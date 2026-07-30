@@ -377,7 +377,7 @@
       <table>
         <thead><tr>
           <th style="width:32px;">#</th><th>进货日期</th><th>供应商</th><th>品种</th>
-          <th>数量</th><th>进价(元)</th><th>总金额</th><th>备注</th><th>操作</th>
+          <th>下单数</th><th>进价(元)</th><th>总金额</th><th>入库状态</th><th>入库日期</th><th>备注</th><th>操作</th>
         </tr></thead>
         <tbody id="purTableBody"></tbody>
       </table>
@@ -800,7 +800,9 @@ function getPurchaseBatches() {
   purchases.sort((a,b) => (a.date||'').localeCompare(b.date||'')).forEach(p => {
     p.items.forEach(item => {
       if (!batches[item.product]) batches[item.product] = [];
-      batches[item.product].push({ qty: item.quantity, price: item.unitPrice, date: p.date, supplier: p.supplier, remaining: item.quantity });
+      // 用实际入库数量，未填入库数量则默认等于下单数量
+      const inQty = (item.inQty !== undefined && item.inQty >= 0) ? item.inQty : item.quantity;
+      batches[item.product].push({ qty: item.quantity, price: item.unitPrice, date: p.date, supplier: p.supplier, inQty: inQty, remaining: inQty, inDate: item.inDate || '' });
     });
   });
   // 按接单已发数扣减（先进先出）
@@ -1065,11 +1067,15 @@ function closePurchaseModal() { document.getElementById('purchaseModal').classLi
 function addPurItemRow(data) {
   const container = document.getElementById('purItemsContainer');
   const div = document.createElement('div'); div.className = 'item-row';
+  const inQty = (data && data.inQty !== undefined) ? data.inQty : (data ? data.quantity : '');
+  const inDate = (data && data.inDate) || '';
   div.innerHTML = `
     <div class="form-group" style="width:170px;"><label>品种 <span class="required">*</span></label>${productSelectHTML(data?data.product:'','pur-product-sel')}</div>
-    <div class="form-group" style="width:90px;"><label>数量</label><input type="number" value="${data?data.quantity:''}" min="0.1" step="0.1" placeholder="数量" oninput="updatePurTotal()" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
-    <div class="form-group" style="width:100px;"><label>进价(元)</label><input type="number" value="${data?data.unitPrice:''}" min="0" step="0.01" placeholder="进价" oninput="updatePurTotal()" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
-    <div class="form-group" style="width:90px;"><label>金额</label><span class="item-subtotal" style="font-weight:600;color:var(--primary);padding:8px 0;display:block;">¥0.00</span></div>
+    <div class="form-group" style="width:85px;"><label>下单数量</label><input type="number" value="${data?data.quantity:''}" min="0.1" step="0.1" placeholder="数量" oninput="updatePurTotal()" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
+    <div class="form-group" style="width:95px;"><label>进价(元)</label><input type="number" value="${data?data.unitPrice:''}" min="0" step="0.01" placeholder="进价" oninput="updatePurTotal()" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
+    <div class="form-group" style="width:85px;"><label>已入库</label><input type="number" value="${inQty}" min="0" step="0.1" placeholder="入库数" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
+    <div class="form-group" style="width:120px;"><label>入库日期</label><input type="date" value="${inDate}" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
+    <div class="form-group" style="width:85px;"><label>金额</label><span class="item-subtotal" style="font-weight:600;color:var(--primary);padding:8px 0;display:block;">¥0.00</span></div>
     <div style="padding-top:20px;"><button class="btn btn-danger btn-sm" onclick="this.closest('.item-row').remove();updatePurTotal();">✕</button></div>
   `;
   container.appendChild(div);
@@ -1115,8 +1121,9 @@ function savePurchase() {
   container.querySelectorAll('.item-row').forEach(row => {
     const sel = row.querySelector('select'), inputs = row.querySelectorAll('input');
     const product = sel.value, quantity = parseFloat(inputs[0]?.value) || 0, unitPrice = parseFloat(inputs[1]?.value) || 0;
+    const inQty = parseFloat(inputs[2]?.value) || 0, inDate = inputs[3]?.value || '';
     if (!product || quantity <= 0 || unitPrice <= 0) { valid = false; return; }
-    items.push({ product, quantity, unitPrice });
+    items.push({ product, quantity, unitPrice, inQty, inDate });
   });
   if (!valid) { alert('请完整填写每个品种'); return; }
   if (items.length === 0) { alert('请至少添加一个品种'); return; }
@@ -1138,15 +1145,19 @@ function renderPurchaseTable() {
   if (search) rows = rows.filter(r => (r.purchase.supplier + r.item.product + r.purchase.remark).toLowerCase().includes(search));
   rows.sort((a,b) => (b.purchase.date||'').localeCompare(a.purchase.date||'') || b.purchase.id - a.purchase.id || a.itemIndex - b.itemIndex);
 
-  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="9"><div class="empty-row"><div class="icon">📦</div><div>暂无进货记录</div></div></td></tr>`; updatePurStats(); return; }
+  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="11"><div class="empty-row"><div class="icon">📦</div><div>暂无进货记录</div></div></td></tr>`; updatePurStats(); return; }
 
   let lastId = null, rowNum = 0;
   tbody.innerHTML = rows.map(r => {
     const p = r.purchase, item = r.item, isNew = (p.id !== lastId); lastId = p.id; rowNum++;
+    const inQty = item.inQty || 0;
+    const inStatus = inQty >= item.quantity ? '<span style="color:var(--success);">✓已入库</span>' 
+      : (inQty > 0 ? `<span style="color:var(--warning);">${inQty}/${item.quantity}</span>` : '<span style="color:var(--danger);">待入库</span>');
     return `<tr class="${isNew?'order-group-start':'merged-row'}">
       <td>${rowNum}</td><td>${isNew?(p.date||'-'):''}</td><td style="font-weight:${isNew?'600':'normal'};">${isNew?(p.supplier||'-'):''}</td>
       <td><span class="product-tag cat-${PRODUCT_CATEGORY[item.product]||'yanwo'}">${item.product}</span></td>
       <td>${item.quantity}</td><td>${formatNum(item.unitPrice)}</td><td style="font-weight:600;color:var(--primary);">${formatNum(item.quantity*item.unitPrice)}</td>
+      <td>${inStatus}</td><td>${item.inDate||'<span style="color:var(--text-light);">-</span>'}</td>
       <td style="max-width:140px;white-space:normal;font-size:11px;color:var(--text-light);">${isNew?(p.remark||''):''}</td>
       <td>${isNew?`<div class="row-actions"><button class="icon-btn" title="编辑" onclick="openPurchaseModal(${p.id})">✏️</button><button class="icon-btn" title="删除" onclick="deletePurchase(${p.id})">🗑️</button></div>`:''}</td>
     </tr>`;
@@ -1185,10 +1196,16 @@ function saveInventory() {
 
 function renderInventoryTable() {
   const tbody = document.getElementById('invTableBody');
-  // 汇总：每种品种的入库累计、出库累计（从接单已发数计算）
+  // 汇总：入库从进货平台取（按实际入库数量），出库从接单已发数
   const invMap = {};
   ALL_PRODUCT_LIST.forEach(p => { invMap[p] = { product: p, totalIn: 0, totalOut: 0 }; });
+  // 进货入库：用每个品种行的 inQty（入库数量）
+  purchases.forEach(p => { p.items.forEach(item => { 
+    if (invMap[item.product]) invMap[item.product].totalIn += ((item.inQty !== undefined && item.inQty >= 0) ? item.inQty : item.quantity); 
+  });});
+  // 手动入库记录
   inventoryLog.forEach(log => { if (invMap[log.product]) invMap[log.product].totalIn += log.quantity; });
+  // 出库：接单已发数
   orders.forEach(o => { o.items.forEach(item => { if (invMap[item.product]) invMap[item.product].totalOut += (item.shipped || 0); }); });
 
   const list = Object.values(invMap).filter(v => v.totalIn > 0 || v.totalOut > 0);
@@ -1221,6 +1238,9 @@ function renderInventoryTable() {
 
 function updateInvStats() {
   const invMap = {}; ALL_PRODUCT_LIST.forEach(p => { invMap[p] = { totalIn: 0, totalOut: 0 }; });
+  purchases.forEach(p => { p.items.forEach(item => { 
+    if (invMap[item.product]) invMap[item.product].totalIn += ((item.inQty !== undefined && item.inQty >= 0) ? item.inQty : item.quantity); 
+  });});
   inventoryLog.forEach(log => { if (invMap[log.product]) invMap[log.product].totalIn += log.quantity; });
   orders.forEach(o => { o.items.forEach(item => { if (invMap[item.product]) invMap[item.product].totalOut += (item.shipped || 0); }); });
   const list = Object.values(invMap).filter(v => v.totalIn > 0 || v.totalOut > 0);
