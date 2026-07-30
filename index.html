@@ -1035,9 +1035,9 @@ function renderOrderTable() {
     const profitClass = profit >= 0 ? 'color:var(--success);' : 'color:var(--danger);';
     const depositInfo = (o.payment==='定金'&&o.deposit>0) ? `<div style="font-size:9px;color:var(--text-light);">定金 ¥${formatNum(o.deposit)}</div>` : '';
     return `<tr class="${isNewGroup?'order-group-start':'merged-row'}">
-      <td>${rowNum}</td><td>${isNewGroup?(o.orderDate||'-'):''}</td>
-      <td><span class="order-customer">${isNewGroup?(o.customer||'-'):''}</span>${isNewGroup&&o.remark?`<div class="order-meta">${o.remark}</div>`:''}</td>
-      <td><span class="product-tag cat-${PRODUCT_CATEGORY[item.product]||'yanwo'}">${item.product||'-'}</span>${item.product==='杂'&&item.miscNote?`<div style="font-size:9px;color:var(--text-light);margin-top:1px;">${item.miscNote}</div>`:''}</td>
+      <td style="max-width:52px;overflow-wrap:break-word;">${rowNum}</td><td>${isNewGroup?(o.orderDate||'-'):''}</td>
+      <td style="max-width:52px;overflow-wrap:break-word;"><span class="order-customer">${isNewGroup?(o.customer||'-'):''}</span>${isNewGroup&&o.remark?`<div class="order-meta">${o.remark}</div>`:''}</td>
+      <td style="max-width:52px;overflow-wrap:break-word;"><span class="product-tag cat-${PRODUCT_CATEGORY[item.product]||'yanwo'}">${item.product||'-'}</span>${item.product==='杂'&&item.miscNote?`<div style="font-size:9px;color:var(--text-light);margin-top:1px;">${item.miscNote}</div>`:''}</td>
       <td style="font-weight:500;">${item.quantity}</td>
       <td><div class="ship-progress"><div class="bar-bg"><div class="bar-fill ${shipBarClass}" style="width:${shipPct}%;"></div></div><span class="ship-text ${shipTextClass}">${shipLabel}</span></div></td>
       <td style="font-weight:500;">${shipped}</td>
@@ -1274,7 +1274,7 @@ function renderPurchaseTable() {
     const inDateText = inRecords.length > 0 ? inRecords.map(r => r.date).filter(d=>d).join('<br>') : '<span style="color:var(--text-light);">-</span>';
     return `<tr class="${isNew?'order-group-start':'merged-row'}">
       <td>${rowNum}</td><td>${isNew?(p.date||'-'):''}</td><td style="font-weight:${isNew?'600':'normal'};">${isNew?(p.supplier||'-'):''}</td>
-      <td><span class="product-tag cat-${PRODUCT_CATEGORY[item.product]||'yanwo'}">${item.product}</span></td>
+      <td style="max-width:52px;overflow-wrap:break-word;"><span class="product-tag cat-${PRODUCT_CATEGORY[item.product]||'yanwo'}">${item.product}</span></td>
       <td>${item.quantity}</td><td>${formatNum(item.unitPrice)}</td><td style="font-weight:600;color:var(--primary);">${formatNum(item.quantity*item.unitPrice)}</td>
       <td>${pendingDisplay}</td><td>${inStatus}</td><td style="font-size:11px;">${inDateText}</td>
       <td style="max-width:140px;white-space:normal;font-size:11px;color:var(--text-light);">${isNew?(p.remark||''):''}</td>
@@ -1383,7 +1383,7 @@ function renderInventoryTable() {
     if (current <= 0) { status = '缺货'; badgeClass = 'badge-deposit'; lowCount++; }
     else if (current < 5) { status = '低库存'; badgeClass = 'badge-deposit'; lowCount++; }
     return `<tr>
-      <td>${i+1}</td><td><span class="product-tag cat-${PRODUCT_CATEGORY[v.product]||'yanwo'}">${v.product}</span></td>
+      <td>${i+1}</td><td style="max-width:52px;overflow-wrap:break-word;"><span class="product-tag cat-${PRODUCT_CATEGORY[v.product]||'yanwo'}">${v.product}</span></td>
       <td style="font-weight:700;color:${current<=0?'var(--danger)':'var(--text)'};">${current}</td>
       <td style="color:${v.pendingIn>0?'var(--warning)':'var(--text-light)'};">${v.pendingIn}</td>
       <td>${v.totalIn}</td>
