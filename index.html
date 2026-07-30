@@ -162,11 +162,12 @@
   .product-tag.cat-chongcao { background: #F5E6F0; color: #6B2D5B; }
   .product-tag.cat-other { background: #F0F0E8; color: #5F5F3C; }
 
-  .ship-progress { display: flex; align-items: center; gap: 5px; font-size: 11px; }
-  .ship-progress .bar-bg { width: 40px; height: 5px; background: #EEE; border-radius: 3px; overflow: hidden; }
-  .ship-progress .bar-fill { height: 100%; background: var(--success); border-radius: 3px; transition: width 0.3s; }
+  .ship-progress { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10px; }
+  .ship-progress .bar-bg { width: 36px; height: 4px; background: #EEE; border-radius: 2px; overflow: hidden; }
+  .ship-progress .bar-fill { height: 100%; background: var(--success); border-radius: 2px; transition: width 0.3s; }
   .ship-progress .bar-fill.partial { background: var(--warning); }
   .ship-progress .bar-fill.none { background: #CCC; }
+  .ship-text { white-space: nowrap; }
   .ship-text.pending { color: var(--danger); font-weight: 600; }
   .ship-text.partial { color: var(--warning); }
   .ship-text.done { color: var(--success); }
@@ -342,7 +343,7 @@
       <table>
         <thead><tr>
           <th style="width:32px;">#</th><th>下单日期</th><th>客户</th><th>品种</th>
-          <th>下单数</th><th>已发数</th><th>待发数</th><th>进度</th><th>发货日</th>
+          <th>下单数</th><th style="width:54px;">进度</th><th>已发数</th><th>待发数</th><th>发货日</th>
           <th>售价</th><th>成本</th><th>总价</th><th>利润</th>
           <th>付款</th><th>备注</th><th>操作</th>
         </tr></thead>
@@ -1007,7 +1008,7 @@ function renderOrderTable() {
     const shipped = item.shipped || 0, pending = item.quantity - shipped;
     const shipPct = item.quantity > 0 ? Math.round((shipped/item.quantity)*100) : 0;
     let shipBarClass='none', shipTextClass='pending', shipLabel='待发货';
-    if (shipped >= item.quantity) { shipBarClass=''; shipTextClass='done'; shipLabel='已发完 ✓'; }
+    if (shipped >= item.quantity) { shipBarClass=''; shipTextClass='done'; shipLabel='已发完'; }
     else if (shipped > 0) { shipBarClass='partial'; shipTextClass='partial'; shipLabel=`${shipped}/${item.quantity}`; }
     const isNewGroup = (o.id !== lastOrderId); lastOrderId = o.id; rowNum++;
     // FIFO 成本：已发部分的实际成本
@@ -1020,9 +1021,10 @@ function renderOrderTable() {
       <td>${rowNum}</td><td>${isNewGroup?(o.orderDate||'-'):''}</td>
       <td><span class="order-customer">${isNewGroup?(o.customer||'-'):''}</span>${isNewGroup&&o.remark?`<div class="order-meta">${o.remark}</div>`:''}</td>
       <td><span class="product-tag cat-${PRODUCT_CATEGORY[item.product]||'yanwo'}">${item.product||'-'}</span>${item.product==='杂'&&item.miscNote?`<div style="font-size:9px;color:var(--text-light);margin-top:1px;">${item.miscNote}</div>`:''}</td>
-      <td style="font-weight:500;">${item.quantity}</td><td style="font-weight:500;">${shipped}</td>
-      <td style="font-weight:500;color:${pending>0?'var(--danger)':'var(--text-light)'};">${pending}</td>
+      <td style="font-weight:500;">${item.quantity}</td>
       <td><div class="ship-progress"><div class="bar-bg"><div class="bar-fill ${shipBarClass}" style="width:${shipPct}%;"></div></div><span class="ship-text ${shipTextClass}">${shipLabel}</span></div></td>
+      <td style="font-weight:500;">${shipped}</td>
+      <td style="font-weight:500;color:${pending>0?'var(--danger)':'var(--text-light)'};">${pending}</td>
       <td>${item.shipDate||'<span style="color:var(--text-light);">-</span>'}</td>
       <td>${formatNum(item.unitPrice)}</td><td style="color:var(--text-light);">${avgCost>0?formatNum(avgCost):'-'}</td>
       <td style="font-weight:600;color:var(--primary);">${formatNum(subTotal)}</td><td style="font-weight:600;${profitClass}">${shipped>0&&avgCost>0?formatNum(profit):'-'}</td>
