@@ -1365,7 +1365,7 @@ function renderInventoryTable() {
 }
 
 function updateInvStats() {
-  const invMap = {}; ALL_PRODUCT_LIST.forEach(p => { invMap[p] = { totalIn: 0, totalOut: 0 }; });
+  const invMap = {}; ALL_PRODUCT_LIST.forEach(p => { invMap[p] = { product: p, totalIn: 0, totalOut: 0 }; });
   purchases.forEach(p => { p.items.forEach(item => { 
     if (invMap[item.product]) {
       const records = item.inRecords || [];
