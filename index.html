@@ -333,8 +333,8 @@
       </div>
       <div class="filter-item">
         <span>发货：</span>
-        <label><input type="checkbox" value="pending" class="filter-ship-cb" onchange="renderOrderTable()">待发货</label>
-        <label><input type="checkbox" value="partial" class="filter-ship-cb" onchange="renderOrderTable()">部分发货</label>
+        <label><input type="checkbox" value="pending" class="filter-ship-cb" onchange="renderOrderTable()" checked>待发货</label>
+        <label><input type="checkbox" value="partial" class="filter-ship-cb" onchange="renderOrderTable()" checked>部分发货</label>
         <label><input type="checkbox" value="done" class="filter-ship-cb" onchange="renderOrderTable()">已全部发完</label>
       </div>
     </div>
@@ -996,12 +996,13 @@ function renderOrderTable() {
     if (filterYear && (r.order.orderDate||'').substring(0,4) !== filterYear) return false;
     if (filterPay.length > 0 && !filterPay.includes(r.order.payment)) return false;
     if (filterProd && r.item.product !== filterProd) return false;
-    // 发货状态 — 待发货=完全没发+部分发货中未发部分，已发货=完全发货+部分发货中已发部分
+    // 发货状态 — 待发货=有未发，已全部发完=完全发完（shipped>=quantity）
     const hasPending = r.item.shipped < r.item.quantity;
     const hasShipped = r.item.shipped > 0;
+    const isDone = r.item.shipped >= r.item.quantity;
     const showPending = filterShipChecks.includes('pending') && hasPending;
     const showPartial = filterShipChecks.includes('partial') && hasPending && hasShipped;
-    const showDone = filterShipChecks.includes('done') && hasShipped;
+    const showDone = filterShipChecks.includes('done') && isDone;
     if (!(showPending || showPartial || showDone)) return false;
     if (search) { const text = (r.order.customer + r.item.product + r.order.remark + r.order.orderDate).toLowerCase(); if (!text.includes(search)) return false; }
     return true;
