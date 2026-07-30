@@ -323,6 +323,9 @@
     </div>
     <div class="filter-bar">
       <div class="filter-item">
+        <span>品种：</span><select id="filterProduct" onchange="renderOrderTable()"><option value="">全部</option></select>
+      </div>
+      <div class="filter-item">
         <span>年份：</span><select id="filterYear" onchange="renderOrderTable()"><option value="">全部</option></select>
       </div>
       <div class="filter-item">
@@ -330,12 +333,9 @@
       </div>
       <div class="filter-item">
         <span>发货：</span>
-        <label><input type="checkbox" value="pending" class="filter-ship-cb" onchange="renderOrderTable()">待发</label>
-        <label><input type="checkbox" value="partial" class="filter-ship-cb" onchange="renderOrderTable()">部分</label>
-        <label><input type="checkbox" value="done" class="filter-ship-cb" onchange="renderOrderTable()">已完</label>
-      </div>
-      <div class="filter-item">
-        <span>品种：</span><select id="filterProduct" onchange="renderOrderTable()"><option value="">全部</option></select>
+        <label><input type="checkbox" value="pending" class="filter-ship-cb" onchange="renderOrderTable()">待发货</label>
+        <label><input type="checkbox" value="partial" class="filter-ship-cb" onchange="renderOrderTable()">部分发货</label>
+        <label><input type="checkbox" value="done" class="filter-ship-cb" onchange="renderOrderTable()">已全部发完</label>
       </div>
     </div>
 
