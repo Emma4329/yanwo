@@ -594,13 +594,13 @@ if ('serviceWorker' in navigator) {
 const ALL_PRODUCTS = {
   yanwo: ['珍品天盏','珍品自用','贡品官燕盏','贡品官自用','龙牙官燕盏','龙牙官自用','龙牙白燕盏','龙牙白自用','精选白燕盏','精选白自用','一级白燕盏','一级白自用','燕盏','燕盏自用','粗条正','粗条自','条正','条自','小条','特级燕盏丝','燕盏碎','即食燕窝','即食燕窝自用'],
   huajiao: ['珍品花胶','特选花胶','精选花胶','一级花胶','花胶筒','小花胶','花胶仔'],
-  other: ['珍品虫草10克','珍品虫草自10克','特选虫草10克','特选虫草自10克','精选虫草10克','精选虫草自10克','一级虫草10克','一级虫草自10克','粗节10克','珍品虫草1两','珍品虫草自1两','特选虫草1两','特选虫草自1两','精选虫草1两','精选虫草自1两','一级虫草1两','一级虫草自1两','粗节1两','杂']
+  other: ['珍品虫草10克','珍品虫草自10克','特选虫草10克','特选虫草自10克','精选虫草10克','精选虫草自10克','一级虫草10克','一级虫草自10克','粗节10克','珍品虫草1两','珍品虫草自1两','特选虫草1两','特选虫草自1两','精选虫草1两','精选虫草自1两','一级虫草1两','一级虫草自1两','粗节1两']
 };
 const ALL_PRODUCT_LIST = [...ALL_PRODUCTS.yanwo, ...ALL_PRODUCTS.huajiao, ...ALL_PRODUCTS.other];
 const PRODUCT_CATEGORY = {};
 ALL_PRODUCTS.yanwo.forEach(p => PRODUCT_CATEGORY[p]='yanwo');
 ALL_PRODUCTS.huajiao.forEach(p => PRODUCT_CATEGORY[p]='huajiao');
-ALL_PRODUCTS.other.forEach(p => PRODUCT_CATEGORY[p] = p.includes('杂') ? 'other' : 'chongcao');
+ALL_PRODUCTS.other.forEach(p => PRODUCT_CATEGORY[p]='chongcao');
 
 // 数据存储 key
 const KEY_ORDERS = 'yw_orders_v2';
