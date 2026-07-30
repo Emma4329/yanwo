@@ -1048,8 +1048,16 @@ function renderOrderTable() {
 
 function updateYearFilter() {
   const sel = document.getElementById('filterYear'), years = new Set();
+  const currentYear = String(new Date().getFullYear());
   orders.forEach(o => { const y = (o.orderDate||'').substring(0,4); if (y) years.add(y); });
-  const sorted = Array.from(years).sort().reverse(), currentVal = sel.value;
+  years.add(currentYear); // 确保当年始终可选
+  const sorted = Array.from(years).sort().reverse();
+  // 默认选中当年，如果之前没选过
+  if (!sel.dataset.initialized) {
+    sel.value = currentYear;
+    sel.dataset.initialized = '1';
+  }
+  const currentVal = sel.value;
   sel.innerHTML = '<option value="">全部</option>' + sorted.map(y => `<option value="${y}" ${y===currentVal?'selected':''}>${y}年</option>`).join('');
 }
 
