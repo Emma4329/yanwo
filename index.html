@@ -365,7 +365,7 @@
     </div>
 
     <div class="stats">
-      <div class="stat-card info"><div class="label">进货总数量</div><div class="value" id="purStatTotalQty">0</div></div>
+      <div class="stat-card info"><div class="label">进货下单总数量</div><div class="value" id="purStatTotalQty">0</div></div>
       <div class="stat-card warning"><div class="label">进货总金额</div><div class="value" id="purStatAmount">¥0</div></div>
       <div class="stat-card" style="border-left-color:var(--danger);"><div class="label">待入库数量</div><div class="value" id="purStatPending">0</div></div>
     </div>
@@ -697,10 +697,10 @@ function init() {
 
   // 默认年份设为当年
   document.getElementById('filterYear').value = String(new Date().getFullYear());
-  document.getElementById('purFilterYear').value = String(new Date().getFullYear());
 
   renderOrderTable();
   updatePurSupplierFilter(); // 初始填充供应商下拉
+  updatePurYearFilter();     // 初始填充进货年份下拉
   updateInvProdFilter();     // 初始填充库存品种筛选
   checkBackupReminder();
 }
