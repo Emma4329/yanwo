@@ -988,8 +988,13 @@ function renderOrderTable() {
     if (filterYear && (r.order.orderDate||'').substring(0,4) !== filterYear) return false;
     if (filterPay && r.order.payment !== filterPay) return false;
     if (filterProd && r.item.product !== filterProd) return false;
-    const shipStatus = r.item.shipped >= r.item.quantity ? 'done' : (r.item.shipped > 0 ? 'partial' : 'pending');
-    if (filterShipChecks.length > 0 && !filterShipChecks.includes(shipStatus)) return false;
+    // 发货状态 — 待发货=完全没发+部分发货中未发部分，已发货=完全发货+部分发货中已发部分
+    const hasPending = r.item.shipped < r.item.quantity;
+    const hasShipped = r.item.shipped > 0;
+    const showPending = filterShipChecks.includes('pending') && hasPending;
+    const showPartial = filterShipChecks.includes('partial') && hasPending && hasShipped;
+    const showDone = filterShipChecks.includes('done') && hasShipped;
+    if (!(showPending || showPartial || showDone)) return false;
     if (search) { const text = (r.order.customer + r.item.product + r.order.remark + r.order.orderDate).toLowerCase(); if (!text.includes(search)) return false; }
     return true;
   });
@@ -1209,13 +1214,17 @@ function renderPurchaseTable() {
   if (search) rows = rows.filter(r => (r.purchase.supplier + r.item.product + r.purchase.remark).toLowerCase().includes(search));
   // 供应商过滤
   if (filterSupplier) rows = rows.filter(r => r.purchase.supplier === filterSupplier);
-  // 入库状态过滤
+  // 入库状态过滤 — 待入库=完全没入库+部分入库中未入库部分，已入库=完全入库+部分入库中已入库部分
   if (filterShipChecks.length > 0) {
     rows = rows.filter(r => {
       const inRecords = r.item.inRecords || [];
       const totalIn = inRecords.reduce((s, rec) => s + (rec.qty || 0), 0);
-      const status = totalIn >= r.item.quantity ? 'done' : (totalIn > 0 ? 'partial' : 'pending');
-      return filterShipChecks.includes(status);
+      const hasPending = totalIn < r.item.quantity;   // 有未入库的
+      const hasIn = totalIn > 0;                       // 有已入库的
+      const showPending = filterShipChecks.includes('pending') && hasPending;
+      const showPartial = filterShipChecks.includes('partial') && hasPending && hasIn;
+      const showDone = filterShipChecks.includes('done') && hasIn;
+      return showPending || showPartial || showDone;
     });
   }
   rows.sort((a,b) => (b.purchase.date||'').localeCompare(a.purchase.date||'') || b.purchase.id - a.purchase.id || a.itemIndex - b.itemIndex);
