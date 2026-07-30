@@ -390,7 +390,7 @@
       <table>
         <thead><tr>
           <th style="width:32px;">#</th><th>进货日期</th><th>供应商</th><th>品种</th>
-          <th>下单数</th><th>进价(元)</th><th>总金额</th><th>入库状态</th><th>入库日期</th><th>备注</th><th>操作</th>
+          <th>下单数</th><th>进价(元)</th><th>总金额</th><th>待入库</th><th>入库状态</th><th>入库日期</th><th>备注</th><th>操作</th>
         </tr></thead>
         <tbody id="purTableBody"></tbody>
       </table>
@@ -1229,13 +1229,15 @@ function renderPurchaseTable() {
   }
   rows.sort((a,b) => (b.purchase.date||'').localeCompare(a.purchase.date||'') || b.purchase.id - a.purchase.id || a.itemIndex - b.itemIndex);
 
-  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="11"><div class="empty-row"><div class="icon">📦</div><div>暂无进货记录</div></div></td></tr>`; updatePurStats(); updatePurSupplierFilter(); return; }
+  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="12"><div class="empty-row"><div class="icon">📦</div><div>暂无进货记录</div></div></td></tr>`; updatePurStats(); updatePurSupplierFilter(); return; }
 
   let lastId = null, rowNum = 0;
   tbody.innerHTML = rows.map(r => {
     const p = r.purchase, item = r.item, isNew = (p.id !== lastId); lastId = p.id; rowNum++;
     const inRecords = item.inRecords || [];
     const totalIn = inRecords.reduce((s, r) => s + (r.qty || 0), 0);
+    const pendingQty = item.quantity - totalIn;
+    const pendingDisplay = pendingQty > 0 ? `<span style="color:var(--danger);font-weight:600;">${pendingQty}</span>` : '<span style="color:var(--text-light);">0</span>';
     const inStatus = totalIn >= item.quantity ? '<span style="color:var(--success);">✓已入库</span>' 
       : (totalIn > 0 ? `<span style="color:var(--warning);">${totalIn}/${item.quantity}</span>` : '<span style="color:var(--danger);">待入库</span>');
     const inDateText = inRecords.length > 0 ? inRecords.map(r => r.date).filter(d=>d).join('<br>') : '<span style="color:var(--text-light);">-</span>';
@@ -1243,7 +1245,7 @@ function renderPurchaseTable() {
       <td>${rowNum}</td><td>${isNew?(p.date||'-'):''}</td><td style="font-weight:${isNew?'600':'normal'};">${isNew?(p.supplier||'-'):''}</td>
       <td><span class="product-tag cat-${PRODUCT_CATEGORY[item.product]||'yanwo'}">${item.product}</span></td>
       <td>${item.quantity}</td><td>${formatNum(item.unitPrice)}</td><td style="font-weight:600;color:var(--primary);">${formatNum(item.quantity*item.unitPrice)}</td>
-      <td>${inStatus}</td><td style="font-size:11px;">${inDateText}</td>
+      <td>${pendingDisplay}</td><td>${inStatus}</td><td style="font-size:11px;">${inDateText}</td>
       <td style="max-width:140px;white-space:normal;font-size:11px;color:var(--text-light);">${isNew?(p.remark||''):''}</td>
       <td>${isNew?`<div class="row-actions"><button class="icon-btn" title="编辑" onclick="openPurchaseModal(${p.id})">✏️</button><button class="icon-btn" title="删除" onclick="deletePurchase(${p.id})">🗑️</button></div>`:''}</td>
     </tr>`;
