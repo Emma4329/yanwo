@@ -54,7 +54,7 @@
   }
   .nav-icon.sell { background: #D4A574; color: #3D2B1F; }
   .nav-icon.buy { background: #6B9B8A; color: #FFF; }
-  .nav-icon.price { background: #C77D0D; color: #FFF; }
+  .nav-icon.compare { background: #C77D0D; color: #FFF; }
   .nav-icon.stock { background: #3B7DD8; color: #FFF; }
   .nav-divider {
     margin: 6px 10px; border-top: 1px solid rgba(255,255,255,0.08);
@@ -286,6 +286,9 @@
   <div class="nav-item" data-page="purchase">
     <span class="nav-icon buy">进</span> 燕窝进货平台
   </div>
+  <div class="nav-item" data-page="compare">
+    <span class="nav-icon compare">比</span> 比价系统
+  </div>
   <div class="nav-item" data-page="inventory">
     <span class="nav-icon stock">库</span> 库存平台
   </div>
@@ -433,6 +436,25 @@
           <th>成本价</th><th>库存价值</th><th>出库累计</th><th>状态</th>
         </tr></thead>
         <tbody id="invTableBody"></tbody>
+      </table>
+    </div></div>
+  </div>
+
+  <!-- ========== 比价系统 ========== -->
+  <div class="page" id="page-compare">
+    <div class="page-header">
+      <div>
+        <h1>📊 比价系统</h1>
+        <div class="sub">供应商进价对比 · 历史价格追踪</div>
+      </div>
+    </div>
+
+    <div class="table-wrapper"><div class="table-scroll">
+      <table>
+        <thead><tr>
+          <th style="width:32px;">#</th><th style="width:52px;">品种</th><th id="compareSupplierHeaders">暂无供应商数据</th>
+        </tr></thead>
+        <tbody id="compareTableBody"></tbody>
       </table>
     </div></div>
   </div>
@@ -614,6 +636,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
     document.getElementById('page-' + this.dataset.page).classList.add('active');
     if (this.dataset.page === 'orders') renderOrderTable();
     if (this.dataset.page === 'purchase') renderPurchaseTable();
+    if (this.dataset.page === 'compare') renderCompareTable();
     if (this.dataset.page === 'inventory') renderInventoryTable();
   });
 });
@@ -1321,6 +1344,80 @@ function updatePurYearFilter() {
 }
 
 // ==========================================
+
+// ==========================================
+// ========== 比价系统 ==========
+// ==========================================
+function renderCompareTable() {
+  const tbody = document.getElementById('compareTableBody');
+  const theadRow = document.getElementById('compareSupplierHeaders');
+
+  // 收集所有供应商（按进货日期排序）
+  const suppliers = new Set();
+  const supplierDates = {};
+  purchases.forEach(p => {
+    suppliers.add(p.supplier);
+    if (!supplierDates[p.supplier] || p.date > supplierDates[p.supplier]) {
+      supplierDates[p.supplier] = p.date;
+    }
+  });
+  const supplierList = Array.from(suppliers).sort((a,b) => (supplierDates[a]||'').localeCompare(supplierDates[b]||''));
+
+  // 渲染表头：品种 + 各供应商列
+  if (supplierList.length === 0) {
+    theadRow.innerHTML = '暂无供应商数据';
+    tbody.innerHTML = `<tr><td colspan="2"><div class="empty-row"><div class="icon">📊</div><div>暂无进货数据，请先在进货平台录入</div></div></td></tr>`;
+    return;
+  }
+  theadRow.innerHTML = supplierList.map(s => `<th>${s}</th>`).join('');
+
+  // 收集每个品种在各供应商的进价（取最近一次）
+  const compareMap = {};
+  ALL_PRODUCT_LIST.forEach(p => { compareMap[p] = {}; });
+  purchases.forEach(p => {
+    p.items.forEach(item => {
+      if (compareMap[item.product]) {
+        const oldDate = compareMap[item.product]._dates ? (compareMap[item.product]._dates[p.supplier] || '') : '';
+        const newDate = p.date || '';
+        if (!oldDate || newDate > oldDate) {
+          compareMap[item.product][p.supplier] = item.unitPrice;
+          if (!compareMap[item.product]._dates) compareMap[item.product]._dates = {};
+          compareMap[item.product]._dates[p.supplier] = newDate;
+        }
+      }
+    });
+  });
+
+  // 只显示有进货记录的品种
+  const showList = ALL_PRODUCT_LIST.filter(prod => {
+    return supplierList.some(s => compareMap[prod][s] !== undefined);
+  });
+
+  if (showList.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="${supplierList.length+1}"><div class="empty-row"><div class="icon">📊</div><div>暂无对比数据</div></div></td></tr>`;
+    return;
+  }
+
+  // 找出每行最低价
+  tbody.innerHTML = showList.map((prod, i) => {
+    let minPrice = Infinity;
+    supplierList.forEach(s => {
+      const v = compareMap[prod][s];
+      if (v && v < minPrice) minPrice = v;
+    });
+    const cells = supplierList.map(s => {
+      const v = compareMap[prod][s];
+      if (!v) return '<td style="color:var(--text-light);">-</td>';
+      const isMin = v === minPrice;
+      return `<td style="font-weight:${isMin?'700':'400'};color:${isMin?'var(--success)':'var(--text)'};">${isMin?'★ ' : ''}¥${formatNum(v)}</td>`;
+    }).join('');
+    return `<tr>
+      <td>${i+1}</td>
+      <td><span class="product-tag cat-${PRODUCT_CATEGORY[prod]||'yanwo'}">${prod}</span></td>
+      ${cells}
+    </tr>`;
+  }).join('');
+}
 
 // ==========================================
 // ========== 库存平台 ==========
