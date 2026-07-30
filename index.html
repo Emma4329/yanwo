@@ -310,7 +310,7 @@
 
     <div class="stats">
       <div class="stat-card"><div class="label">订单总数</div><div class="value" id="statTotal">0 <span class="unit">单</span></div></div>
-      <div class="stat-card info"><div class="label">品种行 / 待发货</div><div class="value" id="statItems">0 / 0</div></div>
+      <div class="stat-card info"><div class="label">待发客户 / 待发数量</div><div class="value" id="statItems">0 / 0</div></div>
       <div class="stat-card warning"><div class="label">待收尾款</div><div class="value" id="statPending">¥0</div></div>
       <div class="stat-card"><div class="label">订单总金额</div><div class="value" id="statTotalAmount">¥0</div></div>
       <div class="stat-card info"><div class="label">已实现利润</div><div class="value" id="statProfit">¥0</div></div>
@@ -342,7 +342,7 @@
       <table>
         <thead><tr>
           <th style="width:32px;">#</th><th>下单日期</th><th>客户</th><th>品种</th>
-          <th>下单数</th><th>已发数</th><th>进度</th><th>发货日</th>
+          <th>下单数</th><th>已发数</th><th>待发数</th><th>进度</th><th>发货日</th>
           <th>售价</th><th>成本</th><th>总价</th><th>利润</th>
           <th>付款</th><th>备注</th><th>操作</th>
         </tr></thead>
@@ -999,12 +999,13 @@ function renderOrderTable() {
   });
   rows.sort((a,b) => { const d = (b.order.orderDate||'').localeCompare(a.order.orderDate||''); if (d!==0) return d; if (a.order.id!==b.order.id) return b.order.id-a.order.id; return a.itemIndex-b.itemIndex; });
 
-  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="15"><div class="empty-row"><div class="icon">📋</div><div>暂无订单数据</div></div></td></tr>`; updateOrderStats(); return; }
+  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="16"><div class="empty-row"><div class="icon">📋</div><div>暂无订单数据</div></div></td></tr>`; updateOrderStats(); return; }
 
   let lastOrderId = null, rowNum = 0;
   tbody.innerHTML = rows.map(r => {
     const o = r.order, item = r.item, subTotal = item.quantity * item.unitPrice;
-    const shipped = item.shipped || 0, shipPct = item.quantity > 0 ? Math.round((shipped/item.quantity)*100) : 0;
+    const shipped = item.shipped || 0, pending = item.quantity - shipped;
+    const shipPct = item.quantity > 0 ? Math.round((shipped/item.quantity)*100) : 0;
     let shipBarClass='none', shipTextClass='pending', shipLabel='待发货';
     if (shipped >= item.quantity) { shipBarClass=''; shipTextClass='done'; shipLabel='已发完 ✓'; }
     else if (shipped > 0) { shipBarClass='partial'; shipTextClass='partial'; shipLabel=`${shipped}/${item.quantity}`; }
@@ -1020,6 +1021,7 @@ function renderOrderTable() {
       <td><span class="order-customer">${isNewGroup?(o.customer||'-'):''}</span>${isNewGroup&&o.remark?`<div class="order-meta">${o.remark}</div>`:''}</td>
       <td><span class="product-tag cat-${PRODUCT_CATEGORY[item.product]||'yanwo'}">${item.product||'-'}</span>${item.product==='杂'&&item.miscNote?`<div style="font-size:9px;color:var(--text-light);margin-top:1px;">${item.miscNote}</div>`:''}</td>
       <td style="font-weight:500;">${item.quantity}</td><td style="font-weight:500;">${shipped}</td>
+      <td style="font-weight:500;color:${pending>0?'var(--danger)':'var(--text-light)'};">${pending}</td>
       <td><div class="ship-progress"><div class="bar-bg"><div class="bar-fill ${shipBarClass}" style="width:${shipPct}%;"></div></div><span class="ship-text ${shipTextClass}">${shipLabel}</span></div></td>
       <td>${item.shipDate||'<span style="color:var(--text-light);">-</span>'}</td>
       <td>${formatNum(item.unitPrice)}</td><td style="color:var(--text-light);">${avgCost>0?formatNum(avgCost):'-'}</td>
@@ -1045,12 +1047,14 @@ function updateOrderStats() {
   const filterYear = document.getElementById('filterYear').value;
   const statsOrders = filterYear ? orders.filter(o => (o.orderDate||'').substring(0,4) === filterYear) : orders;
   const total = statsOrders.length;
-  let totalItems = 0, pendingItems = 0, pendingAmount = 0, totalAmount = 0, realizedProfit = 0, estProfit = 0;
+  let pendingCustomers = new Set(), pendingQty = 0, pendingAmount = 0, totalAmount = 0, realizedProfit = 0, estProfit = 0;
   statsOrders.forEach(o => {
+    let orderHasPending = false;
     o.items.forEach(item => {
-      totalItems++; if (item.shipped < item.quantity) pendingItems++;
-      const sub = item.quantity * item.unitPrice; totalAmount += sub;
       const shipped = item.shipped || 0;
+      const remain = item.quantity - shipped;
+      if (remain > 0) { orderHasPending = true; pendingQty += remain; }
+      const sub = item.quantity * item.unitPrice; totalAmount += sub;
       // 已实现利润：FIFO 实际成本
       if (shipped > 0) {
         const fifo = calcFIFOCost(item.product, shipped);
@@ -1063,10 +1067,11 @@ function updateOrderStats() {
       }
       if (o.payment === '定金') pendingAmount += (sub - (parseFloat(o.deposit)||0));
     });
+    if (orderHasPending) pendingCustomers.add(o.customer);
     if (o.payment === '定金') pendingAmount += (parseFloat(o.deposit)||0) * (o.items.length - 1);
   });
   document.getElementById('statTotal').innerHTML = `${total} <span class="unit">单</span>`;
-  document.getElementById('statItems').innerHTML = `${totalItems} / ${pendingItems}`;
+  document.getElementById('statItems').innerHTML = `${pendingCustomers.size} / ${pendingQty}`;
   document.getElementById('statPending').textContent = '¥' + formatNum(Math.max(0, pendingAmount));
   document.getElementById('statTotalAmount').textContent = '¥' + formatNum(totalAmount);
   document.getElementById('statProfit').textContent = '¥' + formatNum(realizedProfit);
