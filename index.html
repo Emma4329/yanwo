@@ -1038,10 +1038,10 @@ function renderOrderTable() {
       <td style="max-width:52px;overflow-wrap:break-word;">${rowNum}</td><td>${isNewGroup?(o.orderDate||'-'):''}</td>
       <td style="max-width:52px;overflow-wrap:break-word;"><span class="order-customer">${isNewGroup?(o.customer||'-'):''}</span>${isNewGroup&&o.remark?`<div class="order-meta">${o.remark}</div>`:''}</td>
       <td style="max-width:52px;overflow-wrap:break-word;"><span class="product-tag cat-${PRODUCT_CATEGORY[item.product]||'yanwo'}">${item.product||'-'}</span>${item.product==='杂'&&item.miscNote?`<div style="font-size:9px;color:var(--text-light);margin-top:1px;">${item.miscNote}</div>`:''}</td>
-      <td style="font-weight:500;">${item.quantity}</td>
+      <td style="font-weight:500;text-align:center;">${item.quantity}</td>
       <td><div class="ship-progress"><div class="bar-bg"><div class="bar-fill ${shipBarClass}" style="width:${shipPct}%;"></div></div><span class="ship-text ${shipTextClass}">${shipLabel}</span></div></td>
-      <td style="font-weight:500;">${shipped}</td>
-      <td style="font-weight:500;color:${pending>0?'var(--danger)':'var(--text-light)'};">${pending}</td>
+      <td style="font-weight:500;text-align:center;">${shipped}</td>
+      <td style="font-weight:500;text-align:center;color:${pending>0?'var(--danger)':'var(--text-light)'};">${pending}</td>
       <td>${item.shipDate||'<span style="color:var(--text-light);">-</span>'}</td>
       <td>${formatNum(item.unitPrice)}</td><td style="color:var(--text-light);">${avgCost>0?formatNum(avgCost):'-'}</td>
       <td style="font-weight:600;color:var(--primary);">${formatNum(subTotal)}</td><td style="font-weight:600;${profitClass}">${shipped>0&&avgCost>0?formatNum(profit):'-'}</td>
