@@ -379,9 +379,9 @@
       </div>
       <div class="filter-item">
         <span>入库：</span>
-        <label><input type="checkbox" value="pending" class="pur-filter-ship-cb" onchange="renderPurchaseTable()">待入库</label>
-        <label><input type="checkbox" value="partial" class="pur-filter-ship-cb" onchange="renderPurchaseTable()">部分入库</label>
-        <label><input type="checkbox" value="done" class="pur-filter-ship-cb" onchange="renderPurchaseTable()">已入库</label>
+        <label><input type="checkbox" value="pending" class="pur-filter-ship-cb" onchange="renderPurchaseTable()" checked>待入库</label>
+        <label><input type="checkbox" value="partial" class="pur-filter-ship-cb" onchange="renderPurchaseTable()" checked>部分入库</label>
+        <label><input type="checkbox" value="done" class="pur-filter-ship-cb" onchange="renderPurchaseTable()">已全部入库</label>
       </div>
       <div class="filter-item">
         <span>供应商：</span>
@@ -1243,16 +1243,17 @@ function renderPurchaseTable() {
   if (search) rows = rows.filter(r => (r.purchase.supplier + r.item.product + r.purchase.remark).toLowerCase().includes(search));
   // 供应商过滤
   if (filterSupplier) rows = rows.filter(r => r.purchase.supplier === filterSupplier);
-  // 入库状态过滤 — 待入库=完全没入库+部分入库中未入库部分，已入库=完全入库+部分入库中已入库部分
+  // 入库状态过滤 — 待入库=有未入库，已全部入库=完全入库（totalIn>=quantity）
   if (filterShipChecks.length > 0) {
     rows = rows.filter(r => {
       const inRecords = r.item.inRecords || [];
       const totalIn = inRecords.reduce((s, rec) => s + (rec.qty || 0), 0);
       const hasPending = totalIn < r.item.quantity;   // 有未入库的
       const hasIn = totalIn > 0;                       // 有已入库的
+      const isDone = totalIn >= r.item.quantity;       // 完全入库
       const showPending = filterShipChecks.includes('pending') && hasPending;
       const showPartial = filterShipChecks.includes('partial') && hasPending && hasIn;
-      const showDone = filterShipChecks.includes('done') && hasIn;
+      const showDone = filterShipChecks.includes('done') && isDone;
       return showPending || showPartial || showDone;
     });
   }
