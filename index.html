@@ -286,11 +286,11 @@
   <div class="nav-item" data-page="purchase">
     <span class="nav-icon buy">进</span> 燕窝进货平台
   </div>
-  <div class="nav-item" data-page="compare">
-    <span class="nav-icon compare">比</span> 比价系统
-  </div>
   <div class="nav-item" data-page="inventory">
     <span class="nav-icon stock">库</span> 库存平台
+  </div>
+  <div class="nav-item" data-page="compare">
+    <span class="nav-icon compare">比</span> 比价系统
   </div>
   <div class="nav-footer">v3.0 · FIFO成本</div>
 </div>
@@ -445,14 +445,17 @@
     <div class="page-header">
       <div>
         <h1>📊 比价系统</h1>
-        <div class="sub">供应商进价对比 · 历史价格追踪</div>
+        <div class="sub">供应商进价对比 · 手动录入</div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-primary" onclick="addCompareSupplier()">➕ 添加供应商列</button>
       </div>
     </div>
 
     <div class="table-wrapper"><div class="table-scroll">
       <table>
-        <thead><tr>
-          <th style="width:32px;">#</th><th style="width:52px;">品种</th><th id="compareSupplierHeaders">暂无供应商数据</th>
+        <thead id="compareTableHead"><tr>
+          <th style="width:32px;">#</th><th style="width:52px;">品种</th>
         </tr></thead>
         <tbody id="compareTableBody"></tbody>
       </table>
@@ -603,11 +606,13 @@ ALL_PRODUCTS.other.forEach(p => PRODUCT_CATEGORY[p]='other');
 const KEY_ORDERS = 'yw_orders_v2';
 const KEY_PURCHASE = 'yw_purchase_v1';
 const KEY_INVENTORY = 'yw_inventory_v1';
+const KEY_COMPARE = 'yw_compare_v1';
 const KEY_BACKUP = 'yw_last_backup';
 const BACKUP_INTERVAL = 15;
 
 // 全局数据
 let orders = [], purchases = [], inventoryLog = [];
+let compareData = { suppliers: [], prices: {} }; // 比价独立数据
 let editingOrderId = null, editingPurchaseId = null;
 let shipTarget = null;
 
@@ -688,6 +693,7 @@ function saveAll() {
   localStorage.setItem(KEY_ORDERS, JSON.stringify(orders));
   localStorage.setItem(KEY_PURCHASE, JSON.stringify(purchases));
   localStorage.setItem(KEY_INVENTORY, JSON.stringify(inventoryLog));
+  localStorage.setItem(KEY_COMPARE, JSON.stringify(compareData));
 }
 
 function refreshAll() {
@@ -702,6 +708,7 @@ function init() {
   try { orders = JSON.parse(localStorage.getItem(KEY_ORDERS) || '[]'); } catch(e) { orders = []; }
   try { purchases = JSON.parse(localStorage.getItem(KEY_PURCHASE) || '[]'); } catch(e) { purchases = []; }
   try { inventoryLog = JSON.parse(localStorage.getItem(KEY_INVENTORY) || '[]'); } catch(e) { inventoryLog = []; }
+  try { compareData = JSON.parse(localStorage.getItem(KEY_COMPARE) || '{"suppliers":[],"prices":{}}'); } catch(e) { compareData = { suppliers: [], prices: {} }; }
 
   if (orders.length === 0 && purchases.length === 0) {
     orders = [{ id: Date.now(), orderDate: new Date().toISOString().split('T')[0], customer: '示例客户', payment: '定金', deposit: 800, remark: '示例数据，可删除',
@@ -1346,81 +1353,84 @@ function updatePurYearFilter() {
 // ==========================================
 
 // ==========================================
-// ========== 比价系统 ==========
+// ========== 比价系统（独立数据，手动输入） ==========
 // ==========================================
 function renderCompareTable() {
+  const thead = document.getElementById('compareTableHead');
   const tbody = document.getElementById('compareTableBody');
-  const theadRow = document.getElementById('compareSupplierHeaders');
+  const suppliers = compareData.suppliers || [];
+  const prices = compareData.prices || {};
 
-  // 收集所有供应商（按进货日期排序）
-  const suppliers = new Set();
-  const supplierDates = {};
-  purchases.forEach(p => {
-    suppliers.add(p.supplier);
-    if (!supplierDates[p.supplier] || p.date > supplierDates[p.supplier]) {
-      supplierDates[p.supplier] = p.date;
-    }
-  });
-  const supplierList = Array.from(suppliers).sort((a,b) => (supplierDates[a]||'').localeCompare(supplierDates[b]||''));
+  // 渲染表头
+  thead.innerHTML = `<tr>
+    <th style="width:32px;">#</th><th style="width:52px;">品种</th>
+    ${suppliers.map((s,i) => `<th style="min-width:80px;position:relative;padding:6px 4px;">
+      <input value="${s}" onchange="updateCompareSupplier(${i},this.value)" style="width:calc(100% - 18px);border:none;background:transparent;font-weight:600;color:var(--text-light);font-size:11px;text-align:center;" placeholder="供应商">
+      <button onclick="deleteCompareSupplier(${i})" style="position:absolute;top:2px;right:4px;background:none;border:none;cursor:pointer;font-size:10px;color:var(--danger);" title="删除">✕</button>
+    </th>`).join('')}
+  </tr>`;
 
-  // 渲染表头：品种 + 各供应商列
-  if (supplierList.length === 0) {
-    theadRow.innerHTML = '暂无供应商数据';
-    tbody.innerHTML = `<tr><td colspan="2"><div class="empty-row"><div class="icon">📊</div><div>暂无进货数据，请先在进货平台录入</div></div></td></tr>`;
-    return;
-  }
-  theadRow.innerHTML = supplierList.map(s => `<th>${s}</th>`).join('');
-
-  // 收集每个品种在各供应商的进价（取最近一次）
-  const compareMap = {};
-  ALL_PRODUCT_LIST.forEach(p => { compareMap[p] = {}; });
-  purchases.forEach(p => {
-    p.items.forEach(item => {
-      if (compareMap[item.product]) {
-        const oldDate = compareMap[item.product]._dates ? (compareMap[item.product]._dates[p.supplier] || '') : '';
-        const newDate = p.date || '';
-        if (!oldDate || newDate > oldDate) {
-          compareMap[item.product][p.supplier] = item.unitPrice;
-          if (!compareMap[item.product]._dates) compareMap[item.product]._dates = {};
-          compareMap[item.product]._dates[p.supplier] = newDate;
-        }
-      }
-    });
-  });
-
-  // 只显示有进货记录的品种
-  const showList = ALL_PRODUCT_LIST.filter(prod => {
-    return supplierList.some(s => compareMap[prod][s] !== undefined);
-  });
-
-  if (showList.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="${supplierList.length+1}"><div class="empty-row"><div class="icon">📊</div><div>暂无对比数据</div></div></td></tr>`;
-    return;
-  }
-
-  // 找出每行最低价
-  tbody.innerHTML = showList.map((prod, i) => {
-    let minPrice = Infinity;
-    supplierList.forEach(s => {
-      const v = compareMap[prod][s];
-      if (v && v < minPrice) minPrice = v;
-    });
-    const cells = supplierList.map(s => {
-      const v = compareMap[prod][s];
-      if (!v) return '<td style="color:var(--text-light);">-</td>';
-      const isMin = v === minPrice;
-      return `<td style="font-weight:${isMin?'700':'400'};color:${isMin?'var(--success)':'var(--text)'};">${isMin?'★ ' : ''}¥${formatNum(v)}</td>`;
+  // 渲染所有品种行
+  tbody.innerHTML = ALL_PRODUCT_LIST.map((prod, i) => {
+    const cells = suppliers.map((s, si) => {
+      const val = (prices[prod] && prices[prod][s] !== undefined) ? prices[prod][s] : '';
+      return `<td><input value="${val}" onchange="updateComparePrice('${prod}','${s}',this.value)" style="width:100%;border:none;background:transparent;font-size:11px;text-align:center;padding:4px 2px;" placeholder="-" type="number" step="0.01" min="0"></td>`;
     }).join('');
     return `<tr>
       <td>${i+1}</td>
-      <td><span class="product-tag cat-${PRODUCT_CATEGORY[prod]||'yanwo'}">${prod}</span></td>
+      <td style="max-width:52px;overflow-wrap:break-word;"><span class="product-tag cat-${PRODUCT_CATEGORY[prod]||'yanwo'}">${prod}</span></td>
       ${cells}
     </tr>`;
   }).join('');
 }
 
-// ==========================================
-// ========== 库存平台 ==========
+function addCompareSupplier() {
+  const name = prompt('请输入供应商名称：');
+  if (!name || !name.trim()) return;
+  if (compareData.suppliers.includes(name.trim())) { alert('供应商已存在'); return; }
+  compareData.suppliers.push(name.trim());
+  saveAll(); renderCompareTable();
+}
+
+function deleteCompareSupplier(idx) {
+  const name = compareData.suppliers[idx];
+  if (!confirm(`确定删除供应商「${name}」及其所有价格数据？`)) return;
+  compareData.suppliers.splice(idx, 1);
+  // 清除该供应商所有价格
+  Object.keys(compareData.prices).forEach(prod => {
+    delete compareData.prices[prod][name];
+    if (Object.keys(compareData.prices[prod]).length === 0) delete compareData.prices[prod];
+  });
+  saveAll(); renderCompareTable();
+}
+
+function updateCompareSupplier(idx, newName) {
+  const oldName = compareData.suppliers[idx];
+  if (!newName.trim()) return;
+  compareData.suppliers[idx] = newName.trim();
+  // 迁移价格数据
+  if (oldName !== newName.trim()) {
+    Object.keys(compareData.prices).forEach(prod => {
+      if (compareData.prices[prod][oldName] !== undefined) {
+        compareData.prices[prod][newName.trim()] = compareData.prices[prod][oldName];
+        delete compareData.prices[prod][oldName];
+      }
+    });
+  }
+  saveAll(); renderCompareTable();
+}
+
+function updateComparePrice(prod, supplier, val) {
+  if (!compareData.prices[prod]) compareData.prices[prod] = {};
+  if (val === '' || val === null) {
+    delete compareData.prices[prod][supplier];
+    if (Object.keys(compareData.prices[prod]).length === 0) delete compareData.prices[prod];
+  } else {
+    compareData.prices[prod][supplier] = parseFloat(val) || 0;
+  }
+  saveAll();
+}
+
 // ==========================================
 function openInventoryModal() {
   document.getElementById('fInvDate').value = new Date().toISOString().split('T')[0];
