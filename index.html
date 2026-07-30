@@ -465,7 +465,11 @@
   <div class="modal-body">
     <div class="form-row">
       <div class="form-group w140"><label>进货日期 <span class="required">*</span></label><input type="date" id="fPurDate"></div>
-      <div class="form-group w160"><label>供应商 <span class="required">*</span></label><input type="text" id="fPurSupplier" placeholder="供应商名称"></div>
+      <div class="form-group w160" style="position:relative;">
+        <label>供应商 <span class="required">*</span></label>
+        <input type="text" id="fPurSupplier" placeholder="输入名称自动提示" autocomplete="off" oninput="suggestSupplier()" onfocus="suggestSupplier()" onblur="setTimeout(()=>hidePurSuggestion(),200)">
+        <div id="supplierSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:0 0 6px 6px;max-height:160px;overflow-y:auto;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>
+      </div>
     </div>
     <div class="items-section">
       <h3>📦 进货明细 <button class="btn btn-outline btn-sm" onclick="addPurItemRow()">+ 添加品种</button></h3>
@@ -704,6 +708,18 @@ function suggestCustomer() {
 }
 function selectCustomer(name) { document.getElementById('fCustomer').value = name; hideSuggestion(); }
 function hideSuggestion() { document.getElementById('customerSuggest').style.display = 'none'; }
+
+// --- 供应商自动提示 ---
+function getAllSuppliers() { const names = new Set(); purchases.forEach(p => { if (p.supplier) names.add(p.supplier); }); return Array.from(names).sort(); }
+function suggestSupplier() {
+  const input = document.getElementById('fPurSupplier'), suggest = document.getElementById('supplierSuggest');
+  const val = input.value.trim(), allNames = getAllSuppliers();
+  if (!val) { const recent = allNames.slice(0,8); if (!recent.length) { suggest.style.display='none'; return; } suggest.innerHTML = recent.map(n => `<div class="cust-suggest-item" onmousedown="selectSupplier('${n.replace(/'/g,"\\'")}')">${n}</div>`).join(''); suggest.style.display='block'; return; }
+  const matched = allNames.filter(n => n.includes(val)); if (!matched.length) { suggest.style.display='none'; return; }
+  suggest.innerHTML = matched.map(n => `<div class="cust-suggest-item" onmousedown="selectSupplier('${n.replace(/'/g,"\\'")}')">${n}</div>`).join(''); suggest.style.display='block';
+}
+function selectSupplier(name) { document.getElementById('fPurSupplier').value = name; hidePurSuggestion(); }
+function hidePurSuggestion() { document.getElementById('supplierSuggest').style.display = 'none'; }
 
 // --- 接单弹窗 ---
 function openOrderModal(id) {
