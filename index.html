@@ -797,13 +797,26 @@ function showStockInfo(row) {
 // 把所有进货按品种+日期排序，返回每品种的批次队列
 function getPurchaseBatches() {
   const batches = {}; // { product: [{qty, price, date, supplier, remaining}] }
-  purchases.sort((a,b) => (a.date||'').localeCompare(b.date||'')).forEach(p => {
+  // 收集所有入库批次，按入库日期排序
+  const allBatches = [];
+  purchases.forEach(p => {
     p.items.forEach(item => {
-      if (!batches[item.product]) batches[item.product] = [];
-      // 用实际入库数量，未填入库数量则默认等于下单数量
-      const inQty = (item.inQty !== undefined && item.inQty >= 0) ? item.inQty : item.quantity;
-      batches[item.product].push({ qty: item.quantity, price: item.unitPrice, date: p.date, supplier: p.supplier, inQty: inQty, remaining: inQty, inDate: item.inDate || '' });
+      const inRecords = item.inRecords || [];
+      if (inRecords.length > 0) {
+        inRecords.forEach(r => {
+          allBatches.push({ product: item.product, qty: r.qty, price: item.unitPrice, date: r.date || p.date, supplier: p.supplier, remaining: r.qty });
+        });
+      } else {
+        // 兼容旧数据：没有 inRecords 的默认全部入库
+        allBatches.push({ product: item.product, qty: item.quantity, price: item.unitPrice, date: p.date, supplier: p.supplier, remaining: item.quantity });
+      }
     });
+  });
+  // 按日期排序（先进先出）
+  allBatches.sort((a,b) => (a.date||'').localeCompare(b.date||''));
+  allBatches.forEach(b => {
+    if (!batches[b.product]) batches[b.product] = [];
+    batches[b.product].push(b);
   });
   // 按接单已发数扣减（先进先出）
   // 汇总每个品种的总已发数
@@ -1067,19 +1080,45 @@ function closePurchaseModal() { document.getElementById('purchaseModal').classLi
 function addPurItemRow(data) {
   const container = document.getElementById('purItemsContainer');
   const div = document.createElement('div'); div.className = 'item-row';
-  const inQty = (data && data.inQty !== undefined) ? data.inQty : (data ? data.quantity : '');
-  const inDate = (data && data.inDate) || '';
+  const inRecords = (data && data.inRecords) || [];
   div.innerHTML = `
     <div class="form-group" style="width:170px;"><label>品种 <span class="required">*</span></label>${productSelectHTML(data?data.product:'','pur-product-sel')}</div>
-    <div class="form-group" style="width:85px;"><label>下单数量</label><input type="number" value="${data?data.quantity:''}" min="0.1" step="0.1" placeholder="数量" oninput="updatePurTotal()" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
-    <div class="form-group" style="width:95px;"><label>进价(元)</label><input type="number" value="${data?data.unitPrice:''}" min="0" step="0.01" placeholder="进价" oninput="updatePurTotal()" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
-    <div class="form-group" style="width:85px;"><label>已入库</label><input type="number" value="${inQty}" min="0" step="0.1" placeholder="入库数" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
-    <div class="form-group" style="width:120px;"><label>入库日期</label><input type="date" value="${inDate}" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
+    <div class="form-group" style="width:85px;"><label>下单数量</label><input type="number" class="pur-qty" value="${data?data.quantity:''}" min="0.1" step="0.1" placeholder="数量" oninput="updatePurTotal()" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
+    <div class="form-group" style="width:95px;"><label>进价(元)</label><input type="number" class="pur-price" value="${data?data.unitPrice:''}" min="0" step="0.01" placeholder="进价" oninput="updatePurTotal()" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
     <div class="form-group" style="width:85px;"><label>金额</label><span class="item-subtotal" style="font-weight:600;color:var(--primary);padding:8px 0;display:block;">¥0.00</span></div>
+    <div class="form-group" style="width:90px;">
+      <label>入库(<span class="in-total">0</span>)</label>
+      <button class="btn btn-outline btn-sm" onclick="addInRecord(this);return false;" style="width:100%;">+ 入库</button>
+    </div>
     <div style="padding-top:20px;"><button class="btn btn-danger btn-sm" onclick="this.closest('.item-row').remove();updatePurTotal();">✕</button></div>
+    <div class="in-records" style="width:100%;"></div>
   `;
   container.appendChild(div);
+  // 恢复已有入库记录
+  inRecords.forEach(r => addInRecord(div.querySelector('button'), r));
   updatePurTotal();
+  updateInTotal(div);
+}
+
+function addInRecord(btn, data) {
+  const row = btn.closest ? btn.closest('.item-row') : btn;
+  const container = row.querySelector('.in-records');
+  const div = document.createElement('div');
+  div.style.cssText = 'display:flex;gap:6px;align-items:flex-end;margin-top:6px;padding-left:10px;';
+  div.innerHTML = `
+    <div class="form-group" style="width:80px;"><label>入库数量</label><input type="number" class="in-qty" value="${data?data.qty:''}" min="0.1" step="0.1" placeholder="数量" oninput="updateInTotal(this.closest('.item-row'))" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:5px;font-size:11px;"></div>
+    <div class="form-group" style="width:120px;"><label>入库日期</label><input type="date" class="in-date" value="${data?data.date:''}" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:5px;font-size:11px;"></div>
+    <div style="padding-top:18px;"><button class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove();updateInTotal(this.closest('.item-row'));" style="padding:3px 7px;">✕</button></div>
+  `;
+  container.appendChild(div);
+  updateInTotal(row);
+}
+
+function updateInTotal(row) {
+  let total = 0;
+  row.querySelectorAll('.in-qty').forEach(input => { total += parseFloat(input.value) || 0; });
+  const span = row.querySelector('.in-total');
+  if (span) span.textContent = total;
 }
 
 function onPurProductChange(sel) {
@@ -1119,11 +1158,18 @@ function savePurchase() {
 
   const container = document.getElementById('purItemsContainer'); const items = []; let valid = true;
   container.querySelectorAll('.item-row').forEach(row => {
-    const sel = row.querySelector('select'), inputs = row.querySelectorAll('input');
-    const product = sel.value, quantity = parseFloat(inputs[0]?.value) || 0, unitPrice = parseFloat(inputs[1]?.value) || 0;
-    const inQty = parseFloat(inputs[2]?.value) || 0, inDate = inputs[3]?.value || '';
+    const sel = row.querySelector('select');
+    const qtyInput = row.querySelector('.pur-qty'), priceInput = row.querySelector('.pur-price');
+    const product = sel.value, quantity = parseFloat(qtyInput?.value) || 0, unitPrice = parseFloat(priceInput?.value) || 0;
+    // 读取入库批次记录
+    const inRecords = [];
+    row.querySelectorAll('.in-records > div').forEach(rec => {
+      const rq = parseFloat(rec.querySelector('.in-qty')?.value) || 0;
+      const rd = rec.querySelector('.in-date')?.value || '';
+      if (rq > 0) inRecords.push({ qty: rq, date: rd });
+    });
     if (!product || quantity <= 0 || unitPrice <= 0) { valid = false; return; }
-    items.push({ product, quantity, unitPrice, inQty, inDate });
+    items.push({ product, quantity, unitPrice, inRecords });
   });
   if (!valid) { alert('请完整填写每个品种'); return; }
   if (items.length === 0) { alert('请至少添加一个品种'); return; }
@@ -1150,14 +1196,16 @@ function renderPurchaseTable() {
   let lastId = null, rowNum = 0;
   tbody.innerHTML = rows.map(r => {
     const p = r.purchase, item = r.item, isNew = (p.id !== lastId); lastId = p.id; rowNum++;
-    const inQty = item.inQty || 0;
-    const inStatus = inQty >= item.quantity ? '<span style="color:var(--success);">✓已入库</span>' 
-      : (inQty > 0 ? `<span style="color:var(--warning);">${inQty}/${item.quantity}</span>` : '<span style="color:var(--danger);">待入库</span>');
+    const inRecords = item.inRecords || [];
+    const totalIn = inRecords.reduce((s, r) => s + (r.qty || 0), 0);
+    const inStatus = totalIn >= item.quantity ? '<span style="color:var(--success);">✓已入库</span>' 
+      : (totalIn > 0 ? `<span style="color:var(--warning);">${totalIn}/${item.quantity}</span>` : '<span style="color:var(--danger);">待入库</span>');
+    const inDateText = inRecords.length > 0 ? inRecords.map(r => r.date).filter(d=>d).join('<br>') : '<span style="color:var(--text-light);">-</span>';
     return `<tr class="${isNew?'order-group-start':'merged-row'}">
       <td>${rowNum}</td><td>${isNew?(p.date||'-'):''}</td><td style="font-weight:${isNew?'600':'normal'};">${isNew?(p.supplier||'-'):''}</td>
       <td><span class="product-tag cat-${PRODUCT_CATEGORY[item.product]||'yanwo'}">${item.product}</span></td>
       <td>${item.quantity}</td><td>${formatNum(item.unitPrice)}</td><td style="font-weight:600;color:var(--primary);">${formatNum(item.quantity*item.unitPrice)}</td>
-      <td>${inStatus}</td><td>${item.inDate||'<span style="color:var(--text-light);">-</span>'}</td>
+      <td>${inStatus}</td><td style="font-size:11px;">${inDateText}</td>
       <td style="max-width:140px;white-space:normal;font-size:11px;color:var(--text-light);">${isNew?(p.remark||''):''}</td>
       <td>${isNew?`<div class="row-actions"><button class="icon-btn" title="编辑" onclick="openPurchaseModal(${p.id})">✏️</button><button class="icon-btn" title="删除" onclick="deletePurchase(${p.id})">🗑️</button></div>`:''}</td>
     </tr>`;
@@ -1199,9 +1247,16 @@ function renderInventoryTable() {
   // 汇总：入库从进货平台取（按实际入库数量），出库从接单已发数
   const invMap = {};
   ALL_PRODUCT_LIST.forEach(p => { invMap[p] = { product: p, totalIn: 0, totalOut: 0 }; });
-  // 进货入库：用每个品种行的 inQty（入库数量）
+  // 进货入库：用每个入库批次的数量
   purchases.forEach(p => { p.items.forEach(item => { 
-    if (invMap[item.product]) invMap[item.product].totalIn += ((item.inQty !== undefined && item.inQty >= 0) ? item.inQty : item.quantity); 
+    if (invMap[item.product]) {
+      const records = item.inRecords || [];
+      if (records.length > 0) {
+        records.forEach(r => { invMap[item.product].totalIn += (r.qty || 0); });
+      } else {
+        invMap[item.product].totalIn += item.quantity;
+      }
+    }
   });});
   // 手动入库记录
   inventoryLog.forEach(log => { if (invMap[log.product]) invMap[log.product].totalIn += log.quantity; });
@@ -1239,7 +1294,14 @@ function renderInventoryTable() {
 function updateInvStats() {
   const invMap = {}; ALL_PRODUCT_LIST.forEach(p => { invMap[p] = { totalIn: 0, totalOut: 0 }; });
   purchases.forEach(p => { p.items.forEach(item => { 
-    if (invMap[item.product]) invMap[item.product].totalIn += ((item.inQty !== undefined && item.inQty >= 0) ? item.inQty : item.quantity); 
+    if (invMap[item.product]) {
+      const records = item.inRecords || [];
+      if (records.length > 0) {
+        records.forEach(r => { invMap[item.product].totalIn += (r.qty || 0); });
+      } else {
+        invMap[item.product].totalIn += item.quantity;
+      }
+    }
   });});
   inventoryLog.forEach(log => { if (invMap[log.product]) invMap[log.product].totalIn += log.quantity; });
   orders.forEach(o => { o.items.forEach(item => { if (invMap[item.product]) invMap[item.product].totalOut += (item.shipped || 0); }); });
