@@ -411,7 +411,7 @@
 
     <div class="stats">
       <div class="stat-card"><div class="label">库存品种数</div><div class="value" id="invStatTypes">0</div></div>
-      <div class="stat-card"><div class="label">库存总数</div><div class="value" id="invStatTotal">0</div></div>
+      <div class="stat-card"><div class="label">燕窝库存总数</div><div class="value" id="invStatTotal">0</div></div>
       <div class="stat-card warning"><div class="label">低库存预警</div><div class="value" id="invStatLow">0</div></div>
       <div class="stat-card info"><div class="label">库存总价值(成本)</div><div class="value" id="invStatValue">¥0</div></div>
     </div>
@@ -1379,7 +1379,7 @@ function updateInvStats() {
   let lowCount = 0, totalValue = 0, totalStock = 0;
   list.forEach(v => {
     const current = v.totalIn - v.totalOut;
-    totalStock += current;
+    if (PRODUCT_CATEGORY[v.product] === 'yanwo') totalStock += current;
     if (current <= 0 || current < 5) lowCount++;
     // 用剩余批次计算实际价值
     (batches[v.product] || []).forEach(b => { if (b.remaining > 0) totalValue += b.remaining * b.price; });
