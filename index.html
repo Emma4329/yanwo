@@ -375,6 +375,9 @@
     </div>
     <div class="filter-bar">
       <div class="filter-item">
+        <span>年份：</span><select id="purFilterYear" onchange="renderPurchaseTable()"><option value="">全部</option></select>
+      </div>
+      <div class="filter-item">
         <span>入库：</span>
         <label><input type="checkbox" value="pending" class="pur-filter-ship-cb" onchange="renderPurchaseTable()">待入库</label>
         <label><input type="checkbox" value="partial" class="pur-filter-ship-cb" onchange="renderPurchaseTable()">部分入库</label>
@@ -694,6 +697,7 @@ function init() {
 
   // 默认年份设为当年
   document.getElementById('filterYear').value = String(new Date().getFullYear());
+  document.getElementById('purFilterYear').value = String(new Date().getFullYear());
 
   renderOrderTable();
   updatePurSupplierFilter(); // 初始填充供应商下拉
@@ -1230,8 +1234,11 @@ function renderPurchaseTable() {
   const tbody = document.getElementById('purTableBody'), search = document.getElementById('purSearch').value.toLowerCase();
   const filterShipChecks = Array.from(document.querySelectorAll('.pur-filter-ship-cb:checked')).map(cb => cb.value);
   const filterSupplier = document.getElementById('purFilterSupplier').value;
+  const filterYear = document.getElementById('purFilterYear').value;
 
   let rows = []; purchases.forEach(p => { p.items.forEach((item, idx) => { rows.push({ purchase: p, item, itemIndex: idx }); }); });
+  // 年份过滤
+  if (filterYear) rows = rows.filter(r => (r.purchase.date||'').substring(0,4) === filterYear);
   // 搜索过滤
   if (search) rows = rows.filter(r => (r.purchase.supplier + r.item.product + r.purchase.remark).toLowerCase().includes(search));
   // 供应商过滤
@@ -1274,12 +1281,14 @@ function renderPurchaseTable() {
   }).join('');
   updatePurStats();
   updatePurSupplierFilter();
+  updatePurYearFilter();
 }
 
 function updatePurStats() {
-  const totalBatches = purchases.length;
+  const filterYear = document.getElementById('purFilterYear').value;
+  const statsPurchases = filterYear ? purchases.filter(p => (p.date||'').substring(0,4) === filterYear) : purchases;
   let totalAmount = 0, totalQty = 0, pendingQty = 0;
-  purchases.forEach(p => { p.items.forEach(item => { 
+  statsPurchases.forEach(p => { p.items.forEach(item => { 
     totalQty += item.quantity; totalAmount += item.quantity * item.unitPrice; 
     const inRecords = item.inRecords || [];
     const totalIn = inRecords.reduce((s, r) => s + (r.qty || 0), 0);
@@ -1297,6 +1306,16 @@ function updatePurSupplierFilter() {
   purchases.forEach(p => { if (p.supplier) suppliers.add(p.supplier); });
   const sorted = Array.from(suppliers).sort();
   sel.innerHTML = '<option value="">全部</option>' + sorted.map(s => `<option value="${s}" ${s===currentVal?'selected':''}>${s}</option>`).join('');
+}
+
+function updatePurYearFilter() {
+  const sel = document.getElementById('purFilterYear'), years = new Set();
+  const currentYear = String(new Date().getFullYear());
+  purchases.forEach(p => { const y = (p.date||'').substring(0,4); if (y) years.add(y); });
+  years.add(currentYear);
+  const sorted = Array.from(years).sort().reverse();
+  const keepVal = sel.value || currentYear;
+  sel.innerHTML = '<option value="">全部</option>' + sorted.map(y => `<option value="${y}" ${y===keepVal?'selected':''}>${y}年</option>`).join('');
 }
 
 // ==========================================
