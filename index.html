@@ -326,10 +326,10 @@
         <span>品种：</span><select id="filterProduct" onchange="renderOrderTable()"><option value="">全部</option></select>
       </div>
       <div class="filter-item">
-        <span>年份：</span><select id="filterYear" onchange="renderOrderTable()"><option value="">全部</option></select>
+        <span>付款：</span><label class="filter-cb"><input type="checkbox" class="filter-pay-cb" value="定金" onchange="renderOrderTable()"> 定金</label><label class="filter-cb"><input type="checkbox" class="filter-pay-cb" value="已结清" onchange="renderOrderTable()"> 已结清</label>
       </div>
       <div class="filter-item">
-        <span>付款：</span><label class="filter-cb"><input type="checkbox" class="filter-pay-cb" value="定金" onchange="renderOrderTable()"> 定金</label><label class="filter-cb"><input type="checkbox" class="filter-pay-cb" value="已结清" onchange="renderOrderTable()"> 已结清</label>
+        <span>年份：</span><select id="filterYear" onchange="renderOrderTable()"><option value="">全部</option></select>
       </div>
       <div class="filter-item">
         <span>发货：</span>
