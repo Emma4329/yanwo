@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>燕窝管理系统</title>
+<style>
+  :root {
+    --primary: #8B5A2B; --primary-light: #D4A574; --primary-dark: #6B4423;
+    --bg: #FAF7F2; --card: #FFFFFF; --border: #E8DFD3;
+    --text: #3D2B1F; --text-light: #8B7355;
+    --success: #2D7D46; --warning: #C77D0D; --danger: #C0392B; --info: #3B7DD8;
+    --nav-bg: #3D2B1F; --nav-text: #D4C4B0; --nav-active: #FFFFFF;
+    --shadow: 0 2px 8px rgba(139,90,43,0.08);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    background: var(--bg); color: var(--text);
+    display: flex; min-height: 100vh;
+  }
+
+  /* ====== 左侧导航 ====== */
+  .sidebar {
+    width: 140px; min-width: 140px;
+    background: var(--nav-bg); color: var(--nav-text);
+    display: flex; flex-direction: column;
+    padding: 0; position: sticky; top: 0; height: 100vh;
+    overflow-y: auto; z-index: 100;
+  }
+  .sidebar-logo {
+    padding: 16px 14px; font-size: 14px; font-weight: 700;
+    color: var(--nav-active); border-bottom: 1px solid rgba(255,255,255,0.1);
+    letter-spacing: 1px;
+  }
+  .sidebar-logo .sub { font-size: 9px; opacity: 0.5; font-weight: normal; margin-top: 2px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 14px; cursor: pointer; transition: all 0.2s;
+    font-size: 12px; border-left: 3px solid transparent;
+    color: var(--nav-text); user-select: none;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.06); color: #FFF; }
+  .nav-item.active {
+    background: rgba(255,255,255,0.1); color: var(--nav-active);
+    border-left-color: var(--primary-light); font-weight: 600;
+  }
+  .nav-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border-radius: 4px;
+    font-size: 12px; font-weight: 700; flex-shrink: 0;
+  }
+  .nav-icon.sell { background: #D4A574; color: #3D2B1F; }
+  .nav-icon.buy { background: #6B9B8A; color: #FFF; }
+  .nav-icon.price { background: #C77D0D; color: #FFF; }
+  .nav-icon.stock { background: #3B7DD8; color: #FFF; }
+  .nav-divider {
+    margin: 6px 10px; border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  .nav-label {
+    padding: 6px 14px 3px; font-size: 9px; opacity: 0.4;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .nav-footer {
+    margin-top: auto; padding: 10px 14px;
+    font-size: 9px; opacity: 0.3; border-top: 1px solid rgba(255,255,255,0.08);
+  }
+
+  /* ====== 右侧主区域 ====== */
+  .main {
+    flex: 1; min-width: 0; padding: 16px;
+    overflow-y: auto; max-height: 100vh;
+  }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ====== 通用组件 ====== */
+  .page-header {
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+    color: white; padding: 18px 24px; border-radius: 10px;
+    margin-bottom: 14px; box-shadow: var(--shadow);
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 10px;
+  }
+  .page-header h1 { font-size: 20px; font-weight: 700; }
+  .page-header .sub { font-size: 11px; opacity: 0.85; margin-top: 2px; }
+  .header-actions { display: flex; gap: 8px; }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px; margin-bottom: 14px;
+  }
+  .stat-card {
+    background: var(--card); padding: 10px 14px; border-radius: 8px;
+    box-shadow: var(--shadow); border-left: 3px solid var(--primary);
+  }
+  .stat-card.warning { border-left-color: var(--warning); }
+  .stat-card.success { border-left-color: var(--success); }
+  .stat-card.info { border-left-color: var(--info); }
+  .stat-card .label { font-size: 11px; color: var(--text-light); margin-bottom: 2px; }
+  .stat-card .value { font-size: 17px; font-weight: 700; }
+  .stat-card .unit { font-size: 11px; color: var(--text-light); font-weight: normal; margin-left: 2px; }
+
+  .toolbar { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
+  .search-box { flex: 1; min-width: 160px; position: relative; }
+  .search-box input {
+    width: 100%; padding: 8px 12px 8px 32px; border: 1px solid var(--border);
+    border-radius: 7px; font-size: 12px; background: var(--card); outline: none;
+  }
+  .search-box input:focus { border-color: var(--primary-light); }
+  .search-icon { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--text-light); }
+
+  .filter-bar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+  .filter-item { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-light); }
+  .filter-item select {
+    padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px;
+    font-size: 11px; background: var(--card); outline: none;
+  }
+  .filter-item label { cursor: pointer; font-size: 11px; margin: 0 2px; }
+
+  .btn {
+    padding: 7px 14px; border: none; border-radius: 7px; font-size: 12px;
+    cursor: pointer; transition: all 0.2s; font-weight: 500;
+    display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+  }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: var(--primary-dark); }
+  .btn-secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--primary-light); }
+  .btn-sm { padding: 4px 9px; font-size: 11px; }
+  .btn-danger { background: var(--danger); color: white; }
+  .btn-outline { background: transparent; color: var(--primary); border: 1px solid var(--primary-light); }
+  .btn-outline:hover { background: #FDF6EE; }
+
+  .table-wrapper { background: var(--card); border-radius: 10px; box-shadow: var(--shadow); overflow: hidden; }
+  .table-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead { background: var(--bg); }
+  th {
+    padding: 10px 8px; text-align: left; font-weight: 600;
+    color: var(--text-light); border-bottom: 2px solid var(--border);
+    white-space: nowrap; position: sticky; top: 0; z-index: 1;
+  }
+  td { padding: 8px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tbody tr:hover { background: #FDF9F3; }
+  .empty-row { text-align: center; padding: 40px 20px; color: var(--text-light); }
+  .empty-row .icon { font-size: 36px; margin-bottom: 8px; }
+
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+  .badge-deposit { background: #FFF3CD; color: var(--warning); }
+  .badge-paid { background: #D4EDDA; color: var(--success); }
+  .badge-info { background: #D6EAF8; color: #2471A3; }
+
+  .product-tag {
+    display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 500;
+  }
+  .product-tag.cat-yanwo { background: #F0E6D9; color: #6B4423; }
+  .product-tag.cat-huajiao { background: #E8F0F0; color: #2C5F5F; }
+  .product-tag.cat-chongcao { background: #F5E6F0; color: #6B2D5B; }
+  .product-tag.cat-other { background: #F0F0E8; color: #5F5F3C; }
+
+  .ship-progress { display: flex; align-items: center; gap: 5px; font-size: 11px; }
+  .ship-progress .bar-bg { width: 40px; height: 5px; background: #EEE; border-radius: 3px; overflow: hidden; }
+  .ship-progress .bar-fill { height: 100%; background: var(--success); border-radius: 3px; transition: width 0.3s; }
+  .ship-progress .bar-fill.partial { background: var(--warning); }
+  .ship-progress .bar-fill.none { background: #CCC; }
+  .ship-text.pending { color: var(--danger); font-weight: 600; }
+  .ship-text.partial { color: var(--warning); }
+  .ship-text.done { color: var(--success); }
+
+  .order-group-start { border-top: 2px solid var(--primary-light); background: #FFFAF5; }
+  .order-customer { font-weight: 600; }
+  .order-meta { font-size: 10px; color: var(--text-light); margin-top: 1px; }
+  .merged-row td { border-bottom: 1px dashed var(--border); background: #FFFEFA; }
+
+  .row-actions { display: flex; gap: 2px; }
+  .icon-btn {
+    background: none; border: none; cursor: pointer;
+    padding: 4px 6px; border-radius: 4px; font-size: 14px;
+    transition: background 0.2s; line-height: 1;
+  }
+  .icon-btn:hover { background: var(--bg); }
+
+  /* ====== 弹窗 ====== */
+  .modal-overlay {
+    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.4); z-index: 1000;
+    justify-content: center; align-items: flex-start; padding: 30px 16px; overflow-y: auto;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--card); border-radius: 10px; width: 100%; max-width: 750px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15); animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .modal-header {
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .modal-header h2 { font-size: 16px; }
+  .modal-close {
+    background: none; border: none; font-size: 18px; cursor: pointer;
+    color: var(--text-light); width: 28px; height: 28px; border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .modal-close:hover { background: var(--bg); }
+  .modal-body { padding: 18px 20px; }
+  .modal-footer {
+    padding: 12px 20px; border-top: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .modal-footer-right { display: flex; gap: 8px; }
+
+  .form-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-end; flex-wrap: wrap; }
+  .form-group { display: flex; flex-direction: column; gap: 3px; }
+  .form-group label { font-size: 11px; color: var(--text-light); font-weight: 500; }
+  .form-group label .required { color: var(--danger); }
+  .form-group input, .form-group select, .form-group textarea {
+    padding: 8px 9px; border: 1px solid var(--border); border-radius: 6px;
+    font-size: 12px; outline: none; transition: border-color 0.2s; font-family: inherit;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--primary-light); }
+  .form-group textarea { resize: vertical; min-height: 45px; }
+
+  .form-group.w100 { width: 100px; } .form-group.w120 { width: 120px; }
+  .form-group.w140 { width: 140px; } .form-group.w160 { width: 160px; }
+  .form-group.flex1 { flex: 1; min-width: 100px; }
+
+  .items-section { background: var(--bg); border-radius: 8px; padding: 14px; margin-top: 10px; }
+  .items-section h3 { font-size: 13px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+  .item-row {
+    display: flex; gap: 8px; align-items: flex-end; margin-bottom: 8px;
+    padding-bottom: 8px; border-bottom: 1px dashed var(--border); flex-wrap: wrap;
+  }
+  .item-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .item-row .form-group { margin-bottom: 0; }
+
+  .total-preview {
+    background: var(--bg); padding: 10px 14px; border-radius: 6px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .total-preview .label { font-size: 12px; color: var(--text-light); }
+  .total-preview .amount { font-size: 20px; font-weight: 700; color: var(--primary); }
+
+  /* 客户名建议 */
+  .cust-suggest-item {
+    padding: 7px 10px; cursor: pointer; font-size: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .cust-suggest-item:last-child { border-bottom: none; }
+  .cust-suggest-item:hover { background: #FDF6EE; color: var(--primary); }
+
+  @media (max-width: 768px) {
+    .sidebar { width: 50px; min-width: 50px; }
+    .sidebar-logo { font-size: 11px; padding: 10px 6px; text-align: center; }
+    .sidebar-logo .sub { display: none; }
+    .nav-item { padding: 12px 6px; font-size: 0; justify-content: center; }
+    .nav-item .nav-icon { width: 22px; height: 22px; font-size: 11px; }
+    .nav-label { display: none; }
+    .nav-footer { display: none; }
+    .main { padding: 10px; }
+    .page-header h1 { font-size: 17px; }
+    .modal { max-width: 100%; }
+    .form-row { gap: 6px; }
+    .item-row { gap: 5px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ====== 左侧导航 ====== -->
+<div class="sidebar">
+  <div class="sidebar-logo">
+    🕊️ 燕窝管理
+    <div class="sub">YANWO SYSTEM</div>
+  </div>
+  <div class="nav-label">工作类别</div>
+  <div class="nav-item active" data-page="orders">
+    <span class="nav-icon sell">卖</span> 燕窝接单平台
+  </div>
+  <div class="nav-item" data-page="purchase">
+    <span class="nav-icon buy">进</span> 燕窝进货平台
+  </div>
+  <div class="nav-item" data-page="inventory">
+    <span class="nav-icon stock">库</span> 库存平台
+  </div>
+  <div class="nav-footer">v3.0 · FIFO成本</div>
+</div>
+
+<!-- ====== 主区域 ====== -->
+<div class="main">
+
+  <!-- ========== 燕窝接单平台 ========== -->
+  <div class="page active" id="page-orders">
+    <div class="page-header">
+      <div>
+        <h1>📋 燕窝接单平台</h1>
+        <div class="sub">多品种下单 · 分批发货 · 利润核算</div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-secondary" onclick="exportAll()">📤 导出全部</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">📥 导入</button>
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="importAll(event)">
+        <button class="btn btn-primary" onclick="openOrderModal()">➕ 新增订单</button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat-card"><div class="label">订单总数</div><div class="value" id="statTotal">0 <span class="unit">单</span></div></div>
+      <div class="stat-card info"><div class="label">品种行 / 待发货</div><div class="value" id="statItems">0 / 0</div></div>
+      <div class="stat-card warning"><div class="label">待收尾款</div><div class="value" id="statPending">¥0</div></div>
+      <div class="stat-card"><div class="label">订单总金额</div><div class="value" id="statTotalAmount">¥0</div></div>
+      <div class="stat-card info"><div class="label">已实现利润</div><div class="value" id="statProfit">¥0</div></div>
+      <div class="stat-card warning"><div class="label">预估总利润</div><div class="value" id="statEstProfit">¥0</div></div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="searchInput" placeholder="搜索客户名、品种、备注..." oninput="renderOrderTable()"></div>
+    </div>
+    <div class="filter-bar">
+      <div class="filter-item">
+        <span>年份：</span><select id="filterYear" onchange="renderOrderTable()"><option value="">全部</option></select>
+      </div>
+      <div class="filter-item">
+        <span>付款：</span><select id="filterPayment" onchange="renderOrderTable()"><option value="">全部</option><option value="定金">定金</option><option value="已结清">已结清</option></select>
+      </div>
+      <div class="filter-item">
+        <span>发货：</span>
+        <label><input type="checkbox" value="pending" class="filter-ship-cb" onchange="renderOrderTable()">待发</label>
+        <label><input type="checkbox" value="partial" class="filter-ship-cb" onchange="renderOrderTable()">部分</label>
+        <label><input type="checkbox" value="done" class="filter-ship-cb" onchange="renderOrderTable()">已完</label>
+      </div>
+      <div class="filter-item">
+        <span>品种：</span><select id="filterProduct" onchange="renderOrderTable()"><option value="">全部</option></select>
+      </div>
+    </div>
+
+    <div class="table-wrapper"><div class="table-scroll">
+      <table>
+        <thead><tr>
+          <th style="width:32px;">#</th><th>下单日期</th><th>客户</th><th>品种</th>
+          <th>下单数</th><th>已发数</th><th>进度</th><th>发货日</th>
+          <th>售价</th><th>成本</th><th>总价</th><th>利润</th>
+          <th>付款</th><th>备注</th><th>操作</th>
+        </tr></thead>
+        <tbody id="orderTableBody"></tbody>
+      </table>
+    </div></div>
+  </div>
+
+  <!-- ========== 燕窝进货平台 ========== -->
+  <div class="page" id="page-purchase">
+    <div class="page-header">
+      <div>
+        <h1>📦 燕窝进货平台</h1>
+        <div class="sub">供应商管理 · 进货记录 · 成本核算</div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-primary" onclick="openPurchaseModal()">➕ 新增进货</button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat-card"><div class="label">进货总批次</div><div class="value" id="purStatTotal">0 <span class="unit">批</span></div></div>
+      <div class="stat-card info"><div class="label">进货品种数</div><div class="value" id="purStatTypes">0</div></div>
+      <div class="stat-card warning"><div class="label">进货总金额</div><div class="value" id="purStatAmount">¥0</div></div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="purSearch" placeholder="搜索供应商、品种..." oninput="renderPurchaseTable()"></div>
+    </div>
+
+    <div class="table-wrapper"><div class="table-scroll">
+      <table>
+        <thead><tr>
+          <th style="width:32px;">#</th><th>进货日期</th><th>供应商</th><th>品种</th>
+          <th>数量</th><th>进价(元)</th><th>总金额</th><th>备注</th><th>操作</th>
+        </tr></thead>
+        <tbody id="purTableBody"></tbody>
+      </table>
+    </div></div>
+  </div>
+
+  <!-- ========== 库存平台 ========== -->
+  <div class="page" id="page-inventory">
+    <div class="page-header">
+      <div>
+        <h1>📊 库存平台</h1>
+        <div class="sub">实时库存 · 入库/出库追踪 · 自动汇总</div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-primary" onclick="openInventoryModal()">➕ 入库记录</button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat-card"><div class="label">库存品种数</div><div class="value" id="invStatTypes">0</div></div>
+      <div class="stat-card warning"><div class="label">低库存预警</div><div class="value" id="invStatLow">0</div></div>
+      <div class="stat-card info"><div class="label">库存总价值(成本)</div><div class="value" id="invStatValue">¥0</div></div>
+    </div>
+
+    <div class="table-wrapper"><div class="table-scroll">
+      <table>
+        <thead><tr>
+          <th style="width:32px;">#</th><th>品种</th><th>入库累计</th><th>出库累计</th>
+          <th>当前库存</th><th>成本价</th><th>库存价值</th><th>状态</th>
+        </tr></thead>
+        <tbody id="invTableBody"></tbody>
+      </table>
+    </div></div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- ====== 接单弹窗 ====== -->
+<div class="modal-overlay" id="orderModal"><div class="modal">
+  <div class="modal-header"><h2 id="orderModalTitle">新增订单</h2><button class="modal-close" onclick="closeOrderModal()">✕</button></div>
+  <div class="modal-body">
+    <div class="form-row">
+      <div class="form-group w140"><label>下单日期 <span class="required">*</span></label><input type="date" id="fOrderDate"></div>
+      <div class="form-group w160" style="position:relative;">
+        <label>客户姓名 <span class="required">*</span></label>
+        <input type="text" id="fCustomer" placeholder="输入姓名自动提示" autocomplete="off" oninput="suggestCustomer()" onfocus="suggestCustomer()" onblur="setTimeout(()=>hideSuggestion(),200)">
+        <div id="customerSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:0 0 6px 6px;max-height:160px;overflow-y:auto;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>
+      </div>
+      <div class="form-group w140"><label>付款状态 <span class="required">*</span></label><select id="fPayment"><option value="定金">定金</option><option value="已结清">已结清</option></select></div>
+      <div class="form-group w140"><label>定金金额(元)</label><input type="number" id="fDeposit" min="0" step="0.01" placeholder="定金状态填写"></div>
+    </div>
+    <div class="form-row"><div class="form-group flex1"><label>备注</label><input type="text" id="fRemark" placeholder="订单备注..."></div></div>
+    <div class="items-section">
+      <h3>📦 品种明细 <button class="btn btn-outline btn-sm" onclick="addItemRow()">+ 添加品种</button></h3>
+      <div id="itemsContainer"></div>
+      <div class="total-preview" style="margin-top:10px;"><span class="label">订单总价</span><span class="amount" id="orderTotalPreview">¥0.00</span></div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <div style="font-size:11px;color:var(--text-light);">💡 下单后可在表格中逐行记录发货</div>
+    <div class="modal-footer-right">
+      <button class="btn btn-secondary" onclick="closeOrderModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveOrder()">💾 保存订单</button>
+    </div>
+  </div>
+</div></div>
+
+<!-- ====== 发货弹窗 ====== -->
+<div class="modal-overlay" id="shipModal"><div class="modal" style="max-width:450px;">
+  <div class="modal-header"><h2>📦 记录发货</h2><button class="modal-close" onclick="closeShipModal()">✕</button></div>
+  <div class="modal-body">
+    <div id="shipInfo" style="margin-bottom:12px;font-size:12px;color:var(--text-light);"></div>
+    <div class="form-row">
+      <div class="form-group w140"><label>本次发货数量 <span class="required">*</span></label><input type="number" id="fShipQty" min="0.1" step="0.1" placeholder="发货数量"></div>
+      <div class="form-group w160"><label>发货日期</label><input type="date" id="fShipDate"></div>
+    </div>
+    <div style="font-size:11px;color:var(--text-light);margin-top:4px;">已发 <span id="shipAlready" style="font-weight:600;"></span> / 下单 <span id="shipTotal" style="font-weight:600;"></span>，本次后剩余 <span id="shipRemain" style="font-weight:600;color:var(--danger);"></span></div>
+  </div>
+  <div class="modal-footer"><div></div><div class="modal-footer-right"><button class="btn btn-secondary" onclick="closeShipModal()">取消</button><button class="btn btn-primary" onclick="confirmShip()">✅ 确认发货</button></div></div>
+</div></div>
+
+<!-- ====== 进货弹窗 ====== -->
+<div class="modal-overlay" id="purchaseModal"><div class="modal" style="max-width:650px;">
+  <div class="modal-header"><h2 id="purModalTitle">新增进货</h2><button class="modal-close" onclick="closePurchaseModal()">✕</button></div>
+  <div class="modal-body">
+    <div class="form-row">
+      <div class="form-group w140"><label>进货日期 <span class="required">*</span></label><input type="date" id="fPurDate"></div>
+      <div class="form-group w160"><label>供应商 <span class="required">*</span></label><input type="text" id="fPurSupplier" placeholder="供应商名称"></div>
+    </div>
+    <div class="items-section">
+      <h3>📦 进货明细 <button class="btn btn-outline btn-sm" onclick="addPurItemRow()">+ 添加品种</button></h3>
+      <div id="purItemsContainer"></div>
+      <div class="total-preview" style="margin-top:10px;"><span class="label">进货总金额</span><span class="amount" id="purTotalPreview">¥0.00</span></div>
+    </div>
+    <div class="form-row"><div class="form-group flex1"><label>备注</label><input type="text" id="fPurRemark" placeholder="备注..."></div></div>
+  </div>
+  <div class="modal-footer"><div></div><div class="modal-footer-right"><button class="btn btn-secondary" onclick="closePurchaseModal()">取消</button><button class="btn btn-primary" onclick="savePurchase()">💾 保存进货</button></div></div>
+</div></div>
+
+<!-- ====== 入库弹窗 ====== -->
+<div class="modal-overlay" id="inventoryModal"><div class="modal" style="max-width:550px;">
+  <div class="modal-header"><h2>入库记录</h2><button class="modal-close" onclick="closeInventoryModal()">✕</button></div>
+  <div class="modal-body">
+    <div class="form-row">
+      <div class="form-group w140"><label>日期 <span class="required">*</span></label><input type="date" id="fInvDate"></div>
+      <div class="form-group" style="width:180px;"><label>品种 <span class="required">*</span></label><select id="fInvProduct"></select></div>
+      <div class="form-group w120"><label>入库数量 <span class="required">*</span></label><input type="number" id="fInvQty" min="0.1" step="0.1" placeholder="数量"></div>
+    </div>
+    <div class="form-row"><div class="form-group flex1"><label>备注</label><input type="text" id="fInvRemark" placeholder="来源/批次..."></div></div>
+  </div>
+  <div class="modal-footer"><div></div><div class="modal-footer-right"><button class="btn btn-secondary" onclick="closeInventoryModal()">取消</button><button class="btn btn-primary" onclick="saveInventory()">💾 确认入库</button></div></div>
+</div></div>
+
+<script>
+// ==========================================
+// 全局数据 & 品种配置
+// ==========================================
+const ALL_PRODUCTS = {
+  yanwo: ['珍品天盏','珍品自用','贡品官燕盏','贡品官自用','龙牙官燕盏','龙牙官自用','龙牙白燕盏','龙牙白自用','精选白燕盏','精选白自用','一级白燕盏','一级白自用','燕盏','燕盏自用','粗条正','粗条自','条正','条自','小条','特级燕盏丝','燕盏碎','即食燕窝','即食燕窝自用'],
+  huajiao: ['珍品花胶','特选花胶','精选花胶','一级花胶','花胶筒','小花胶','花胶仔'],
+  other: ['虫草','杂']
+};
+const ALL_PRODUCT_LIST = [...ALL_PRODUCTS.yanwo, ...ALL_PRODUCTS.huajiao, ...ALL_PRODUCTS.other];
+const PRODUCT_CATEGORY = {};
+ALL_PRODUCTS.yanwo.forEach(p => PRODUCT_CATEGORY[p]='yanwo');
+ALL_PRODUCTS.huajiao.forEach(p => PRODUCT_CATEGORY[p]='huajiao');
+ALL_PRODUCTS.other.forEach(p => PRODUCT_CATEGORY[p]='other');
+
+// 数据存储 key
+const KEY_ORDERS = 'yw_orders_v2';
+const KEY_PURCHASE = 'yw_purchase_v1';
+const KEY_INVENTORY = 'yw_inventory_v1';
+const KEY_BACKUP = 'yw_last_backup';
+const BACKUP_INTERVAL = 15;
+
+// 全局数据
+let orders = [], purchases = [], inventoryLog = [];
+let editingOrderId = null, editingPurchaseId = null;
+let shipTarget = null;
+
+function formatNum(n) { return parseFloat(n).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function productSelectHTML(selected, cls) {
+  let h = `<select class="${cls||''}" onchange="${cls==='pur-product-sel'?'onPurProductChange(this);':''}updatePurTotal();" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;">`;
+  h += '<option value="">请选择</option>';
+  Object.entries(ALL_PRODUCTS).forEach(([cat, prods]) => {
+    const labels = {yanwo:'燕窝系列',huajiao:'花胶系列',other:'其他'};
+    h += `<optgroup label="── ${labels[cat]} ──">`;
+    prods.forEach(p => h += `<option value="${p}" ${p===selected?'selected':''}>${p}</option>`);
+    h += '</optgroup>';
+  });
+  h += '</select>';
+  return h;
+}
+
+// ==========================================
+// 导航切换
+// ==========================================
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', function() {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    this.classList.add('active');
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + this.dataset.page).classList.add('active');
+    if (this.dataset.page === 'orders') renderOrderTable();
+    if (this.dataset.page === 'purchase') renderPurchaseTable();
+    if (this.dataset.page === 'inventory') renderInventoryTable();
+  });
+});
+
+// ==========================================
+// 通用导入导出
+// ==========================================
+function exportAll() {
+  const data = { orders, purchases, inventoryLog };
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `燕窝数据_${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  localStorage.setItem(KEY_BACKUP, new Date().toISOString().split('T')[0]);
+}
+
+function importAll(event) {
+  const file = event.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (Array.isArray(data)) {
+        // 旧格式：只有订单数组
+        if (confirm('检测到旧版备份，仅导入订单数据？\n（点击取消则放弃导入）')) {
+          orders = data; saveAll(); refreshAll();
+        }
+      } else {
+        if (confirm('即将导入全部数据，是否覆盖现有数据？\n（点击取消则追加到现有数据）')) {
+          orders = data.orders || []; purchases = data.purchases || [];
+          inventoryLog = data.inventoryLog || [];
+        } else {
+          orders = orders.concat(data.orders || []); purchases = purchases.concat(data.purchases || []);
+          inventoryLog = inventoryLog.concat(data.inventoryLog || []);
+        }
+        saveAll(); refreshAll();
+      }
+      alert('导入成功！');
+    } catch(err) { alert('导入失败：文件格式不正确'); }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function saveAll() {
+  localStorage.setItem(KEY_ORDERS, JSON.stringify(orders));
+  localStorage.setItem(KEY_PURCHASE, JSON.stringify(purchases));
+  localStorage.setItem(KEY_INVENTORY, JSON.stringify(inventoryLog));
+}
+
+function refreshAll() {
+  renderOrderTable(); renderPurchaseTable(); renderInventoryTable();
+}
+
+// ==========================================
+// 初始化
+// ==========================================
+function init() {
+  // 加载数据
+  try { orders = JSON.parse(localStorage.getItem(KEY_ORDERS) || '[]'); } catch(e) { orders = []; }
+  try { purchases = JSON.parse(localStorage.getItem(KEY_PURCHASE) || '[]'); } catch(e) { purchases = []; }
+  try { inventoryLog = JSON.parse(localStorage.getItem(KEY_INVENTORY) || '[]'); } catch(e) { inventoryLog = []; }
+
+  if (orders.length === 0 && purchases.length === 0) {
+    orders = [{ id: Date.now(), orderDate: new Date().toISOString().split('T')[0], customer: '示例客户', payment: '定金', deposit: 800, remark: '示例数据，可删除',
+      items: [{ product: '珍品天盏', quantity: 10, unitPrice: 88, cost: 0, shipped: 5, shipDate: '' }, { product: '贡品官燕盏', quantity: 5, unitPrice: 120, cost: 0, shipped: 0, shipDate: '' }]
+    }];
+    saveAll();
+  }
+
+  document.getElementById('fOrderDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('fShipDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('fPurDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('fInvDate').value = new Date().toISOString().split('T')[0];
+
+  // 初始化品种筛选下拉
+  initProductFilter();
+  initInvProductSelect();
+
+  renderOrderTable();
+  checkBackupReminder();
+}
+
+function initProductFilter() {
+  const sel = document.getElementById('filterProduct');
+  sel.innerHTML = '<option value="">全部</option>';
+  Object.entries(ALL_PRODUCTS).forEach(([cat, prods]) => {
+    const labels = {yanwo:'燕窝系列',huajiao:'花胶系列',other:'其他'};
+    sel.innerHTML += `<optgroup label="── ${labels[cat]} ──">`;
+    prods.forEach(p => sel.innerHTML += `<option value="${p}">${p}</option>`);
+    sel.innerHTML += '</optgroup>';
+  });
+}
+
+function initInvProductSelect() {
+  const sel = document.getElementById('fInvProduct');
+  sel.innerHTML = '<option value="">请选择品种</option>';
+  ALL_PRODUCT_LIST.forEach(p => sel.innerHTML += `<option value="${p}">${p}</option>`);
+}
+
+// ==========================================
+// ========== 燕窝接单平台 ==========
+// ==========================================
+
+// --- 客户名自动提示 ---
+function getAllCustomers() { const names = new Set(); orders.forEach(o => { if (o.customer) names.add(o.customer); }); return Array.from(names).sort(); }
+function suggestCustomer() {
+  const input = document.getElementById('fCustomer'), suggest = document.getElementById('customerSuggest');
+  const val = input.value.trim(), allNames = getAllCustomers();
+  if (!val) { const recent = allNames.slice(0,8); if (!recent.length) { suggest.style.display='none'; return; } suggest.innerHTML = recent.map(n => `<div class="cust-suggest-item" onmousedown="selectCustomer('${n.replace(/'/g,"\\'")}')">${n}</div>`).join(''); suggest.style.display='block'; return; }
+  const matched = allNames.filter(n => n.includes(val)); if (!matched.length) { suggest.style.display='none'; return; }
+  suggest.innerHTML = matched.map(n => `<div class="cust-suggest-item" onmousedown="selectCustomer('${n.replace(/'/g,"\\'")}')">${n}</div>`).join(''); suggest.style.display='block';
+}
+function selectCustomer(name) { document.getElementById('fCustomer').value = name; hideSuggestion(); }
+function hideSuggestion() { document.getElementById('customerSuggest').style.display = 'none'; }
+
+// --- 接单弹窗 ---
+function openOrderModal(id) {
+  editingOrderId = id || null;
+  document.getElementById('orderModalTitle').textContent = id ? '编辑订单' : '新增订单';
+  document.getElementById('fOrderDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('fCustomer').value = ''; document.getElementById('fPayment').value = '定金';
+  document.getElementById('fDeposit').value = ''; document.getElementById('fRemark').value = '';
+  document.getElementById('itemsContainer').innerHTML = '';
+  if (id) {
+    const o = orders.find(x => x.id === id); if (!o) return;
+    document.getElementById('fOrderDate').value = o.orderDate || ''; document.getElementById('fCustomer').value = o.customer || '';
+    document.getElementById('fPayment').value = o.payment || '定金'; document.getElementById('fDeposit').value = o.deposit || '';
+    document.getElementById('fRemark').value = o.remark || '';
+    o.items.forEach(item => addItemRow(item));
+  }
+  if (!id) addItemRow();
+  updateOrderTotal();
+  document.getElementById('orderModal').classList.add('show');
+}
+function closeOrderModal() { document.getElementById('orderModal').classList.remove('show'); editingOrderId = null; }
+
+function addItemRow(data) {
+  const container = document.getElementById('itemsContainer');
+  const div = document.createElement('div'); div.className = 'item-row';
+  const isMisc = data && data.product === '杂';
+  const miscNote = (data && data.miscNote) || '';
+  div.innerHTML = `
+    <div class="form-group" style="width:170px;"><label>品种 <span class="required">*</span></label>${productSelectHTML(data?data.product:'')}</div>
+    <div class="form-group" style="width:85px;"><label>下单数量</label><input type="number" value="${data?data.quantity:''}" min="0.1" step="0.1" placeholder="数量" oninput="updateOrderTotal()" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
+    <div class="form-group" style="width:95px;"><label>售价(元)</label><input type="number" value="${data?data.unitPrice:''}" min="0" step="0.01" placeholder="售价" oninput="updateOrderTotal()" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
+    <div class="form-group" style="width:85px;"><label>总价</label><span class="item-subtotal" style="font-weight:600;color:var(--primary);padding:8px 0;display:block;">¥0.00</span></div>
+    ${isMisc?`<div class="form-group misc-note" style="width:120px;"><label>杂·备注</label><input type="text" value="${miscNote}" placeholder="具体物品..." style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>`:''}
+    <div style="padding-top:20px;"><button class="btn btn-danger btn-sm" onclick="this.closest('.item-row').remove();updateOrderTotal();">✕</button></div>
+  `;
+  container.appendChild(div);
+  // 品种切换时处理杂备注 + 自动填定价
+  const sel = div.querySelector('select');
+  sel.addEventListener('change', function() { onProductChange(this); showStockInfo(div); updateOrderTotal(); });
+  updateOrderTotal();
+}
+
+function onProductChange(selectEl) {
+  const row = selectEl.closest('.item-row');
+  const miscNote = row.querySelector('.misc-note');
+  if (selectEl.value === '杂') {
+    if (!miscNote) {
+      const div = document.createElement('div'); div.className = 'form-group misc-note'; div.style.width = '120px';
+      div.innerHTML = '<label>杂·备注</label><input type="text" placeholder="具体物品..." style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;">';
+      row.insertBefore(div, row.lastElementChild);
+    }
+  } else { if (miscNote) miscNote.remove(); }
+}
+
+function showStockInfo(row) {
+  const sel = row.querySelector('select'); if (!sel) return;
+  const product = sel.value; if (!product) return;
+  const stock = getStockQty(product);
+  const avgCost = getAvgCost(product);
+  let infoEl = row.querySelector('.stock-info');
+  if (!infoEl) {
+    infoEl = document.createElement('div');
+    infoEl.className = 'form-group stock-info';
+    infoEl.style.width = '130px';
+    row.insertBefore(infoEl, row.lastElementChild);
+  }
+  if (stock > 0) {
+    infoEl.innerHTML = `<label>库存/均价</label><span style="font-size:11px;color:var(--text-light);padding:8px 0;display:block;">库存 <b style="color:var(--info);">${stock}</b> · 均价 <b style="color:var(--primary);">¥${formatNum(avgCost)}</b></span>`;
+  } else {
+    infoEl.innerHTML = `<label>库存/均价</label><span style="font-size:11px;color:var(--danger);padding:8px 0;display:block;">无库存</span>`;
+  }
+}
+
+// ====== FIFO 成本核算 ======
+// 把所有进货按品种+日期排序，返回每品种的批次队列
+function getPurchaseBatches() {
+  const batches = {}; // { product: [{qty, price, date, supplier, remaining}] }
+  purchases.sort((a,b) => (a.date||'').localeCompare(b.date||'')).forEach(p => {
+    p.items.forEach(item => {
+      if (!batches[item.product]) batches[item.product] = [];
+      batches[item.product].push({ qty: item.quantity, price: item.unitPrice, date: p.date, supplier: p.supplier, remaining: item.quantity });
+    });
+  });
+  // 按接单已发数扣减（先进先出）
+  // 汇总每个品种的总已发数
+  const shippedByProduct = {};
+  orders.forEach(o => {
+    o.items.forEach(item => {
+      shippedByProduct[item.product] = (shippedByProduct[item.product] || 0) + (item.shipped || 0);
+    });
+  });
+  // 扣减
+  Object.keys(batches).forEach(product => {
+    let toDeduct = shippedByProduct[product] || 0;
+    for (const b of batches[product]) {
+      if (toDeduct <= 0) break;
+      const d = Math.min(b.remaining, toDeduct);
+      b.remaining -= d; toDeduct -= d;
+    }
+  });
+  return batches;
+}
+
+// 计算指定品种发 N 个的 FIFO 成本
+function calcFIFOCost(product, shipQty) {
+  const batches = getPurchaseBatches();
+  const queue = batches[product] || [];
+  let remaining = shipQty, cost = 0;
+  for (const b of queue) {
+    if (remaining <= 0) break;
+    const take = Math.min(b.remaining, remaining);
+    cost += take * b.price;
+    remaining -= take;
+  }
+  // 如果库存不够（remaining > 0），说明超卖了，这部分成本记为0
+  return { cost, shortage: remaining };
+}
+
+// 获取某品种当前库存加权平均成本（用于显示参考）
+function getAvgCost(product) {
+  const batches = getPurchaseBatches();
+  const queue = batches[product] || [];
+  let totalQty = 0, totalCost = 0;
+  queue.forEach(b => { if (b.remaining > 0) { totalQty += b.remaining; totalCost += b.remaining * b.price; } });
+  return totalQty > 0 ? totalCost / totalQty : 0;
+}
+
+// 获取某品种当前库存量
+function getStockQty(product) {
+  const batches = getPurchaseBatches();
+  const queue = batches[product] || [];
+  return queue.reduce((s, b) => s + b.remaining, 0);
+}
+
+function updateOrderTotal() {
+  const container = document.getElementById('itemsContainer'); let grandTotal = 0;
+  container.querySelectorAll('.item-row').forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    const qty = parseFloat(inputs[0]?.value) || 0, price = parseFloat(inputs[1]?.value) || 0;
+    const sub = qty * price;
+    row.querySelector('.item-subtotal').textContent = '¥' + formatNum(sub);
+    grandTotal += sub;
+  });
+  document.getElementById('orderTotalPreview').textContent = '¥' + formatNum(grandTotal);
+}
+
+function saveOrder() {
+  const orderDate = document.getElementById('fOrderDate').value, customer = document.getElementById('fCustomer').value.trim();
+  const payment = document.getElementById('fPayment').value, deposit = parseFloat(document.getElementById('fDeposit').value) || 0;
+  const remark = document.getElementById('fRemark').value.trim();
+  if (!orderDate) { alert('请选择下单日期'); return; }
+  if (!customer) { alert('请输入客户姓名'); return; }
+
+  const container = document.getElementById('itemsContainer'); const items = []; let valid = true;
+  container.querySelectorAll('.item-row').forEach(row => {
+    const sel = row.querySelector('select'), inputs = row.querySelectorAll('input');
+    const product = sel.value, quantity = parseFloat(inputs[0]?.value) || 0, unitPrice = parseFloat(inputs[1]?.value) || 0;
+    const miscNoteEl = row.querySelector('.misc-note input'), miscNote = miscNoteEl ? miscNoteEl.value.trim() : '';
+    if (!product || quantity <= 0 || unitPrice <= 0) { valid = false; return; }
+    const item = { product, quantity, unitPrice, shipped: 0, shipDate: '' };
+    if (product === '杂' && miscNote) item.miscNote = miscNote;
+    items.push(item);
+  });
+  if (!valid) { alert('请完整填写每个品种的品名、数量和售价'); return; }
+  if (items.length === 0) { alert('请至少添加一个品种'); return; }
+
+  const order = { id: editingOrderId || Date.now(), orderDate, customer, payment, deposit, remark, items };
+  if (editingOrderId) {
+    const oldOrder = orders.find(x => x.id === editingOrderId);
+    if (oldOrder) {
+      order.items = order.items.map(newItem => {
+        const oldItem = oldOrder.items.find(oi => oi.product === newItem.product);
+        if (oldItem && oldItem.shipped > 0) return { ...newItem, shipped: Math.min(oldItem.shipped, newItem.quantity), shipDate: oldItem.shipDate };
+        return newItem;
+      });
+    }
+    const idx = orders.findIndex(x => x.id === editingOrderId); if (idx >= 0) orders[idx] = order;
+  } else { orders.push(order); }
+  saveAll(); renderOrderTable(); closeOrderModal();
+}
+
+// --- 发货弹窗 ---
+function openShipModal(orderId, itemIndex) {
+  const o = orders.find(x => x.id === orderId); if (!o) return;
+  const item = o.items[itemIndex]; shipTarget = { orderId, itemIndex };
+  document.getElementById('shipInfo').innerHTML = `<strong>${o.customer}</strong> · <span class="product-tag cat-${PRODUCT_CATEGORY[item.product]||'yanwo'}">${item.product}</span>`;
+  document.getElementById('fShipQty').value = '';
+  document.getElementById('fShipDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('shipAlready').textContent = item.shipped || 0;
+  document.getElementById('shipTotal').textContent = item.quantity;
+  updateShipRemain();
+  document.getElementById('shipModal').classList.add('show');
+}
+function closeShipModal() { document.getElementById('shipModal').classList.remove('show'); shipTarget = null; }
+function updateShipRemain() {
+  if (!shipTarget) return;
+  const o = orders.find(x => x.id === shipTarget.orderId); if (!o) return;
+  const item = o.items[shipTarget.itemIndex];
+  const thisShip = parseFloat(document.getElementById('fShipQty').value) || 0;
+  document.getElementById('shipRemain').textContent = Math.max(0, item.quantity - item.shipped - thisShip);
+}
+document.getElementById('fShipQty')?.addEventListener('input', updateShipRemain);
+
+function confirmShip() {
+  if (!shipTarget) return;
+  const o = orders.find(x => x.id === shipTarget.orderId); if (!o) return;
+  const item = o.items[shipTarget.itemIndex];
+  const shipQty = parseFloat(document.getElementById('fShipQty').value), shipDate = document.getElementById('fShipDate').value;
+  if (!shipQty || shipQty <= 0) { alert('请输入发货数量'); return; }
+  if (item.shipped + shipQty > item.quantity) { alert(`发货数量超过未发数量！未发：${item.quantity - item.shipped}`); return; }
+  item.shipped += shipQty; if (shipDate) item.shipDate = shipDate;
+  saveAll(); renderOrderTable(); closeShipModal();
+}
+
+function deleteOrder(id) {
+  const o = orders.find(x => x.id === id); if (!o) return;
+  if (confirm(`确认删除「${o.customer}」的整笔订单吗？包含 ${o.items.length} 个品种，不可撤销。`)) {
+    orders = orders.filter(x => x.id !== id); saveAll(); renderOrderTable();
+  }
+}
+function markPaid(id) {
+  const o = orders.find(x => x.id === id); if (!o) return;
+  o.payment = '已结清'; o.deposit = 0; saveAll(); renderOrderTable();
+}
+
+// --- 接单表格 ---
+function renderOrderTable() {
+  const tbody = document.getElementById('orderTableBody');
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const filterYear = document.getElementById('filterYear').value;
+  const filterPay = document.getElementById('filterPayment').value;
+  const filterShipChecks = Array.from(document.querySelectorAll('.filter-ship-cb:checked')).map(cb => cb.value);
+  const filterProd = document.getElementById('filterProduct').value;
+
+  let rows = []; orders.forEach(o => { o.items.forEach((item, idx) => { rows.push({ order: o, item, itemIndex: idx }); }); });
+  rows = rows.filter(r => {
+    if (filterYear && (r.order.orderDate||'').substring(0,4) !== filterYear) return false;
+    if (filterPay && r.order.payment !== filterPay) return false;
+    if (filterProd && r.item.product !== filterProd) return false;
+    const shipStatus = r.item.shipped >= r.item.quantity ? 'done' : (r.item.shipped > 0 ? 'partial' : 'pending');
+    if (filterShipChecks.length > 0 && !filterShipChecks.includes(shipStatus)) return false;
+    if (search) { const text = (r.order.customer + r.item.product + r.order.remark + r.order.orderDate).toLowerCase(); if (!text.includes(search)) return false; }
+    return true;
+  });
+  rows.sort((a,b) => { const d = (b.order.orderDate||'').localeCompare(a.order.orderDate||''); if (d!==0) return d; if (a.order.id!==b.order.id) return b.order.id-a.order.id; return a.itemIndex-b.itemIndex; });
+
+  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="15"><div class="empty-row"><div class="icon">📋</div><div>暂无订单数据</div></div></td></tr>`; updateOrderStats(); return; }
+
+  let lastOrderId = null, rowNum = 0;
+  tbody.innerHTML = rows.map(r => {
+    const o = r.order, item = r.item, subTotal = item.quantity * item.unitPrice;
+    const shipped = item.shipped || 0, shipPct = item.quantity > 0 ? Math.round((shipped/item.quantity)*100) : 0;
+    let shipBarClass='none', shipTextClass='pending', shipLabel='待发货';
+    if (shipped >= item.quantity) { shipBarClass=''; shipTextClass='done'; shipLabel='已发完 ✓'; }
+    else if (shipped > 0) { shipBarClass='partial'; shipTextClass='partial'; shipLabel=`${shipped}/${item.quantity}`; }
+    const isNewGroup = (o.id !== lastOrderId); lastOrderId = o.id; rowNum++;
+    // FIFO 成本：已发部分的实际成本
+    const fifo = calcFIFOCost(item.product, shipped);
+    const avgCost = getAvgCost(item.product);
+    const profit = (item.unitPrice * shipped) - fifo.cost;
+    const profitClass = profit >= 0 ? 'color:var(--success);' : 'color:var(--danger);';
+    const depositInfo = (o.payment==='定金'&&o.deposit>0) ? `<div style="font-size:9px;color:var(--text-light);">定金 ¥${formatNum(o.deposit)}</div>` : '';
+    return `<tr class="${isNewGroup?'order-group-start':'merged-row'}">
+      <td>${rowNum}</td><td>${isNewGroup?(o.orderDate||'-'):''}</td>
+      <td><span class="order-customer">${isNewGroup?(o.customer||'-'):''}</span>${isNewGroup&&o.remark?`<div class="order-meta">${o.remark}</div>`:''}</td>
+      <td><span class="product-tag cat-${PRODUCT_CATEGORY[item.product]||'yanwo'}">${item.product||'-'}</span>${item.product==='杂'&&item.miscNote?`<div style="font-size:9px;color:var(--text-light);margin-top:1px;">${item.miscNote}</div>`:''}</td>
+      <td style="font-weight:500;">${item.quantity}</td><td style="font-weight:500;">${shipped}</td>
+      <td><div class="ship-progress"><div class="bar-bg"><div class="bar-fill ${shipBarClass}" style="width:${shipPct}%;"></div></div><span class="ship-text ${shipTextClass}">${shipLabel}</span></div></td>
+      <td>${item.shipDate||'<span style="color:var(--text-light);">-</span>'}</td>
+      <td>${formatNum(item.unitPrice)}</td><td style="color:var(--text-light);">${avgCost>0?formatNum(avgCost):'-'}</td>
+      <td style="font-weight:600;color:var(--primary);">${formatNum(subTotal)}</td><td style="font-weight:600;${profitClass}">${shipped>0&&avgCost>0?formatNum(profit):'-'}</td>
+      <td>${isNewGroup?`<span class="badge ${o.payment==='已结清'?'badge-paid':'badge-deposit'}">${o.payment}</span>${depositInfo}`:''}</td>
+      <td style="max-width:120px;white-space:normal;font-size:10px;color:var(--text-light);">${isNewGroup?(o.remark||''):''}</td>
+      <td><div class="row-actions">
+        <button class="icon-btn" title="发货" onclick="openShipModal(${o.id},${r.itemIndex})" style="font-size:16px;">📦</button>
+        ${isNewGroup?`${o.payment==='定金'?`<button class="icon-btn" title="结清" onclick="markPaid(${o.id})">✅</button>`:''}<button class="icon-btn" title="编辑" onclick="openOrderModal(${o.id})">✏️</button><button class="icon-btn" title="删除" onclick="deleteOrder(${o.id})">🗑️</button>`:''}
+      </div></td></tr>`;
+  }).join('');
+  updateYearFilter(); updateOrderStats();
+}
+
+function updateYearFilter() {
+  const sel = document.getElementById('filterYear'), years = new Set();
+  orders.forEach(o => { const y = (o.orderDate||'').substring(0,4); if (y) years.add(y); });
+  const sorted = Array.from(years).sort().reverse(), currentVal = sel.value;
+  sel.innerHTML = '<option value="">全部</option>' + sorted.map(y => `<option value="${y}" ${y===currentVal?'selected':''}>${y}年</option>`).join('');
+}
+
+function updateOrderStats() {
+  const filterYear = document.getElementById('filterYear').value;
+  const statsOrders = filterYear ? orders.filter(o => (o.orderDate||'').substring(0,4) === filterYear) : orders;
+  const total = statsOrders.length;
+  let totalItems = 0, pendingItems = 0, pendingAmount = 0, totalAmount = 0, realizedProfit = 0, estProfit = 0;
+  statsOrders.forEach(o => {
+    o.items.forEach(item => {
+      totalItems++; if (item.shipped < item.quantity) pendingItems++;
+      const sub = item.quantity * item.unitPrice; totalAmount += sub;
+      const shipped = item.shipped || 0;
+      // 已实现利润：FIFO 实际成本
+      if (shipped > 0) {
+        const fifo = calcFIFOCost(item.product, shipped);
+        realizedProfit += (item.unitPrice * shipped) - fifo.cost;
+      }
+      // 预估利润：用当前库存均价算
+      const avgCost = getAvgCost(item.product);
+      if (avgCost > 0) {
+        estProfit += (item.unitPrice - avgCost) * item.quantity;
+      }
+      if (o.payment === '定金') pendingAmount += (sub - (parseFloat(o.deposit)||0));
+    });
+    if (o.payment === '定金') pendingAmount += (parseFloat(o.deposit)||0) * (o.items.length - 1);
+  });
+  document.getElementById('statTotal').innerHTML = `${total} <span class="unit">单</span>`;
+  document.getElementById('statItems').innerHTML = `${totalItems} / ${pendingItems}`;
+  document.getElementById('statPending').textContent = '¥' + formatNum(Math.max(0, pendingAmount));
+  document.getElementById('statTotalAmount').textContent = '¥' + formatNum(totalAmount);
+  document.getElementById('statProfit').textContent = '¥' + formatNum(realizedProfit);
+  document.getElementById('statEstProfit').textContent = '¥' + formatNum(estProfit);
+}
+
+// ==========================================
+// ========== 燕窝进货平台 ==========
+// ==========================================
+function openPurchaseModal(id) {
+  editingPurchaseId = id || null;
+  document.getElementById('purModalTitle').textContent = id ? '编辑进货' : '新增进货';
+  document.getElementById('fPurDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('fPurSupplier').value = ''; document.getElementById('fPurRemark').value = '';
+  document.getElementById('purItemsContainer').innerHTML = '';
+  if (id) {
+    const p = purchases.find(x => x.id === id); if (!p) return;
+    document.getElementById('fPurDate').value = p.date || '';
+    document.getElementById('fPurSupplier').value = p.supplier || '';
+    document.getElementById('fPurRemark').value = p.remark || '';
+    p.items.forEach(item => addPurItemRow(item));
+  }
+  if (!id) addPurItemRow();
+  updatePurTotal();
+  document.getElementById('purchaseModal').classList.add('show');
+}
+function closePurchaseModal() { document.getElementById('purchaseModal').classList.remove('show'); editingPurchaseId = null; }
+
+function addPurItemRow(data) {
+  const container = document.getElementById('purItemsContainer');
+  const div = document.createElement('div'); div.className = 'item-row';
+  div.innerHTML = `
+    <div class="form-group" style="width:170px;"><label>品种 <span class="required">*</span></label>${productSelectHTML(data?data.product:'','pur-product-sel')}</div>
+    <div class="form-group" style="width:90px;"><label>数量</label><input type="number" value="${data?data.quantity:''}" min="0.1" step="0.1" placeholder="数量" oninput="updatePurTotal()" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
+    <div class="form-group" style="width:100px;"><label>进价(元)</label><input type="number" value="${data?data.unitPrice:''}" min="0" step="0.01" placeholder="进价" oninput="updatePurTotal()" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
+    <div class="form-group" style="width:90px;"><label>金额</label><span class="item-subtotal" style="font-weight:600;color:var(--primary);padding:8px 0;display:block;">¥0.00</span></div>
+    <div style="padding-top:20px;"><button class="btn btn-danger btn-sm" onclick="this.closest('.item-row').remove();updatePurTotal();">✕</button></div>
+  `;
+  container.appendChild(div);
+  updatePurTotal();
+}
+
+function onPurProductChange(sel) {
+  // 显示当前库存均价作为参考
+  const row = sel.closest('.item-row'); const product = sel.value; if (!product) return;
+  const avgCost = getAvgCost(product);
+  const stock = getStockQty(product);
+  let infoEl = row.querySelector('.stock-info');
+  if (!infoEl) {
+    infoEl = document.createElement('div'); infoEl.className = 'form-group stock-info'; infoEl.style.width = '110px';
+    row.insertBefore(infoEl, row.lastElementChild);
+  }
+  if (stock > 0) {
+    infoEl.innerHTML = `<label>库存/均价</label><span style="font-size:11px;color:var(--text-light);padding:8px 0;display:block;">库存 <b style="color:var(--info);">${stock}</b> · 均价 <b>¥${formatNum(avgCost)}</b></span>`;
+  } else {
+    infoEl.innerHTML = `<label>库存/均价</label><span style="font-size:11px;color:var(--text-light);padding:8px 0;display:block;">新品种</span>`;
+  }
+}
+
+function updatePurTotal() {
+  const container = document.getElementById('purItemsContainer'); let total = 0;
+  container.querySelectorAll('.item-row').forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    const qty = parseFloat(inputs[0]?.value) || 0, price = parseFloat(inputs[1]?.value) || 0;
+    const sub = qty * price;
+    row.querySelector('.item-subtotal').textContent = '¥' + formatNum(sub);
+    total += sub;
+  });
+  document.getElementById('purTotalPreview').textContent = '¥' + formatNum(total);
+}
+
+function savePurchase() {
+  const date = document.getElementById('fPurDate').value, supplier = document.getElementById('fPurSupplier').value.trim();
+  const remark = document.getElementById('fPurRemark').value.trim();
+  if (!date) { alert('请选择进货日期'); return; }
+  if (!supplier) { alert('请输入供应商'); return; }
+
+  const container = document.getElementById('purItemsContainer'); const items = []; let valid = true;
+  container.querySelectorAll('.item-row').forEach(row => {
+    const sel = row.querySelector('select'), inputs = row.querySelectorAll('input');
+    const product = sel.value, quantity = parseFloat(inputs[0]?.value) || 0, unitPrice = parseFloat(inputs[1]?.value) || 0;
+    if (!product || quantity <= 0 || unitPrice <= 0) { valid = false; return; }
+    items.push({ product, quantity, unitPrice });
+  });
+  if (!valid) { alert('请完整填写每个品种'); return; }
+  if (items.length === 0) { alert('请至少添加一个品种'); return; }
+
+  const purchase = { id: editingPurchaseId || Date.now(), date, supplier, items, remark };
+  if (editingPurchaseId) { const idx = purchases.findIndex(x => x.id === editingPurchaseId); if (idx >= 0) purchases[idx] = purchase; }
+  else { purchases.push(purchase); }
+  saveAll(); renderPurchaseTable(); closePurchaseModal();
+}
+
+function deletePurchase(id) {
+  if (!confirm('确认删除该进货记录？')) return;
+  purchases = purchases.filter(x => x.id !== id); saveAll(); renderPurchaseTable();
+}
+
+function renderPurchaseTable() {
+  const tbody = document.getElementById('purTableBody'), search = document.getElementById('purSearch').value.toLowerCase();
+  let rows = []; purchases.forEach(p => { p.items.forEach((item, idx) => { rows.push({ purchase: p, item, itemIndex: idx }); }); });
+  if (search) rows = rows.filter(r => (r.purchase.supplier + r.item.product + r.purchase.remark).toLowerCase().includes(search));
+  rows.sort((a,b) => (b.purchase.date||'').localeCompare(a.purchase.date||'') || b.purchase.id - a.purchase.id || a.itemIndex - b.itemIndex);
+
+  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="9"><div class="empty-row"><div class="icon">📦</div><div>暂无进货记录</div></div></td></tr>`; updatePurStats(); return; }
+
+  let lastId = null, rowNum = 0;
+  tbody.innerHTML = rows.map(r => {
+    const p = r.purchase, item = r.item, isNew = (p.id !== lastId); lastId = p.id; rowNum++;
+    return `<tr class="${isNew?'order-group-start':'merged-row'}">
+      <td>${rowNum}</td><td>${isNew?(p.date||'-'):''}</td><td style="font-weight:${isNew?'600':'normal'};">${isNew?(p.supplier||'-'):''}</td>
+      <td><span class="product-tag cat-${PRODUCT_CATEGORY[item.product]||'yanwo'}">${item.product}</span></td>
+      <td>${item.quantity}</td><td>${formatNum(item.unitPrice)}</td><td style="font-weight:600;color:var(--primary);">${formatNum(item.quantity*item.unitPrice)}</td>
+      <td style="max-width:140px;white-space:normal;font-size:11px;color:var(--text-light);">${isNew?(p.remark||''):''}</td>
+      <td>${isNew?`<div class="row-actions"><button class="icon-btn" title="编辑" onclick="openPurchaseModal(${p.id})">✏️</button><button class="icon-btn" title="删除" onclick="deletePurchase(${p.id})">🗑️</button></div>`:''}</td>
+    </tr>`;
+  }).join('');
+  updatePurStats();
+}
+
+function updatePurStats() {
+  const totalBatches = purchases.length;
+  const types = new Set(); let totalAmount = 0;
+  purchases.forEach(p => { p.items.forEach(item => { types.add(item.product); totalAmount += item.quantity * item.unitPrice; }); });
+  document.getElementById('purStatTotal').innerHTML = `${totalBatches} <span class="unit">批</span>`;
+  document.getElementById('purStatTypes').textContent = types.size;
+  document.getElementById('purStatAmount').textContent = '¥' + formatNum(totalAmount);
+}
+
+// ==========================================
+
+// ==========================================
+// ========== 库存平台 ==========
+// ==========================================
+function openInventoryModal() {
+  document.getElementById('fInvDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('fInvProduct').value = ''; document.getElementById('fInvQty').value = ''; document.getElementById('fInvRemark').value = '';
+  document.getElementById('inventoryModal').classList.add('show');
+}
+function closeInventoryModal() { document.getElementById('inventoryModal').classList.remove('show'); }
+
+function saveInventory() {
+  const date = document.getElementById('fInvDate').value, product = document.getElementById('fInvProduct').value;
+  const qty = parseFloat(document.getElementById('fInvQty').value) || 0, remark = document.getElementById('fInvRemark').value.trim();
+  if (!date || !product || qty <= 0) { alert('请完整填写日期、品种和数量'); return; }
+  inventoryLog.push({ id: Date.now(), date, product, type: 'in', quantity: qty, remark });
+  saveAll(); renderInventoryTable(); closeInventoryModal();
+}
+
+function renderInventoryTable() {
+  const tbody = document.getElementById('invTableBody');
+  // 汇总：每种品种的入库累计、出库累计（从接单已发数计算）
+  const invMap = {};
+  ALL_PRODUCT_LIST.forEach(p => { invMap[p] = { product: p, totalIn: 0, totalOut: 0 }; });
+  inventoryLog.forEach(log => { if (invMap[log.product]) invMap[log.product].totalIn += log.quantity; });
+  orders.forEach(o => { o.items.forEach(item => { if (invMap[item.product]) invMap[item.product].totalOut += (item.shipped || 0); }); });
+
+  const list = Object.values(invMap).filter(v => v.totalIn > 0 || v.totalOut > 0);
+  if (!list.length) { tbody.innerHTML = `<tr><td colspan="8"><div class="empty-row"><div class="icon">📊</div><div>暂无库存数据，点击「入库记录」添加</div></div></td></tr>`; updateInvStats(); return; }
+
+  list.sort((a,b) => a.product.localeCompare(b.product));
+  let lowCount = 0, totalValue = 0;
+  const batches = getPurchaseBatches();
+  tbody.innerHTML = list.map((v,i) => {
+    const current = v.totalIn - v.totalOut;
+    // 用剩余库存的批次计算实际库存价值
+    const prodBatches = batches[v.product] || [];
+    let cost = 0, value = 0;
+    prodBatches.forEach(b => { if (b.remaining > 0) { value += b.remaining * b.price; } });
+    cost = current > 0 ? value / current : 0;
+    totalValue += value;
+    let status = '正常', badgeClass = 'badge-info';
+    if (current <= 0) { status = '缺货'; badgeClass = 'badge-deposit'; lowCount++; }
+    else if (current < 5) { status = '低库存'; badgeClass = 'badge-deposit'; lowCount++; }
+    return `<tr>
+      <td>${i+1}</td><td><span class="product-tag cat-${PRODUCT_CATEGORY[v.product]||'yanwo'}">${v.product}</span></td>
+      <td>${v.totalIn}</td><td>${v.totalOut}</td>
+      <td style="font-weight:700;color:${current<=0?'var(--danger)':'var(--text)'};">${current}</td>
+      <td>${cost>0?formatNum(cost):'-'}</td><td style="font-weight:600;color:var(--primary);">${value>0?formatNum(value):'-'}</td>
+      <td><span class="badge ${badgeClass}">${status}</span></td>
+    </tr>`;
+  }).join('');
+  updateInvStats();
+}
+
+function updateInvStats() {
+  const invMap = {}; ALL_PRODUCT_LIST.forEach(p => { invMap[p] = { totalIn: 0, totalOut: 0 }; });
+  inventoryLog.forEach(log => { if (invMap[log.product]) invMap[log.product].totalIn += log.quantity; });
+  orders.forEach(o => { o.items.forEach(item => { if (invMap[item.product]) invMap[item.product].totalOut += (item.shipped || 0); }); });
+  const list = Object.values(invMap).filter(v => v.totalIn > 0 || v.totalOut > 0);
+  const batches = getPurchaseBatches();
+  let lowCount = 0, totalValue = 0;
+  list.forEach(v => {
+    const current = v.totalIn - v.totalOut;
+    if (current <= 0 || current < 5) lowCount++;
+    // 用剩余批次计算实际价值
+    (batches[v.product] || []).forEach(b => { if (b.remaining > 0) totalValue += b.remaining * b.price; });
+  });
+  document.getElementById('invStatTypes').textContent = list.length;
+  document.getElementById('invStatLow').textContent = lowCount;
+  document.getElementById('invStatValue').textContent = '¥' + formatNum(totalValue);
+}
+
+// ==========================================
+// 备份提醒
+// ==========================================
+function checkBackupReminder() {
+  const lastBackup = localStorage.getItem(KEY_BACKUP);
+  if (!lastBackup) { if (orders.length > 0) showBackupReminder('欢迎使用燕窝管理系统！\n\n建议立即备份全部数据。'); return; }
+  const diffDays = Math.floor((new Date() - new Date(lastBackup)) / 86400000);
+  if (diffDays >= BACKUP_INTERVAL) showBackupReminder(`⚠️ 距上次备份已过 ${diffDays} 天\n\n建议立即导出备份！`);
+}
+function showBackupReminder(msg) {
+  setTimeout(() => {
+    const ok = confirm(msg + '\n\n「确定」导出备份  「取消」稍后');
+    if (ok) exportAll();
+    else { const lb = localStorage.getItem(KEY_BACKUP); if (lb && Math.floor((new Date()-new Date(lb))/86400000) < 30) localStorage.setItem(KEY_BACKUP, new Date().toISOString().split('T')[0]); }
+  }, 500);
+}
+
+// 弹窗遮罩关闭
+document.getElementById('orderModal').addEventListener('click', function(e) { if (e.target===this) closeOrderModal(); });
+document.getElementById('shipModal').addEventListener('click', function(e) { if (e.target===this) closeShipModal(); });
+document.getElementById('purchaseModal').addEventListener('click', function(e) { if (e.target===this) closePurchaseModal(); });
+document.getElementById('inventoryModal').addEventListener('click', function(e) { if (e.target===this) closeInventoryModal(); });
+
+init();
+</script>
+</body>
+</html>
