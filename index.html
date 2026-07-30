@@ -367,10 +367,23 @@
       <div class="stat-card"><div class="label">进货总批次</div><div class="value" id="purStatTotal">0 <span class="unit">批</span></div></div>
       <div class="stat-card info"><div class="label">进货品种数</div><div class="value" id="purStatTypes">0</div></div>
       <div class="stat-card warning"><div class="label">进货总金额</div><div class="value" id="purStatAmount">¥0</div></div>
+      <div class="stat-card" style="border-left-color:var(--danger);"><div class="label">待入库数量</div><div class="value" id="purStatPending">0</div></div>
     </div>
 
     <div class="toolbar">
       <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="purSearch" placeholder="搜索供应商、品种..." oninput="renderPurchaseTable()"></div>
+    </div>
+    <div class="filter-bar">
+      <div class="filter-item">
+        <span>入库：</span>
+        <label><input type="checkbox" value="pending" class="pur-filter-ship-cb" onchange="renderPurchaseTable()">待入库</label>
+        <label><input type="checkbox" value="partial" class="pur-filter-ship-cb" onchange="renderPurchaseTable()">部分入库</label>
+        <label><input type="checkbox" value="done" class="pur-filter-ship-cb" onchange="renderPurchaseTable()">已入库</label>
+      </div>
+      <div class="filter-item">
+        <span>供应商：</span>
+        <select id="purFilterSupplier" onchange="renderPurchaseTable()"><option value="">全部</option></select>
+      </div>
     </div>
 
     <div class="table-wrapper"><div class="table-scroll">
@@ -673,6 +686,7 @@ function init() {
   initInvProductSelect();
 
   renderOrderTable();
+  updatePurSupplierFilter(); // 初始填充供应商下拉
   checkBackupReminder();
 }
 
@@ -1187,11 +1201,26 @@ function deletePurchase(id) {
 
 function renderPurchaseTable() {
   const tbody = document.getElementById('purTableBody'), search = document.getElementById('purSearch').value.toLowerCase();
+  const filterShipChecks = Array.from(document.querySelectorAll('.pur-filter-ship-cb:checked')).map(cb => cb.value);
+  const filterSupplier = document.getElementById('purFilterSupplier').value;
+
   let rows = []; purchases.forEach(p => { p.items.forEach((item, idx) => { rows.push({ purchase: p, item, itemIndex: idx }); }); });
+  // 搜索过滤
   if (search) rows = rows.filter(r => (r.purchase.supplier + r.item.product + r.purchase.remark).toLowerCase().includes(search));
+  // 供应商过滤
+  if (filterSupplier) rows = rows.filter(r => r.purchase.supplier === filterSupplier);
+  // 入库状态过滤
+  if (filterShipChecks.length > 0) {
+    rows = rows.filter(r => {
+      const inRecords = r.item.inRecords || [];
+      const totalIn = inRecords.reduce((s, rec) => s + (rec.qty || 0), 0);
+      const status = totalIn >= r.item.quantity ? 'done' : (totalIn > 0 ? 'partial' : 'pending');
+      return filterShipChecks.includes(status);
+    });
+  }
   rows.sort((a,b) => (b.purchase.date||'').localeCompare(a.purchase.date||'') || b.purchase.id - a.purchase.id || a.itemIndex - b.itemIndex);
 
-  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="11"><div class="empty-row"><div class="icon">📦</div><div>暂无进货记录</div></div></td></tr>`; updatePurStats(); return; }
+  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="11"><div class="empty-row"><div class="icon">📦</div><div>暂无进货记录</div></div></td></tr>`; updatePurStats(); updatePurSupplierFilter(); return; }
 
   let lastId = null, rowNum = 0;
   tbody.innerHTML = rows.map(r => {
@@ -1211,15 +1240,31 @@ function renderPurchaseTable() {
     </tr>`;
   }).join('');
   updatePurStats();
+  updatePurSupplierFilter();
 }
 
 function updatePurStats() {
   const totalBatches = purchases.length;
-  const types = new Set(); let totalAmount = 0;
-  purchases.forEach(p => { p.items.forEach(item => { types.add(item.product); totalAmount += item.quantity * item.unitPrice; }); });
+  const types = new Set(); let totalAmount = 0, pendingQty = 0;
+  purchases.forEach(p => { p.items.forEach(item => { 
+    types.add(item.product); totalAmount += item.quantity * item.unitPrice; 
+    const inRecords = item.inRecords || [];
+    const totalIn = inRecords.reduce((s, r) => s + (r.qty || 0), 0);
+    pendingQty += Math.max(0, item.quantity - totalIn);
+  }); });
   document.getElementById('purStatTotal').innerHTML = `${totalBatches} <span class="unit">批</span>`;
   document.getElementById('purStatTypes').textContent = types.size;
   document.getElementById('purStatAmount').textContent = '¥' + formatNum(totalAmount);
+  document.getElementById('purStatPending').textContent = pendingQty;
+}
+
+function updatePurSupplierFilter() {
+  const sel = document.getElementById('purFilterSupplier');
+  const currentVal = sel.value;
+  const suppliers = new Set();
+  purchases.forEach(p => { if (p.supplier) suppliers.add(p.supplier); });
+  const sorted = Array.from(suppliers).sort();
+  sel.innerHTML = '<option value="">全部</option>' + sorted.map(s => `<option value="${s}" ${s===currentVal?'selected':''}>${s}</option>`).join('');
 }
 
 // ==========================================
