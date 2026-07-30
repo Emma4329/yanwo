@@ -692,6 +692,9 @@ function init() {
   initProductFilter();
   initInvProductSelect();
 
+  // 默认年份设为当年
+  document.getElementById('filterYear').value = String(new Date().getFullYear());
+
   renderOrderTable();
   updatePurSupplierFilter(); // 初始填充供应商下拉
   updateInvProdFilter();     // 初始填充库存品种筛选
@@ -1053,13 +1056,9 @@ function updateYearFilter() {
   orders.forEach(o => { const y = (o.orderDate||'').substring(0,4); if (y) years.add(y); });
   years.add(currentYear); // 确保当年始终可选
   const sorted = Array.from(years).sort().reverse();
-  // 默认选中当年，如果之前没选过
-  if (!sel.dataset.initialized) {
-    sel.value = currentYear;
-    sel.dataset.initialized = '1';
-  }
-  const currentVal = sel.value;
-  sel.innerHTML = '<option value="">全部</option>' + sorted.map(y => `<option value="${y}" ${y===currentVal?'selected':''}>${y}年</option>`).join('');
+  // 保持当前选中值，如果为空则默认当年
+  const keepVal = sel.value || currentYear;
+  sel.innerHTML = '<option value="">全部</option>' + sorted.map(y => `<option value="${y}" ${y===keepVal?'selected':''}>${y}年</option>`).join('');
 }
 
 function updateOrderStats() {
