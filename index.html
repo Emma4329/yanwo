@@ -326,7 +326,7 @@
         <span>年份：</span><select id="filterYear" onchange="renderOrderTable()"><option value="">全部</option></select>
       </div>
       <div class="filter-item">
-        <span>付款：</span><select id="filterPayment" onchange="renderOrderTable()"><option value="">全部</option><option value="定金">定金</option><option value="已结清">已结清</option></select>
+        <span>付款：</span><label class="filter-cb"><input type="checkbox" class="filter-pay-cb" value="定金" onchange="renderOrderTable()"> 定金</label><label class="filter-cb"><input type="checkbox" class="filter-pay-cb" value="已结清" onchange="renderOrderTable()"> 已结清</label>
       </div>
       <div class="filter-item">
         <span>发货：</span>
@@ -979,14 +979,14 @@ function renderOrderTable() {
   const tbody = document.getElementById('orderTableBody');
   const search = document.getElementById('searchInput').value.toLowerCase();
   const filterYear = document.getElementById('filterYear').value;
-  const filterPay = document.getElementById('filterPayment').value;
+  const filterPay = Array.from(document.querySelectorAll('.filter-pay-cb:checked')).map(cb => cb.value);
   const filterShipChecks = Array.from(document.querySelectorAll('.filter-ship-cb:checked')).map(cb => cb.value);
   const filterProd = document.getElementById('filterProduct').value;
 
   let rows = []; orders.forEach(o => { o.items.forEach((item, idx) => { rows.push({ order: o, item, itemIndex: idx }); }); });
   rows = rows.filter(r => {
     if (filterYear && (r.order.orderDate||'').substring(0,4) !== filterYear) return false;
-    if (filterPay && r.order.payment !== filterPay) return false;
+    if (filterPay.length > 0 && !filterPay.includes(r.order.payment)) return false;
     if (filterProd && r.item.product !== filterProd) return false;
     // 发货状态 — 待发货=完全没发+部分发货中未发部分，已发货=完全发货+部分发货中已发部分
     const hasPending = r.item.shipped < r.item.quantity;
