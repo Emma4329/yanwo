@@ -589,6 +589,24 @@
         <select id="growthWeekSelect" onchange="renderGrowthSummary()" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></select>
       </div>
     </div>
+
+    <!-- 每月利润 -->
+    <div style="background:var(--card);border-radius:10px;padding:16px;box-shadow:var(--shadow);margin-top:14px;">
+      <h3 style="margin:0 0 12px;font-size:14px;">📈 每月利润</h3>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+        <button class="btn btn-outline btn-sm" onclick="changeGrowthMonth(-1)">◀ 上月</button>
+        <span id="growthMonthLabel" style="font-size:14px;font-weight:600;min-width:100px;text-align:center;"></span>
+        <button class="btn btn-outline btn-sm" onclick="changeGrowthMonth(1)">下月 ▶</button>
+      </div>
+      <div class="stats" style="margin-bottom:14px;">
+        <div class="stat-card success"><div class="label">本月卖货利润</div><div class="value" id="growthMonthSellProfit">¥0</div></div>
+        <div class="stat-card success"><div class="label">本月杂货利润</div><div class="value" id="growthMonthZaProfit">¥0</div></div>
+        <div class="stat-card success" style="border-left-color:var(--primary);"><div class="label">本月利润合计</div><div class="value" id="growthMonthTotalProfit">¥0</div></div>
+      </div>
+      <div id="growthChartContainer" style="background:var(--bg);border-radius:8px;padding:12px;overflow-x:auto;">
+        <svg id="growthProfitChart" width="100%" height="200" viewBox="0 0 700 200" style="min-width:600px;"></svg>
+      </div>
+    </div>
   </div>
 
 </div><!-- /main -->
@@ -1897,7 +1915,7 @@ function renderGrowthTable() {
   const tbody = document.getElementById('growthTableBody');
   if (growthRecords.length === 0) {
     tbody.innerHTML = `<tr><td colspan="7"><div class="empty-row"><div class="icon">🎯</div><div>暂无打卡记录</div></div></td></tr>`;
-    updateGrowthStats(); renderGrowthSummary(); return;
+    updateGrowthStats(); renderGrowthSummary(); renderGrowthMonth(); return;
   }
   tbody.innerHTML = growthRecords.map((r,i) => {
     const wxDone = parseInt(r.wx) >= 3;
@@ -1913,7 +1931,7 @@ function renderGrowthTable() {
       <td><button class="icon-btn" title="编辑" onclick="editGrowthRecord('${r.date}')">✏️</button><button class="icon-btn" title="删除" onclick="deleteGrowthRecord('${r.date}')">🗑️</button></td>
     </tr>`;
   }).join('');
-  updateGrowthStats(); renderGrowthSummary();
+  updateGrowthStats(); renderGrowthSummary(); renderGrowthMonth();
 }
 
 function editGrowthRecord(date) {
@@ -1940,28 +1958,22 @@ function updateGrowthStats() {
     return parseInt(r.wx) >= 3 && parseInt(r.xhs) >= 1 && parseFloat(r.study) >= 2;
   }).length;
   document.getElementById('growthWeekRate').textContent = weekRecords.length > 0 ? Math.round(allDoneDays/weekRecords.length*100) + '%' : '0%';
-  // 本周利润合计
+  // 本周利润合计（按下单数计算）
   let sellProfit = 0, zaProfit = 0;
   orders.forEach(o => {
     if (o.orderDate >= weekStart && o.orderDate <= weekEnd) {
       o.items.forEach(item => {
-        const shipped = item.shipped || 0;
-        if (shipped > 0) {
-          const fifo = calcFIFOCost(item.product, shipped);
-          sellProfit += (item.unitPrice * shipped) - fifo.cost;
-        }
+        const fifo = calcFIFOCost(item.product, item.quantity);
+        sellProfit += (item.unitPrice * item.quantity) - fifo.cost;
       });
     }
   });
   zaOrders.forEach(o => {
     if (o.orderDate >= weekStart && o.orderDate <= weekEnd) {
       o.items.forEach(item => {
-        const shipped = item.shipped || 0;
-        if (shipped > 0) {
-          const itemCost = (item.cost || 0) * shipped;
-          sellProfit += (item.unitPrice * shipped) - itemCost;
-          zaProfit += (item.unitPrice * shipped) - itemCost;
-        }
+        const itemCost = (item.cost || 0) * item.quantity;
+        sellProfit += (item.unitPrice * item.quantity) - itemCost;
+        zaProfit += (item.unitPrice * item.quantity) - itemCost;
       });
     }
   });
@@ -1992,35 +2004,131 @@ function renderGrowthSummary() {
   document.getElementById('growthSumXhs').textContent = weekRecords.filter(r => parseInt(r.xhs) >= 1).length;
   document.getElementById('growthSumStudy').textContent = weekRecords.filter(r => parseFloat(r.study) >= 2).length;
 
-  // 卖货周利润
+  // 卖货周利润（按下单数）
   let sellProfit = 0;
   orders.forEach(o => {
     if (o.orderDate >= weekStart && o.orderDate <= weekEnd) {
       o.items.forEach(item => {
-        const shipped = item.shipped || 0;
-        if (shipped > 0) {
-          const fifo = calcFIFOCost(item.product, shipped);
-          sellProfit += (item.unitPrice * shipped) - fifo.cost;
-        }
+        const fifo = calcFIFOCost(item.product, item.quantity);
+        sellProfit += (item.unitPrice * item.quantity) - fifo.cost;
       });
     }
   });
   document.getElementById('growthSumSellProfit').textContent = '¥' + formatNum(sellProfit);
 
-  // 杂货周利润
+  // 杂货周利润（按下单数）
   let zaProfit = 0;
   zaOrders.forEach(o => {
     if (o.orderDate >= weekStart && o.orderDate <= weekEnd) {
       o.items.forEach(item => {
-        const shipped = item.shipped || 0;
-        if (shipped > 0) {
-          const itemCost = (item.cost || 0) * shipped;
-          zaProfit += (item.unitPrice * shipped) - itemCost;
-        }
+        const itemCost = (item.cost || 0) * item.quantity;
+        zaProfit += (item.unitPrice * item.quantity) - itemCost;
       });
     }
   });
   document.getElementById('growthSumZaProfit').textContent = '¥' + formatNum(zaProfit);
+}
+
+// ========== 每月利润 ==========
+let growthMonthOffset = 0;
+
+function changeGrowthMonth(delta) {
+  growthMonthOffset += delta;
+  renderGrowthMonth();
+}
+
+function getMonthRange(offset) {
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+  const start = d.toISOString().split('T')[0];
+  const end = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0];
+  const label = d.getFullYear() + '年' + (d.getMonth() + 1) + '月';
+  return { start, end, label };
+}
+
+function calcMonthProfit(monthStart, monthEnd) {
+  let sellProfit = 0, zaProfit = 0;
+  const dailyProfit = {};
+  orders.forEach(o => {
+    if (o.orderDate >= monthStart && o.orderDate <= monthEnd) {
+      o.items.forEach(item => {
+        const fifo = calcFIFOCost(item.product, item.quantity);
+        const p = (item.unitPrice * item.quantity) - fifo.cost;
+        sellProfit += p;
+        dailyProfit[o.orderDate] = (dailyProfit[o.orderDate] || 0) + p;
+      });
+    }
+  });
+  zaOrders.forEach(o => {
+    if (o.orderDate >= monthStart && o.orderDate <= monthEnd) {
+      o.items.forEach(item => {
+        const itemCost = (item.cost || 0) * item.quantity;
+        const p = (item.unitPrice * item.quantity) - itemCost;
+        zaProfit += p;
+        dailyProfit[o.orderDate] = (dailyProfit[o.orderDate] || 0) + p;
+      });
+    }
+  });
+  return { sellProfit, zaProfit, total: sellProfit + zaProfit, dailyProfit };
+}
+
+function renderGrowthMonth() {
+  const { start, end, label } = getMonthRange(growthMonthOffset);
+  document.getElementById('growthMonthLabel').textContent = label;
+  const { sellProfit, zaProfit, total, dailyProfit } = calcMonthProfit(start, end);
+  document.getElementById('growthMonthSellProfit').textContent = '¥' + formatNum(sellProfit);
+  document.getElementById('growthMonthZaProfit').textContent = '¥' + formatNum(zaProfit);
+  document.getElementById('growthMonthTotalProfit').textContent = '¥' + formatNum(total);
+  drawProfitChart(dailyProfit, start, end);
+}
+
+function drawProfitChart(dailyProfit, monthStart, monthEnd) {
+  const svg = document.getElementById('growthProfitChart');
+  const days = [];
+  const startD = new Date(monthStart), endD = new Date(monthEnd);
+  for (let d = new Date(startD); d <= endD; d.setDate(d.getDate() + 1)) {
+    const ds = d.toISOString().split('T')[0];
+    days.push({ date: ds, profit: dailyProfit[ds] || 0 });
+  }
+
+  const W = 700, H = 200, padL = 50, padR = 20, padT = 20, padB = 30;
+  const chartW = W - padL - padR, chartH = H - padT - padB;
+  const maxProfit = Math.max(...days.map(d => d.profit), 1);
+  const barW = chartW / days.length;
+
+  // 构建SVG
+  let html = '';
+  // 背景网格线
+  for (let i = 0; i <= 4; i++) {
+    const y = padT + (chartH / 4) * i;
+    const val = Math.round(maxProfit * (1 - i / 4));
+    html += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="var(--border)" stroke-width="0.5"/>`;
+    html += `<text x="${padL - 6}" y="${y + 4}" text-anchor="end" font-size="9" fill="var(--text-light)">¥${formatNum(val)}</text>`;
+  }
+
+  // 柱状图
+  days.forEach((d, i) => {
+    if (d.profit > 0) {
+      const barH = (d.profit / maxProfit) * chartH;
+      const x = padL + i * barW;
+      const y = padT + chartH - barH;
+      html += `<rect x="${x + 1}" y="${y}" width="${Math.max(barW - 2, 1)}" height="${barH}" rx="2" fill="var(--primary-light)" opacity="0.8"><title>${d.date}: ¥${formatNum(d.profit)}</title></rect>`;
+    }
+  });
+
+  // X轴日期标签（每5天显示一个）
+  days.forEach((d, i) => {
+    if (i % 5 === 0 || i === days.length - 1) {
+      const x = padL + i * barW + barW / 2;
+      html += `<text x="${x}" y="${H - 8}" text-anchor="middle" font-size="9" fill="var(--text-light)">${d.date.substring(8)}</text>`;
+    }
+  });
+
+  // 坐标轴
+  html += `<line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT + chartH}" stroke="var(--border)" stroke-width="1"/>`;
+  html += `<line x1="${padL}" y1="${padT + chartH}" x2="${W - padR}" y2="${padT + chartH}" stroke="var(--border)" stroke-width="1"/>`;
+
+  svg.innerHTML = html;
 }
 
 // ==========================================
