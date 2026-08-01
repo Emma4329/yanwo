@@ -55,6 +55,7 @@
   .nav-icon.sell { background: #D4A574; color: #3D2B1F; }
   .nav-icon.buy { background: #6B9B8A; color: #FFF; }
   .nav-icon.compare { background: #C77D0D; color: #FFF; }
+  .nav-icon.za { background: #8B5A2B; color: #FFF; }
   .nav-icon.stock { background: #3B7DD8; color: #FFF; }
   .nav-divider {
     margin: 6px 10px; border-top: 1px solid rgba(255,255,255,0.08);
@@ -292,6 +293,9 @@
   <div class="nav-item" data-page="compare">
     <span class="nav-icon compare">比</span> 比价系统
   </div>
+  <div class="nav-item" data-page="za">
+    <span class="nav-icon za">杂</span> 杂
+  </div>
   <div class="nav-footer">v3.0 · FIFO成本</div>
 </div>
 
@@ -462,7 +466,97 @@
     </div></div>
   </div>
 
+  <!-- ========== 杂平台 ========== -->
+  <div class="page" id="page-za">
+    <div class="page-header">
+      <div>
+        <h1>📋 杂</h1>
+        <div class="sub">自由录入 · 分批发货 · 利润核算</div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-primary" onclick="openZaModal()">➕ 新增订单</button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat-card"><div class="label">订单总数</div><div class="value" id="zaStatTotal">0 <span class="unit">单</span></div></div>
+      <div class="stat-card info"><div class="label">待发客户 / 待发数量</div><div class="value" id="zaStatItems">0 / 0</div></div>
+      <div class="stat-card warning"><div class="label">待收尾款</div><div class="value" id="zaStatPending">¥0</div></div>
+      <div class="stat-card"><div class="label">订单总金额</div><div class="value" id="zaStatTotalAmount">¥0</div></div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="zaSearchInput" placeholder="搜索客户名、商品名、备注..." oninput="renderZaTable()"></div>
+    </div>
+    <div class="filter-bar">
+      <div class="filter-item">
+        <span>付款：</span><label class="filter-cb"><input type="checkbox" class="za-filter-pay-cb" value="定金" onchange="renderZaTable()"> 定金</label><label class="filter-cb"><input type="checkbox" class="za-filter-pay-cb" value="已结清" onchange="renderZaTable()"> 已结清</label>
+      </div>
+      <div class="filter-item">
+        <span>年份：</span><select id="zaFilterYear" onchange="renderZaTable()"><option value="">全部</option></select>
+      </div>
+      <div class="filter-item">
+        <span>发货：</span>
+        <label><input type="checkbox" value="pending" class="za-filter-ship-cb" onchange="renderZaTable()" checked>待发货</label>
+        <label><input type="checkbox" value="partial" class="za-filter-ship-cb" onchange="renderZaTable()" checked>部分发货</label>
+        <label><input type="checkbox" value="done" class="za-filter-ship-cb" onchange="renderZaTable()">已全部发完</label>
+      </div>
+    </div>
+
+    <div class="table-wrapper"><div class="table-scroll">
+      <table>
+        <thead><tr>
+          <th style="width:32px;">#</th><th>下单日期</th><th style="width:52px;">客户名</th><th>商品名</th>
+          <th>下单数</th><th style="width:54px;">进度</th><th>已发数</th><th>待发数</th><th>发货日</th>
+          <th>售价</th><th>总价</th>
+          <th>付款</th><th>备注</th><th>操作</th>
+        </tr></thead>
+        <tbody id="zaTableBody"></tbody>
+      </table>
+    </div></div>
+  </div>
+
 </div><!-- /main -->
+
+<!-- ====== 杂平台弹窗 ====== -->
+<div class="modal-overlay" id="zaModal"><div class="modal">
+  <div class="modal-header"><h2 id="zaModalTitle">新增订单</h2><button class="modal-close" onclick="closeZaModal()">✕</button></div>
+  <div class="modal-body">
+    <div class="form-row">
+      <div class="form-group w140"><label>下单日期 <span class="required">*</span></label><input type="date" id="fZaDate"></div>
+      <div class="form-group w160"><label>客户姓名 <span class="required">*</span></label><input type="text" id="fZaCustomer" placeholder="输入姓名"></div>
+      <div class="form-group w140"><label>付款状态 <span class="required">*</span></label><select id="fZaPayment"><option value="定金">定金</option><option value="已结清">已结清</option></select></div>
+      <div class="form-group w140"><label>定金金额(元)</label><input type="number" id="fZaDeposit" min="0" step="0.01" placeholder="定金状态填写"></div>
+    </div>
+    <div class="form-row"><div class="form-group flex1"><label>备注</label><input type="text" id="fZaRemark" placeholder="订单备注..."></div></div>
+    <div class="items-section">
+      <h3>📦 商品明细 <button class="btn btn-outline btn-sm" onclick="addZaItemRow()">+ 添加商品</button></h3>
+      <div id="zaItemsContainer"></div>
+      <div class="total-preview" style="margin-top:10px;"><span class="label">订单总价</span><span class="amount" id="zaTotalPreview">¥0.00</span></div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <div style="font-size:11px;color:var(--text-light);">💡 下单后可在表格中逐行记录发货</div>
+    <div class="modal-footer-right">
+      <button class="btn btn-secondary" onclick="closeZaModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveZaOrder()">💾 保存订单</button>
+    </div>
+  </div>
+</div></div>
+
+<!-- ====== 杂发货弹窗 ====== -->
+<div class="modal-overlay" id="zaShipModal"><div class="modal" style="max-width:450px;">
+  <div class="modal-header"><h2>📦 记录发货</h2><button class="modal-close" onclick="closeZaShipModal()">✕</button></div>
+  <div class="modal-body">
+    <div id="zaShipInfo" style="margin-bottom:12px;font-size:12px;color:var(--text-light);"></div>
+    <div class="form-row">
+      <div class="form-group w140"><label>本次发货数量 <span class="required">*</span></label><input type="number" id="fZaShipQty" min="0.1" step="0.1" placeholder="发货数量"></div>
+      <div class="form-group w160"><label>发货日期</label><input type="date" id="fZaShipDate"></div>
+    </div>
+    <div style="font-size:11px;color:var(--text-light);margin-top:4px;">已发 <span id="zaShipAlready" style="font-weight:600;"></span> / 下单 <span id="zaShipTotal" style="font-weight:600;"></span>，本次后剩余 <span id="zaShipRemain" style="font-weight:600;color:var(--danger);"></span></div>
+  </div>
+  <div class="modal-footer"><div></div><div class="modal-footer-right"><button class="btn btn-secondary" onclick="closeZaShipModal()">取消</button><button class="btn btn-primary" onclick="confirmZaShip()">✅ 确认发货</button></div></div>
+</div></div>
 
 <!-- ====== 接单弹窗 ====== -->
 <div class="modal-overlay" id="orderModal"><div class="modal">
@@ -607,12 +701,16 @@ const KEY_ORDERS = 'yw_orders_v2';
 const KEY_PURCHASE = 'yw_purchase_v1';
 const KEY_INVENTORY = 'yw_inventory_v1';
 const KEY_COMPARE = 'yw_compare_v1';
+const KEY_ZA = 'yw_za_v1';
 const KEY_BACKUP = 'yw_last_backup';
 const BACKUP_INTERVAL = 15;
 
 // 全局数据
 let orders = [], purchases = [], inventoryLog = [];
 let compareData = { suppliers: [], prices: {} }; // 比价独立数据
+let zaOrders = []; // 杂平台独立数据
+let editingZaOrderId = null;
+let zaShipTarget = null;
 let editingOrderId = null, editingPurchaseId = null;
 let shipTarget = null;
 
@@ -642,6 +740,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
     if (this.dataset.page === 'orders') renderOrderTable();
     if (this.dataset.page === 'purchase') renderPurchaseTable();
     if (this.dataset.page === 'compare') renderCompareTable();
+    if (this.dataset.page === 'za') renderZaTable();
     if (this.dataset.page === 'inventory') renderInventoryTable();
   });
 });
@@ -650,12 +749,12 @@ document.querySelectorAll('.nav-item').forEach(item => {
 // 通用导入导出
 // ==========================================
 function exportAll() {
-  const data = { orders, purchases, inventoryLog };
+  const data = { orders, purchases, inventoryLog, compareData, zaOrders };
   const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `燕窝数据_${new Date().toISOString().split('T')[0]}.json`;
+  a.download = `HP工作台数据_${new Date().toISOString().split('T')[0]}.json`;
   a.click();
   URL.revokeObjectURL(url);
   localStorage.setItem(KEY_BACKUP, new Date().toISOString().split('T')[0]);
@@ -676,9 +775,12 @@ function importAll(event) {
         if (confirm('即将导入全部数据，是否覆盖现有数据？\n（点击取消则追加到现有数据）')) {
           orders = data.orders || []; purchases = data.purchases || [];
           inventoryLog = data.inventoryLog || [];
+          if (data.compareData) compareData = data.compareData;
+          if (data.zaOrders) zaOrders = data.zaOrders;
         } else {
           orders = orders.concat(data.orders || []); purchases = purchases.concat(data.purchases || []);
           inventoryLog = inventoryLog.concat(data.inventoryLog || []);
+          if (data.zaOrders) zaOrders = zaOrders.concat(data.zaOrders || []);
         }
         saveAll(); refreshAll();
       }
@@ -694,10 +796,11 @@ function saveAll() {
   localStorage.setItem(KEY_PURCHASE, JSON.stringify(purchases));
   localStorage.setItem(KEY_INVENTORY, JSON.stringify(inventoryLog));
   localStorage.setItem(KEY_COMPARE, JSON.stringify(compareData));
+  localStorage.setItem(KEY_ZA, JSON.stringify(zaOrders));
 }
 
 function refreshAll() {
-  renderOrderTable(); renderPurchaseTable(); renderInventoryTable();
+  renderOrderTable(); renderPurchaseTable(); renderInventoryTable(); renderZaTable();
 }
 
 // ==========================================
@@ -709,6 +812,7 @@ function init() {
   try { purchases = JSON.parse(localStorage.getItem(KEY_PURCHASE) || '[]'); } catch(e) { purchases = []; }
   try { inventoryLog = JSON.parse(localStorage.getItem(KEY_INVENTORY) || '[]'); } catch(e) { inventoryLog = []; }
   try { compareData = JSON.parse(localStorage.getItem(KEY_COMPARE) || '{"suppliers":[],"prices":{}}'); } catch(e) { compareData = { suppliers: [], prices: {} }; }
+  try { zaOrders = JSON.parse(localStorage.getItem(KEY_ZA) || '[]'); } catch(e) { zaOrders = []; }
 
   if (orders.length === 0 && purchases.length === 0) {
     orders = [{ id: Date.now(), orderDate: new Date().toISOString().split('T')[0], customer: '示例客户', payment: '定金', deposit: 800, remark: '示例数据，可删除',
@@ -721,6 +825,8 @@ function init() {
   document.getElementById('fShipDate').value = new Date().toISOString().split('T')[0];
   document.getElementById('fPurDate').value = new Date().toISOString().split('T')[0];
   document.getElementById('fInvDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('fZaDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('fZaShipDate').value = new Date().toISOString().split('T')[0];
 
   // 初始化品种筛选下拉
   initProductFilter();
@@ -728,6 +834,7 @@ function init() {
 
   // 默认年份设为当年
   document.getElementById('filterYear').value = String(new Date().getFullYear());
+  document.getElementById('zaFilterYear').value = String(new Date().getFullYear());
 
   renderOrderTable();
   updatePurSupplierFilter(); // 初始填充供应商下拉
@@ -1433,6 +1540,213 @@ function updateComparePrice(prod, supplier, val) {
 }
 
 // ==========================================
+// ========== 杂平台 ==========
+// ==========================================
+function renderZaTable() {
+  const tbody = document.getElementById('zaTableBody');
+  const search = document.getElementById('zaSearchInput').value.toLowerCase();
+  const filterYear = document.getElementById('zaFilterYear').value;
+  const filterPay = Array.from(document.querySelectorAll('.za-filter-pay-cb:checked')).map(cb => cb.value);
+  const filterShipChecks = Array.from(document.querySelectorAll('.za-filter-ship-cb:checked')).map(cb => cb.value);
+
+  let rows = []; zaOrders.forEach(o => { o.items.forEach((item, idx) => { rows.push({ order: o, item, itemIndex: idx }); }); });
+  rows = rows.filter(r => {
+    if (filterYear && (r.order.orderDate||'').substring(0,4) !== filterYear) return false;
+    if (filterPay.length > 0 && !filterPay.includes(r.order.payment)) return false;
+    const hasPending = r.item.shipped < r.item.quantity;
+    const hasShipped = r.item.shipped > 0;
+    const isDone = r.item.shipped >= r.item.quantity;
+    const showPending = filterShipChecks.includes('pending') && hasPending;
+    const showPartial = filterShipChecks.includes('partial') && hasPending && hasShipped;
+    const showDone = filterShipChecks.includes('done') && isDone;
+    if (!(showPending || showPartial || showDone)) return false;
+    if (search) { const text = (r.order.customer + r.item.product + r.order.remark + r.order.orderDate).toLowerCase(); if (!text.includes(search)) return false; }
+    return true;
+  });
+  rows.sort((a,b) => { const d = (b.order.orderDate||'').localeCompare(a.order.orderDate||''); if (d!==0) return d; if (a.order.id!==b.order.id) return b.order.id-a.order.id; return a.itemIndex-b.itemIndex; });
+
+  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="14"><div class="empty-row"><div class="icon">📋</div><div>暂无订单数据</div></div></td></tr>`; updateZaStats(); return; }
+
+  let lastOrderId = null, rowNum = 0;
+  tbody.innerHTML = rows.map(r => {
+    const o = r.order, item = r.item, subTotal = item.quantity * item.unitPrice;
+    const shipped = item.shipped || 0, pending = item.quantity - shipped;
+    const shipPct = item.quantity > 0 ? Math.round((shipped/item.quantity)*100) : 0;
+    let shipBarClass='none', shipTextClass='pending', shipLabel='待发货';
+    if (shipped >= item.quantity) { shipBarClass=''; shipTextClass='done'; shipLabel='已发完'; }
+    else if (shipped > 0) { shipBarClass='partial'; shipTextClass='partial'; shipLabel=`${shipped}/${item.quantity}`; }
+    const isNewGroup = (o.id !== lastOrderId); lastOrderId = o.id; rowNum++;
+    const depositInfo = (o.payment==='定金'&&o.deposit>0) ? `<div style="font-size:9px;color:var(--text-light);">定金 ¥${formatNum(o.deposit)}</div>` : '';
+    return `<tr class="${isNewGroup?'order-group-start':'merged-row'}">
+      <td>${rowNum}</td><td>${isNewGroup?(o.orderDate||'-'):''}</td>
+      <td style="max-width:52px;overflow-wrap:break-word;"><span class="order-customer">${isNewGroup?(o.customer||'-'):''}</span></td>
+      <td style="font-weight:500;">${item.product||'-'}</td>
+      <td style="font-weight:500;text-align:center;">${item.quantity}</td>
+      <td><div class="ship-progress"><div class="bar-bg"><div class="bar-fill ${shipBarClass}" style="width:${shipPct}%;"></div></div><span class="ship-text ${shipTextClass}">${shipLabel}</span></div></td>
+      <td style="font-weight:500;text-align:center;">${shipped}</td>
+      <td style="font-weight:500;text-align:center;color:${pending>0?'var(--danger)':'var(--text-light)'};">${pending}</td>
+      <td>${item.shipDate||'<span style="color:var(--text-light);">-</span>'}</td>
+      <td>${formatNum(item.unitPrice)}</td>
+      <td style="font-weight:600;color:var(--primary);">${formatNum(subTotal)}</td>
+      <td>${isNewGroup?`<span class="badge ${o.payment==='已结清'?'badge-paid':'badge-deposit'}">${o.payment}</span>${depositInfo}`:''}</td>
+      <td style="max-width:120px;white-space:normal;font-size:10px;color:var(--text-light);">${isNewGroup?(o.remark||''):''}</td>
+      <td><div class="row-actions">
+        <button class="icon-btn" title="发货" onclick="openZaShipModal(${o.id},${r.itemIndex})" style="font-size:16px;">📦</button>
+        ${isNewGroup?`${o.payment==='定金'?`<button class="icon-btn" title="结清" onclick="markZaPaid(${o.id})">✅</button>`:''}<button class="icon-btn" title="编辑" onclick="openZaModal(${o.id})">✏️</button><button class="icon-btn" title="删除" onclick="deleteZaOrder(${o.id})">🗑️</button>`:''}
+      </div></td></tr>`;
+  }).join('');
+  updateZaYearFilter(); updateZaStats();
+}
+
+function updateZaStats() {
+  const filterYear = document.getElementById('zaFilterYear').value;
+  const statsOrders = filterYear ? zaOrders.filter(o => (o.orderDate||'').substring(0,4) === filterYear) : zaOrders;
+  const total = statsOrders.length;
+  let pendingCustomers = new Set(), pendingQty = 0, pendingAmount = 0, totalAmount = 0;
+  statsOrders.forEach(o => {
+    let orderHasPending = false;
+    o.items.forEach(item => {
+      const shipped = item.shipped || 0;
+      const remain = item.quantity - shipped;
+      if (remain > 0) { orderHasPending = true; pendingQty += remain; }
+      const sub = item.quantity * item.unitPrice; totalAmount += sub;
+      if (o.payment === '定金') pendingAmount += (sub - (parseFloat(o.deposit)||0));
+    });
+    if (orderHasPending) pendingCustomers.add(o.customer);
+    if (o.payment === '定金') pendingAmount += (parseFloat(o.deposit)||0) * (o.items.length - 1);
+  });
+  document.getElementById('zaStatTotal').innerHTML = `${total} <span class="unit">单</span>`;
+  document.getElementById('zaStatItems').innerHTML = `${pendingCustomers.size} / ${pendingQty}`;
+  document.getElementById('zaStatPending').textContent = '¥' + formatNum(Math.max(0, pendingAmount));
+  document.getElementById('zaStatTotalAmount').textContent = '¥' + formatNum(totalAmount);
+}
+
+function updateZaYearFilter() {
+  const sel = document.getElementById('zaFilterYear'), years = new Set();
+  const currentYear = String(new Date().getFullYear());
+  zaOrders.forEach(o => { const y = (o.orderDate||'').substring(0,4); if (y) years.add(y); });
+  years.add(currentYear);
+  const sorted = Array.from(years).sort().reverse();
+  const keepVal = sel.value || currentYear;
+  sel.innerHTML = '<option value="">全部</option>' + sorted.map(y => `<option value="${y}" ${y===keepVal?'selected':''}>${y}年</option>`).join('');
+}
+
+function openZaModal(id) {
+  editingZaOrderId = id || null;
+  document.getElementById('zaModalTitle').textContent = id ? '编辑订单' : '新增订单';
+  document.getElementById('fZaDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('fZaCustomer').value = ''; document.getElementById('fZaPayment').value = '定金';
+  document.getElementById('fZaDeposit').value = ''; document.getElementById('fZaRemark').value = '';
+  document.getElementById('zaItemsContainer').innerHTML = '';
+  if (id) {
+    const o = zaOrders.find(x => x.id === id); if (!o) return;
+    document.getElementById('fZaDate').value = o.orderDate || ''; document.getElementById('fZaCustomer').value = o.customer || '';
+    document.getElementById('fZaPayment').value = o.payment || '定金'; document.getElementById('fZaDeposit').value = o.deposit || '';
+    document.getElementById('fZaRemark').value = o.remark || '';
+    o.items.forEach(item => addZaItemRow(item));
+  }
+  if (!id) addZaItemRow();
+  updateZaTotal();
+  document.getElementById('zaModal').classList.add('show');
+}
+function closeZaModal() { document.getElementById('zaModal').classList.remove('show'); editingZaOrderId = null; }
+
+function addZaItemRow(data) {
+  const container = document.getElementById('zaItemsContainer');
+  const div = document.createElement('div'); div.className = 'item-row';
+  div.innerHTML = `
+    <div class="form-group" style="width:170px;"><label>商品名 <span class="required">*</span></label><input type="text" value="${data?data.product:''}" placeholder="输入商品名" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
+    <div class="form-group" style="width:85px;"><label>下单数量</label><input type="number" value="${data?data.quantity:''}" min="0.1" step="0.1" placeholder="数量" oninput="updateZaTotal()" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
+    <div class="form-group" style="width:95px;"><label>售价(元)</label><input type="number" value="${data?data.unitPrice:''}" min="0" step="0.01" placeholder="售价" oninput="updateZaTotal()" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
+    <div class="form-group" style="width:85px;"><label>总价</label><span class="item-subtotal" style="font-weight:600;color:var(--primary);padding:8px 0;display:block;">¥0.00</span></div>
+    <div style="padding-top:20px;"><button class="btn btn-danger btn-sm" onclick="this.closest('.item-row').remove();updateZaTotal();">✕</button></div>
+  `;
+  container.appendChild(div);
+  updateZaTotal();
+}
+
+function updateZaTotal() {
+  let total = 0;
+  document.querySelectorAll('#zaItemsContainer .item-row').forEach(row => {
+    const qty = parseFloat(row.querySelectorAll('input[type=number]')[0]?.value) || 0;
+    const price = parseFloat(row.querySelectorAll('input[type=number]')[1]?.value) || 0;
+    const sub = qty * price; total += sub;
+    row.querySelector('.item-subtotal').textContent = '¥' + formatNum(sub);
+  });
+  document.getElementById('zaTotalPreview').textContent = '¥' + formatNum(total);
+}
+
+function saveZaOrder() {
+  const orderDate = document.getElementById('fZaDate').value, customer = document.getElementById('fZaCustomer').value.trim();
+  const payment = document.getElementById('fZaPayment').value, deposit = parseFloat(document.getElementById('fZaDeposit').value) || 0;
+  const remark = document.getElementById('fZaRemark').value.trim();
+  if (!orderDate) { alert('请选择下单日期'); return; }
+  if (!customer) { alert('请输入客户姓名'); return; }
+
+  const container = document.getElementById('zaItemsContainer'); const items = []; let valid = true;
+  container.querySelectorAll('.item-row').forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    const product = inputs[0].value.trim(), quantity = parseFloat(inputs[1]?.value) || 0, unitPrice = parseFloat(inputs[2]?.value) || 0;
+    if (!product || quantity <= 0 || unitPrice <= 0) { valid = false; return; }
+    items.push({ product, quantity, unitPrice, shipped: 0, shipDate: '' });
+  });
+  if (!valid) { alert('请完整填写每个商品名、数量和售价'); return; }
+  if (items.length === 0) { alert('请至少添加一个商品'); return; }
+
+  const order = { id: editingZaOrderId || Date.now(), orderDate, customer, payment, deposit, remark, items };
+  if (editingZaOrderId) {
+    const oldOrder = zaOrders.find(x => x.id === editingZaOrderId);
+    if (oldOrder) {
+      order.items = order.items.map(newItem => {
+        const oldItem = oldOrder.items.find(oi => oi.product === newItem.product);
+        if (oldItem && oldItem.shipped > 0) return { ...newItem, shipped: Math.min(oldItem.shipped, newItem.quantity), shipDate: oldItem.shipDate };
+        return newItem;
+      });
+    }
+    const idx = zaOrders.findIndex(x => x.id === editingZaOrderId); if (idx >= 0) zaOrders[idx] = order;
+  } else { zaOrders.push(order); }
+  saveAll(); renderZaTable(); closeZaModal();
+}
+
+function deleteZaOrder(id) {
+  const o = zaOrders.find(x => x.id === id); if (!o) return;
+  if (!confirm(`确定删除「${o.customer}」的订单？`)) return;
+  zaOrders = zaOrders.filter(x => x.id !== id);
+  saveAll(); renderZaTable();
+}
+
+function markZaPaid(id) {
+  const o = zaOrders.find(x => x.id === id); if (!o) return;
+  o.payment = '已结清'; saveAll(); renderZaTable();
+}
+
+function openZaShipModal(orderId, itemIndex) {
+  const o = zaOrders.find(x => x.id === orderId); if (!o) return;
+  const item = o.items[itemIndex]; zaShipTarget = { orderId, itemIndex };
+  document.getElementById('zaShipInfo').innerHTML = `<strong>${o.customer}</strong> · ${item.product}`;
+  document.getElementById('zaShipAlready').textContent = item.shipped || 0;
+  document.getElementById('zaShipTotal').textContent = item.quantity;
+  document.getElementById('zaShipRemain').textContent = item.quantity - (item.shipped || 0);
+  document.getElementById('fZaShipQty').value = '';
+  document.getElementById('fZaShipDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('zaShipModal').classList.add('show');
+}
+function closeZaShipModal() { document.getElementById('zaShipModal').classList.remove('show'); zaShipTarget = null; }
+
+function confirmZaShip() {
+  if (!zaShipTarget) return;
+  const qty = parseFloat(document.getElementById('fZaShipQty').value) || 0;
+  const date = document.getElementById('fZaShipDate').value;
+  if (qty <= 0) { alert('请输入发货数量'); return; }
+  const o = zaOrders.find(x => x.id === zaShipTarget.orderId); if (!o) return;
+  const item = o.items[zaShipTarget.itemIndex]; if (!item) return;
+  const newShipped = (item.shipped || 0) + qty;
+  if (newShipped > item.quantity) { alert(`发货总数不能超过下单数（${item.quantity}）`); return; }
+  item.shipped = newShipped; item.shipDate = date;
+  saveAll(); renderZaTable(); closeZaShipModal();
+}
+
+// ==========================================
 function openInventoryModal() {
   document.getElementById('fInvDate').value = new Date().toISOString().split('T')[0];
   document.getElementById('fInvProduct').value = ''; document.getElementById('fInvQty').value = ''; document.getElementById('fInvRemark').value = '';
@@ -1566,6 +1880,8 @@ document.getElementById('orderModal').addEventListener('click', function(e) { if
 document.getElementById('shipModal').addEventListener('click', function(e) { if (e.target===this) closeShipModal(); });
 document.getElementById('purchaseModal').addEventListener('click', function(e) { if (e.target===this) closePurchaseModal(); });
 document.getElementById('inventoryModal').addEventListener('click', function(e) { if (e.target===this) closeInventoryModal(); });
+document.getElementById('zaModal').addEventListener('click', function(e) { if (e.target===this) closeZaModal(); });
+document.getElementById('zaShipModal').addEventListener('click', function(e) { if (e.target===this) closeZaShipModal(); });
 
 init();
 </script>
