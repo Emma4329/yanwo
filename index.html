@@ -2080,10 +2080,10 @@ function renderGrowthMonth() {
   document.getElementById('growthMonthZaProfit').textContent = '¥' + formatNum(zaProfit);
   document.getElementById('growthMonthTotalProfit').textContent = '¥' + formatNum(total);
 
-  // 计算最近6个月的利润趋势
+  // 显示当前查看月份及过去5个月
   const months = [];
   for (let i = 5; i >= 0; i--) {
-    const m = getMonthRange(i - growthMonthOffset);
+    const m = getMonthRange(growthMonthOffset + i);
     const mp = calcMonthProfit(m.start, m.end);
     months.push({ label: m.label, profit: mp.total });
   }
