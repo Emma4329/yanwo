@@ -2075,30 +2075,30 @@ function calcMonthProfit(monthStart, monthEnd) {
 function renderGrowthMonth() {
   const { start, end, label } = getMonthRange(growthMonthOffset);
   document.getElementById('growthMonthLabel').textContent = label;
-  const { sellProfit, zaProfit, total, dailyProfit } = calcMonthProfit(start, end);
+  const { sellProfit, zaProfit, total } = calcMonthProfit(start, end);
   document.getElementById('growthMonthSellProfit').textContent = '¥' + formatNum(sellProfit);
   document.getElementById('growthMonthZaProfit').textContent = '¥' + formatNum(zaProfit);
   document.getElementById('growthMonthTotalProfit').textContent = '¥' + formatNum(total);
-  drawProfitChart(dailyProfit, start, end);
+
+  // 计算最近6个月的利润趋势
+  const months = [];
+  for (let i = 5; i >= 0; i--) {
+    const m = getMonthRange(i - growthMonthOffset);
+    const mp = calcMonthProfit(m.start, m.end);
+    months.push({ label: m.label, profit: mp.total });
+  }
+  drawProfitChart(months);
 }
 
-function drawProfitChart(dailyProfit, monthStart, monthEnd) {
+function drawProfitChart(months) {
   const svg = document.getElementById('growthProfitChart');
-  const days = [];
-  const startD = new Date(monthStart), endD = new Date(monthEnd);
-  for (let d = new Date(startD); d <= endD; d.setDate(d.getDate() + 1)) {
-    const ds = d.toISOString().split('T')[0];
-    days.push({ date: ds, profit: dailyProfit[ds] || 0 });
-  }
-
-  const W = 700, H = 200, padL = 50, padR = 20, padT = 20, padB = 30;
+  const W = 700, H = 200, padL = 55, padR = 20, padT = 20, padB = 35;
   const chartW = W - padL - padR, chartH = H - padT - padB;
-  const maxProfit = Math.max(...days.map(d => d.profit), 1);
-  const barW = chartW / days.length;
+  const maxProfit = Math.max(...months.map(m => m.profit), 1);
+  const barW = chartW / months.length;
 
-  // 构建SVG
   let html = '';
-  // 背景网格线
+  // Y轴网格线
   for (let i = 0; i <= 4; i++) {
     const y = padT + (chartH / 4) * i;
     const val = Math.round(maxProfit * (1 - i / 4));
@@ -2107,21 +2107,17 @@ function drawProfitChart(dailyProfit, monthStart, monthEnd) {
   }
 
   // 柱状图
-  days.forEach((d, i) => {
-    if (d.profit > 0) {
-      const barH = (d.profit / maxProfit) * chartH;
+  months.forEach((m, i) => {
+    if (m.profit > 0) {
+      const barH = (m.profit / maxProfit) * chartH;
       const x = padL + i * barW;
       const y = padT + chartH - barH;
-      html += `<rect x="${x + 1}" y="${y}" width="${Math.max(barW - 2, 1)}" height="${barH}" rx="2" fill="var(--primary-light)" opacity="0.8"><title>${d.date}: ¥${formatNum(d.profit)}</title></rect>`;
+      html += `<rect x="${x + 4}" y="${y}" width="${Math.max(barW - 8, 2)}" height="${barH}" rx="3" fill="var(--primary-light)" opacity="0.85"><title>${m.label}: ¥${formatNum(m.profit)}</title></rect>`;
     }
-  });
-
-  // X轴日期标签（每5天显示一个）
-  days.forEach((d, i) => {
-    if (i % 5 === 0 || i === days.length - 1) {
-      const x = padL + i * barW + barW / 2;
-      html += `<text x="${x}" y="${H - 8}" text-anchor="middle" font-size="9" fill="var(--text-light)">${d.date.substring(8)}</text>`;
-    }
+    // X轴月份标签
+    const midX = padL + i * barW + barW / 2;
+    const shortLabel = m.label.replace('年', '/').replace('月', '');
+    html += `<text x="${midX}" y="${H - 8}" text-anchor="middle" font-size="10" fill="var(--text-light)">${shortLabel}</text>`;
   });
 
   // 坐标轴
