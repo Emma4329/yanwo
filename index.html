@@ -512,7 +512,7 @@
         <thead><tr>
           <th style="width:32px;">#</th><th>下单日期</th><th style="width:52px;">客户名</th><th>商品名</th>
           <th>下单数</th><th style="width:54px;">进度</th><th>已发数</th><th>待发数</th><th>发货日</th>
-          <th>售价</th><th>总价</th>
+          <th>售价</th><th>成本</th><th>总价</th><th>利润</th>
           <th>付款</th><th>备注</th><th>操作</th>
         </tr></thead>
         <tbody id="zaTableBody"></tbody>
@@ -1633,7 +1633,7 @@ function renderZaTable() {
   });
   rows.sort((a,b) => { const d = (b.order.orderDate||'').localeCompare(a.order.orderDate||''); if (d!==0) return d; if (a.order.id!==b.order.id) return b.order.id-a.order.id; return a.itemIndex-b.itemIndex; });
 
-  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="14"><div class="empty-row"><div class="icon">📋</div><div>暂无订单数据</div></div></td></tr>`; updateZaStats(); return; }
+  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="16"><div class="empty-row"><div class="icon">📋</div><div>暂无订单数据</div></div></td></tr>`; updateZaStats(); return; }
 
   let lastOrderId = null, rowNum = 0;
   tbody.innerHTML = rows.map(r => {
@@ -1655,7 +1655,9 @@ function renderZaTable() {
       <td style="font-weight:500;text-align:center;color:${pending>0?'var(--danger)':'var(--text-light)'};">${pending}</td>
       <td>${item.shipDate||'<span style="color:var(--text-light);">-</span>'}</td>
       <td>${formatNum(item.unitPrice)}</td>
+      <td>${formatNum(item.cost || 0)}</td>
       <td style="font-weight:600;color:var(--primary);">${formatNum(subTotal)}</td>
+      <td style="font-weight:600;color:var(--success);">${formatNum(subTotal - (item.cost || 0) * item.quantity)}</td>
       <td>${isNewGroup?`<span class="badge ${o.payment==='已结清'?'badge-paid':'badge-deposit'}">${o.payment}</span>${depositInfo}`:''}</td>
       <td style="max-width:120px;white-space:normal;font-size:10px;color:var(--text-light);">${isNewGroup?(o.remark||''):''}</td>
       <td><div class="row-actions">
@@ -1723,10 +1725,12 @@ function addZaItemRow(data) {
   const container = document.getElementById('zaItemsContainer');
   const div = document.createElement('div'); div.className = 'item-row';
   div.innerHTML = `
-    <div class="form-group" style="width:170px;"><label>商品名 <span class="required">*</span></label><input type="text" value="${data?data.product:''}" placeholder="输入商品名" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
-    <div class="form-group" style="width:85px;"><label>下单数量</label><input type="number" value="${data?data.quantity:''}" min="0.1" step="0.1" placeholder="数量" oninput="updateZaTotal()" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
-    <div class="form-group" style="width:95px;"><label>售价(元)</label><input type="number" value="${data?data.unitPrice:''}" min="0" step="0.01" placeholder="售价" oninput="updateZaTotal()" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
+    <div class="form-group" style="width:150px;"><label>商品名 <span class="required">*</span></label><input type="text" value="${data?data.product:''}" placeholder="输入商品名" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
+    <div class="form-group" style="width:75px;"><label>下单数量</label><input type="number" value="${data?data.quantity:''}" min="0.1" step="0.1" placeholder="数量" oninput="updateZaTotal()" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
+    <div class="form-group" style="width:85px;"><label>售价(元)</label><input type="number" value="${data?data.unitPrice:''}" min="0" step="0.01" placeholder="售价" oninput="updateZaTotal()" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
+    <div class="form-group" style="width:85px;"><label>成本(元)</label><input type="number" value="${data?data.cost:''}" min="0" step="0.01" placeholder="成本" oninput="updateZaTotal()" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
     <div class="form-group" style="width:85px;"><label>总价</label><span class="item-subtotal" style="font-weight:600;color:var(--primary);padding:8px 0;display:block;">¥0.00</span></div>
+    <div class="form-group" style="width:85px;"><label>利润</label><span class="item-profit" style="font-weight:600;color:var(--success);padding:8px 0;display:block;">¥0.00</span></div>
     <div style="padding-top:20px;"><button class="btn btn-danger btn-sm" onclick="this.closest('.item-row').remove();updateZaTotal();">✕</button></div>
   `;
   container.appendChild(div);
@@ -1734,12 +1738,15 @@ function addZaItemRow(data) {
 }
 
 function updateZaTotal() {
-  let total = 0;
+  let total = 0, totalProfit = 0;
   document.querySelectorAll('#zaItemsContainer .item-row').forEach(row => {
     const qty = parseFloat(row.querySelectorAll('input[type=number]')[0]?.value) || 0;
     const price = parseFloat(row.querySelectorAll('input[type=number]')[1]?.value) || 0;
+    const cost = parseFloat(row.querySelectorAll('input[type=number]')[2]?.value) || 0;
     const sub = qty * price; total += sub;
+    const profit = sub - (cost * qty); totalProfit += profit;
     row.querySelector('.item-subtotal').textContent = '¥' + formatNum(sub);
+    row.querySelector('.item-profit').textContent = '¥' + formatNum(profit);
   });
   document.getElementById('zaTotalPreview').textContent = '¥' + formatNum(total);
 }
@@ -1755,8 +1762,9 @@ function saveZaOrder() {
   container.querySelectorAll('.item-row').forEach(row => {
     const inputs = row.querySelectorAll('input');
     const product = inputs[0].value.trim(), quantity = parseFloat(inputs[1]?.value) || 0, unitPrice = parseFloat(inputs[2]?.value) || 0;
+    const cost = parseFloat(inputs[3]?.value) || 0;
     if (!product || quantity <= 0 || unitPrice <= 0) { valid = false; return; }
-    items.push({ product, quantity, unitPrice, shipped: 0, shipDate: '' });
+    items.push({ product, quantity, unitPrice, cost, shipped: 0, shipDate: '' });
   });
   if (!valid) { alert('请完整填写每个商品名、数量和售价'); return; }
   if (items.length === 0) { alert('请至少添加一个商品'); return; }
@@ -1909,8 +1917,11 @@ function updateGrowthStats() {
     if (o.orderDate >= weekStart && o.orderDate <= weekEnd) {
       o.items.forEach(item => {
         const shipped = item.shipped || 0;
-        if (shipped > 0) sellProfit += (item.unitPrice * shipped); // 杂平台无成本，利润=售价×已发
-        zaProfit += (item.unitPrice * shipped);
+        if (shipped > 0) {
+          const itemCost = (item.cost || 0) * shipped;
+          sellProfit += (item.unitPrice * shipped) - itemCost;
+          zaProfit += (item.unitPrice * shipped) - itemCost;
+        }
       });
     }
   });
@@ -1961,7 +1972,11 @@ function renderGrowthSummary() {
   zaOrders.forEach(o => {
     if (o.orderDate >= weekStart && o.orderDate <= weekEnd) {
       o.items.forEach(item => {
-        zaProfit += (item.unitPrice * (item.shipped || 0));
+        const shipped = item.shipped || 0;
+        if (shipped > 0) {
+          const itemCost = (item.cost || 0) * shipped;
+          zaProfit += (item.unitPrice * shipped) - itemCost;
+        }
       });
     }
   });
