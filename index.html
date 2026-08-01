@@ -271,14 +271,26 @@
   .cust-suggest-item:hover { background: #FDF6EE; color: var(--primary); }
 
   @media (max-width: 768px) {
-    .sidebar { width: 50px; min-width: 50px; }
-    .sidebar-logo { font-size: 11px; padding: 10px 6px; text-align: center; }
-    .sidebar-logo .sub { display: none; }
-    .nav-item { padding: 12px 6px; font-size: 0; justify-content: center; }
-    .nav-item .nav-icon { width: 22px; height: 22px; font-size: 11px; }
+    body { flex-direction: column; }
+    .sidebar {
+      width: 100%; min-width: 0; height: auto; position: fixed;
+      bottom: 0; left: 0; right: 0; top: auto;
+      flex-direction: row; overflow-x: auto; overflow-y: hidden;
+      padding: 6px 4px; z-index: 100;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    .sidebar-logo { display: none; }
+    .nav-item {
+      padding: 6px 10px; font-size: 11px; flex-direction: column;
+      gap: 3px; border-left: none; border-bottom: 3px solid transparent;
+      border-radius: 6px; white-space: nowrap; min-width: 52px;
+    }
+    .nav-item.active { border-left: none; border-bottom-color: var(--primary-light); }
+    .nav-item .nav-icon { width: 26px; height: 26px; font-size: 12px; }
     .nav-label { display: none; }
     .nav-footer { display: none; }
-    .main { padding: 10px; }
+    .nav-divider { display: none; }
+    .main { padding: 10px 10px 70px 10px; max-height: none; }
     .page-header h1 { font-size: 17px; }
     .modal { max-width: 100%; }
     .form-row { gap: 6px; }
