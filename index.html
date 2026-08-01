@@ -2083,7 +2083,7 @@ function renderGrowthMonth() {
   // 显示当前查看月份及过去5个月
   const months = [];
   for (let i = 5; i >= 0; i--) {
-    const m = getMonthRange(growthMonthOffset + i);
+    const m = getMonthRange(growthMonthOffset - i);
     const mp = calcMonthProfit(m.start, m.end);
     months.push({ label: m.label, profit: mp.total });
   }
