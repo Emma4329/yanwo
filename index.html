@@ -107,13 +107,6 @@
   .stat-card .unit { font-size: 11px; color: var(--text-light); font-weight: normal; margin-left: 2px; }
 
   .toolbar { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
-
-  /* 打卡复选框样式 */
-  .check-group { display: flex; gap: 8px; flex-wrap: wrap; padding-top: 2px; }
-  .check-label { display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; user-select: none; color: var(--text); }
-  .check-circle { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border); display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
-  .check-label.checked .check-circle { background: var(--success); border-color: var(--success); }
-  .check-label.checked .check-circle::after { content: '✓'; color: #FFF; font-size: 12px; font-weight: 700; line-height: 1; }
   .search-box { flex: 1; min-width: 160px; position: relative; }
   .search-box input {
     width: 100%; padding: 8px 12px 8px 32px; border: 1px solid var(--border);
@@ -519,7 +512,7 @@
         <thead><tr>
           <th style="width:32px;">#</th><th>下单日期</th><th style="width:52px;">客户名</th><th>商品名</th>
           <th>下单数</th><th style="width:54px;">进度</th><th>已发数</th><th>待发数</th><th>发货日</th>
-          <th>售价</th><th>成本</th><th>总价</th><th>利润</th>
+          <th>售价</th><th>总价</th>
           <th>付款</th><th>备注</th><th>操作</th>
         </tr></thead>
         <tbody id="zaTableBody"></tbody>
@@ -549,9 +542,9 @@
       <h3 style="margin:0 0 12px;font-size:14px;">📝 每日打卡</h3>
       <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
         <div class="form-group" style="width:140px;"><label>日期</label><input type="date" id="fGrowthDate" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
-        <div class="form-group"><label>发朋友圈（目标3条）</label><div class="check-group" id="fGrowthWxGroup"><div class="check-label"><span class="check-circle"></span>第1条</div><div class="check-label"><span class="check-circle"></span>第2条</div><div class="check-label"><span class="check-circle"></span>第3条</div></div></div>
-        <div class="form-group"><label>小红书笔记（目标1条）</label><div class="check-group" id="fGrowthXhsGroup"><div class="check-label"><span class="check-circle"></span>已完成</div></div></div>
-        <div class="form-group"><label>学习（目标2小时）</label><div class="check-group" id="fGrowthStudyGroup"><div class="check-label"><span class="check-circle"></span>已完成</div></div></div>
+        <div class="form-group" style="width:140px;"><label>发朋友圈</label><select id="fGrowthWx" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:12px;"><option value="">未打卡</option><option value="1">✅ 1条</option><option value="2">✅ 2条</option><option value="3">✅ 3条</option></select></div>
+        <div class="form-group" style="width:140px;"><label>小红书笔记</label><select id="fGrowthXhs" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:12px;"><option value="">未打卡</option><option value="1">✅ 1条</option></select></div>
+        <div class="form-group" style="width:140px;"><label>学习(小时)</label><select id="fGrowthStudy" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:12px;"><option value="">未打卡</option><option value="0.5">0.5h</option><option value="1">1h</option><option value="1.5">1.5h</option><option value="2">✅ 2h</option><option value="2.5">2.5h</option><option value="3">3h</option></select></div>
         <button class="btn btn-primary" onclick="saveGrowthRecord()" style="height:40px;">💾 保存打卡</button>
       </div>
     </div>
@@ -1662,9 +1655,7 @@ function renderZaTable() {
       <td style="font-weight:500;text-align:center;color:${pending>0?'var(--danger)':'var(--text-light)'};">${pending}</td>
       <td>${item.shipDate||'<span style="color:var(--text-light);">-</span>'}</td>
       <td>${formatNum(item.unitPrice)}</td>
-      <td>${item.cost>0?formatNum(item.cost):'-'}</td>
       <td style="font-weight:600;color:var(--primary);">${formatNum(subTotal)}</td>
-      <td style="font-weight:600;color:${(subTotal-(item.cost||0)*(shipped||0))>=0?'var(--success)':'var(--danger)'};">${(item.cost||0)>0?formatNum(subTotal-(item.cost||0)*item.quantity):'-'}</td>
       <td>${isNewGroup?`<span class="badge ${o.payment==='已结清'?'badge-paid':'badge-deposit'}">${o.payment}</span>${depositInfo}`:''}</td>
       <td style="max-width:120px;white-space:normal;font-size:10px;color:var(--text-light);">${isNewGroup?(o.remark||''):''}</td>
       <td><div class="row-actions">
@@ -1735,7 +1726,6 @@ function addZaItemRow(data) {
     <div class="form-group" style="width:170px;"><label>商品名 <span class="required">*</span></label><input type="text" value="${data?data.product:''}" placeholder="输入商品名" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
     <div class="form-group" style="width:85px;"><label>下单数量</label><input type="number" value="${data?data.quantity:''}" min="0.1" step="0.1" placeholder="数量" oninput="updateZaTotal()" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
     <div class="form-group" style="width:95px;"><label>售价(元)</label><input type="number" value="${data?data.unitPrice:''}" min="0" step="0.01" placeholder="售价" oninput="updateZaTotal()" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
-    <div class="form-group" style="width:85px;"><label>成本(元)</label><input type="number" value="${data?data.cost||data?data.unitCost||'':''}" min="0" step="0.01" placeholder="成本" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
     <div class="form-group" style="width:85px;"><label>总价</label><span class="item-subtotal" style="font-weight:600;color:var(--primary);padding:8px 0;display:block;">¥0.00</span></div>
     <div style="padding-top:20px;"><button class="btn btn-danger btn-sm" onclick="this.closest('.item-row').remove();updateZaTotal();">✕</button></div>
   `;
@@ -1765,9 +1755,8 @@ function saveZaOrder() {
   container.querySelectorAll('.item-row').forEach(row => {
     const inputs = row.querySelectorAll('input');
     const product = inputs[0].value.trim(), quantity = parseFloat(inputs[1]?.value) || 0, unitPrice = parseFloat(inputs[2]?.value) || 0;
-    const cost = parseFloat(inputs[3]?.value) || 0;
     if (!product || quantity <= 0 || unitPrice <= 0) { valid = false; return; }
-    items.push({ product, quantity, unitPrice, cost, shipped: 0, shipDate: '' });
+    items.push({ product, quantity, unitPrice, shipped: 0, shipDate: '' });
   });
   if (!valid) { alert('请完整填写每个商品名、数量和售价'); return; }
   if (items.length === 0) { alert('请至少添加一个商品'); return; }
@@ -1838,15 +1827,9 @@ function getWeekRange(dateStr) {
 
 function saveGrowthRecord() {
   const date = document.getElementById('fGrowthDate').value;
-  // 朋友圈：统计勾选了几个
-  const wxChecks = document.querySelectorAll('#fGrowthWxGroup .check-label.checked');
-  const wx = wxChecks.length;
-  // 小红书：勾选=1条
-  const xhsChecked = document.querySelector('#fGrowthXhsGroup .check-label.checked');
-  const xhs = xhsChecked ? 1 : 0;
-  // 学习：勾选=2小时
-  const studyChecked = document.querySelector('#fGrowthStudyGroup .check-label.checked');
-  const study = studyChecked ? 2 : 0;
+  const wx = document.getElementById('fGrowthWx').value;
+  const xhs = document.getElementById('fGrowthXhs').value;
+  const study = document.getElementById('fGrowthStudy').value;
   if (!date) { alert('请选择日期'); return; }
   const existing = growthRecords.find(r => r.date === date);
   if (existing) {
@@ -1856,29 +1839,9 @@ function saveGrowthRecord() {
   }
   growthRecords.sort((a,b) => b.date.localeCompare(a.date));
   saveAll(); renderGrowthTable();
-  resetGrowthChecks();
+  document.getElementById('fGrowthWx').value = ''; document.getElementById('fGrowthXhs').value = '';
+  document.getElementById('fGrowthStudy').value = '';
 }
-
-// 重置所有打卡复选框
-function resetGrowthChecks() {
-  document.querySelectorAll('#fGrowthWxGroup .check-label, #fGrowthXhsGroup .check-label, #fGrowthStudyGroup .check-label').forEach(el => el.classList.remove('checked'));
-}
-
-// 根据数据设置打卡复选框状态
-function setGrowthChecks(wx, xhs, study) {
-  const wxLabels = document.querySelectorAll('#fGrowthWxGroup .check-label');
-  wxLabels.forEach((l, i) => { if (i < wx) l.classList.add('checked'); else l.classList.remove('checked'); });
-  const xhsLabel = document.querySelector('#fGrowthXhsGroup .check-label');
-  if (xhs >= 1) xhsLabel.classList.add('checked'); else xhsLabel.classList.remove('checked');
-  const studyLabel = document.querySelector('#fGrowthStudyGroup .check-label');
-  if (study >= 2) studyLabel.classList.add('checked'); else studyLabel.classList.remove('checked');
-}
-
-// 复选框点击切换
-document.addEventListener('click', function(e) {
-  const label = e.target.closest('.check-label');
-  if (label) { label.classList.toggle('checked'); }
-});
 
 function renderGrowthTable() {
   const tbody = document.getElementById('growthTableBody');
@@ -1906,7 +1869,9 @@ function renderGrowthTable() {
 function editGrowthRecord(date) {
   const r = growthRecords.find(x => x.date === date); if (!r) return;
   document.getElementById('fGrowthDate').value = r.date;
-  setGrowthChecks(parseInt(r.wx)||0, parseInt(r.xhs)||0, parseInt(r.study)||0);
+  document.getElementById('fGrowthWx').value = r.wx || '';
+  document.getElementById('fGrowthXhs').value = r.xhs || '';
+  document.getElementById('fGrowthStudy').value = r.study || '';
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -1944,11 +1909,8 @@ function updateGrowthStats() {
     if (o.orderDate >= weekStart && o.orderDate <= weekEnd) {
       o.items.forEach(item => {
         const shipped = item.shipped || 0;
-        if (shipped > 0) {
-          const itemCost = (item.cost || 0) * shipped;
-          sellProfit += (item.unitPrice * shipped) - itemCost;
-          zaProfit += (item.unitPrice * shipped) - itemCost;
-        }
+        if (shipped > 0) sellProfit += (item.unitPrice * shipped); // 杂平台无成本，利润=售价×已发
+        zaProfit += (item.unitPrice * shipped);
       });
     }
   });
@@ -1999,11 +1961,7 @@ function renderGrowthSummary() {
   zaOrders.forEach(o => {
     if (o.orderDate >= weekStart && o.orderDate <= weekEnd) {
       o.items.forEach(item => {
-        const shipped = item.shipped || 0;
-        if (shipped > 0) {
-          const itemCost = (item.cost || 0) * shipped;
-          zaProfit += (item.unitPrice * shipped) - itemCost;
-        }
+        zaProfit += (item.unitPrice * (item.shipped || 0));
       });
     }
   });
