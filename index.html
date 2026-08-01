@@ -107,6 +107,19 @@
   .stat-card .unit { font-size: 11px; color: var(--text-light); font-weight: normal; margin-left: 2px; }
 
   .toolbar { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
+
+  /* 打卡 Toggle 开关 */
+  .toggle-group { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+  .toggle-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .toggle-item .toggle-label { font-size: 11px; color: var(--text-light); }
+  .toggle-switch { width: 44px; height: 24px; border-radius: 12px; background: #ccc; position: relative; cursor: pointer; transition: background 0.2s; flex-shrink: 0; }
+  .toggle-switch::after { content: ''; position: absolute; width: 20px; height: 20px; border-radius: 50%; background: #FFF; top: 2px; left: 2px; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+  .toggle-switch.on { background: var(--success); }
+  .toggle-switch.on::after { transform: translateX(20px); }
+  .checkin-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .checkin-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--bg); border-radius: 8px; border: 1px solid var(--border); }
+  .checkin-item .ci-label { font-size: 13px; font-weight: 500; color: var(--text); }
+  .checkin-item.done .ci-label { color: var(--success); }
   .search-box { flex: 1; min-width: 160px; position: relative; }
   .search-box input {
     width: 100%; padding: 8px 12px 8px 32px; border: 1px solid var(--border);
@@ -540,11 +553,15 @@
     <!-- 每日打卡区 -->
     <div style="background:var(--card);border-radius:10px;padding:16px;box-shadow:var(--shadow);margin-bottom:14px;">
       <h3 style="margin:0 0 12px;font-size:14px;">📝 每日打卡</h3>
-      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
+      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;">
         <div class="form-group" style="width:140px;"><label>日期</label><input type="date" id="fGrowthDate" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
-        <div class="form-group" style="width:140px;"><label>发朋友圈</label><select id="fGrowthWx" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:12px;"><option value="">未打卡</option><option value="1">✅ 1条</option><option value="2">✅ 2条</option><option value="3">✅ 3条</option></select></div>
-        <div class="form-group" style="width:140px;"><label>小红书笔记</label><select id="fGrowthXhs" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:12px;"><option value="">未打卡</option><option value="1">✅ 1条</option></select></div>
-        <div class="form-group" style="width:140px;"><label>学习(小时)</label><select id="fGrowthStudy" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:12px;"><option value="">未打卡</option><option value="0.5">0.5h</option><option value="1">1h</option><option value="1.5">1.5h</option><option value="2">✅ 2h</option><option value="2.5">2.5h</option><option value="3">3h</option></select></div>
+        <div class="checkin-row">
+          <div class="checkin-item" id="ciWx1" onclick="toggleCheckin('ciWx1')"><span class="ci-label">朋友圈第1条</span><div class="toggle-switch"></div></div>
+          <div class="checkin-item" id="ciWx2" onclick="toggleCheckin('ciWx2')"><span class="ci-label">朋友圈第2条</span><div class="toggle-switch"></div></div>
+          <div class="checkin-item" id="ciWx3" onclick="toggleCheckin('ciWx3')"><span class="ci-label">朋友圈第3条</span><div class="toggle-switch"></div></div>
+          <div class="checkin-item" id="ciXhs" onclick="toggleCheckin('ciXhs')"><span class="ci-label">小红书笔记</span><div class="toggle-switch"></div></div>
+          <div class="checkin-item" id="ciStudy" onclick="toggleCheckin('ciStudy')"><span class="ci-label">学习2小时</span><div class="toggle-switch"></div></div>
+        </div>
         <button class="btn btn-primary" onclick="saveGrowthRecord()" style="height:40px;">💾 保存打卡</button>
       </div>
     </div>
@@ -1845,12 +1862,18 @@ function getWeekRange(dateStr) {
   return mon.toISOString().split('T')[0];
 }
 
+function toggleCheckin(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('done');
+  el.querySelector('.toggle-switch').classList.toggle('on');
+}
+
 function saveGrowthRecord() {
   const date = document.getElementById('fGrowthDate').value;
-  const wx = document.getElementById('fGrowthWx').value;
-  const xhs = document.getElementById('fGrowthXhs').value;
-  const study = document.getElementById('fGrowthStudy').value;
   if (!date) { alert('请选择日期'); return; }
+  const wx = ['ciWx1','ciWx2','ciWx3'].filter(id => document.getElementById(id).classList.contains('done')).length;
+  const xhs = document.getElementById('ciXhs').classList.contains('done') ? 1 : 0;
+  const study = document.getElementById('ciStudy').classList.contains('done') ? 2 : 0;
   const existing = growthRecords.find(r => r.date === date);
   if (existing) {
     existing.wx = wx; existing.xhs = xhs; existing.study = study;
@@ -1859,8 +1882,24 @@ function saveGrowthRecord() {
   }
   growthRecords.sort((a,b) => b.date.localeCompare(a.date));
   saveAll(); renderGrowthTable();
-  document.getElementById('fGrowthWx').value = ''; document.getElementById('fGrowthXhs').value = '';
-  document.getElementById('fGrowthStudy').value = '';
+  resetCheckin();
+}
+
+function resetCheckin() {
+  ['ciWx1','ciWx2','ciWx3','ciXhs','ciStudy'].forEach(id => {
+    const el = document.getElementById(id);
+    el.classList.remove('done');
+    el.querySelector('.toggle-switch').classList.remove('on');
+  });
+}
+
+function setCheckin(wx, xhs, study) {
+  resetCheckin();
+  ['ciWx1','ciWx2','ciWx3'].forEach((id, i) => {
+    if (i < wx) { const el = document.getElementById(id); el.classList.add('done'); el.querySelector('.toggle-switch').classList.add('on'); }
+  });
+  if (xhs >= 1) { const el = document.getElementById('ciXhs'); el.classList.add('done'); el.querySelector('.toggle-switch').classList.add('on'); }
+  if (study >= 2) { const el = document.getElementById('ciStudy'); el.classList.add('done'); el.querySelector('.toggle-switch').classList.add('on'); }
 }
 
 function renderGrowthTable() {
@@ -1889,9 +1928,7 @@ function renderGrowthTable() {
 function editGrowthRecord(date) {
   const r = growthRecords.find(x => x.date === date); if (!r) return;
   document.getElementById('fGrowthDate').value = r.date;
-  document.getElementById('fGrowthWx').value = r.wx || '';
-  document.getElementById('fGrowthXhs').value = r.xhs || '';
-  document.getElementById('fGrowthStudy').value = r.study || '';
+  setCheckin(parseInt(r.wx)||0, parseInt(r.xhs)||0, parseInt(r.study)||0);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
