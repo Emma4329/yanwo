@@ -604,7 +604,7 @@
         <div class="stat-card success" style="border-left-color:var(--primary);"><div class="label">本月利润合计</div><div class="value" id="growthMonthTotalProfit">¥0</div></div>
       </div>
       <div id="growthChartContainer" style="background:var(--bg);border-radius:8px;padding:12px;overflow-x:auto;">
-        <svg id="growthProfitChart" width="100%" height="200" viewBox="0 0 600 200" style="min-width:100%;"></svg>
+        <svg id="growthProfitChart" width="100%" height="220" viewBox="0 0 600 220" style="min-width:100%;"></svg>
       </div>
     </div>
   </div>
@@ -2092,7 +2092,7 @@ function renderGrowthMonth() {
 
 function drawProfitChart(months) {
   const svg = document.getElementById('growthProfitChart');
-  const W = 600, H = 200, padL = 55, padR = 15, padT = 15, padB = 45;
+  const W = 600, H = 220, padL = 65, padR = 10, padT = 15, padB = 50;
   const chartW = W - padL - padR, chartH = H - padT - padB;
   const maxProfit = Math.max(...months.map(m => m.profit), 1);
   const barW = chartW / months.length;
@@ -2103,7 +2103,7 @@ function drawProfitChart(months) {
     const y = padT + (chartH / 4) * i;
     const val = Math.round(maxProfit * (1 - i / 4));
     html += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="var(--border)" stroke-width="0.5"/>`;
-    html += `<text x="${padL - 6}" y="${y + 4}" text-anchor="end" font-size="9" fill="var(--text-light)">¥${formatNum(val)}</text>`;
+    html += `<text x="${padL - 6}" y="${y + 5}" text-anchor="end" font-size="18" fill="var(--text-light)">¥${formatNum(val)}</text>`;
   }
 
   // 柱状图
@@ -2112,12 +2112,12 @@ function drawProfitChart(months) {
       const barH = (m.profit / maxProfit) * chartH;
       const x = padL + i * barW;
       const y = padT + chartH - barH;
-      html += `<rect x="${x + 28}" y="${y}" width="${Math.max(barW - 56, 4)}" height="${barH}" rx="2" fill="var(--primary-light)" opacity="0.85"><title>${m.label}: ¥${formatNum(m.profit)}</title></rect>`;
+      html += `<rect x="${x + 20}" y="${y}" width="${Math.max(barW - 40, 4)}" height="${barH}" rx="2" fill="var(--primary-light)" opacity="0.85"><title>${m.label}: ¥${formatNum(m.profit)}</title></rect>`;
     }
     // X轴月份标签
     const midX = padL + i * barW + barW / 2;
     const shortLabel = m.label.replace('年', '/').replace('月', '');
-    html += `<text x="${midX}" y="${H - 6}" text-anchor="middle" font-size="14" fill="var(--text-light)" font-weight="600">${shortLabel}</text>`;
+    html += `<text x="${midX}" y="${H - 8}" text-anchor="middle" font-size="18" fill="var(--text-light)" font-weight="600">${shortLabel}</text>`;
   });
 
   // 坐标轴
