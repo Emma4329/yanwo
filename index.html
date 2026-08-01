@@ -2112,12 +2112,12 @@ function drawProfitChart(months) {
       const barH = (m.profit / maxProfit) * chartH;
       const x = padL + i * barW;
       const y = padT + chartH - barH;
-      html += `<rect x="${x + 3}" y="${y}" width="${Math.max(barW - 6, 2)}" height="${barH}" rx="3" fill="var(--primary-light)" opacity="0.85"><title>${m.label}: ¥${formatNum(m.profit)}</title></rect>`;
+      html += `<rect x="${x + 8}" y="${y}" width="${Math.max(barW - 16, 8)}" height="${barH}" rx="2" fill="var(--primary-light)" opacity="0.85"><title>${m.label}: ¥${formatNum(m.profit)}</title></rect>`;
     }
     // X轴月份标签
     const midX = padL + i * barW + barW / 2;
     const shortLabel = m.label.replace('年', '/').replace('月', '');
-    html += `<text x="${midX}" y="${H - 8}" text-anchor="middle" font-size="10" fill="var(--text-light)">${shortLabel}</text>`;
+    html += `<text x="${midX}" y="${H - 6}" text-anchor="middle" font-size="12" fill="var(--text-light)" font-weight="500">${shortLabel}</text>`;
   });
 
   // 坐标轴
