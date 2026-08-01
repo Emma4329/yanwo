@@ -584,7 +584,7 @@
   <div class="modal-body">
     <div class="form-row">
       <div class="form-group w140"><label>下单日期 <span class="required">*</span></label><input type="date" id="fZaDate"></div>
-      <div class="form-group w160"><label>客户姓名 <span class="required">*</span></label><input type="text" id="fZaCustomer" placeholder="输入姓名"></div>
+      <div class="form-group w160" style="position:relative;"><label>客户姓名 <span class="required">*</span></label><input type="text" id="fZaCustomer" placeholder="输入姓名自动提示" autocomplete="off" oninput="suggestZaCustomer()" onfocus="suggestZaCustomer()" onblur="setTimeout(()=>hideZaSuggestion(),200)"><div id="zaCustomerSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:0 0 6px 6px;max-height:160px;overflow-y:auto;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div></div>
       <div class="form-group w140"><label>付款状态 <span class="required">*</span></label><select id="fZaPayment"><option value="定金">定金</option><option value="已结清">已结清</option></select></div>
       <div class="form-group w140"><label>定金金额(元)</label><input type="number" id="fZaDeposit" min="0" step="0.01" placeholder="定金状态填写"></div>
     </div>
@@ -944,6 +944,18 @@ function suggestCustomer() {
 }
 function selectCustomer(name) { document.getElementById('fCustomer').value = name; hideSuggestion(); }
 function hideSuggestion() { document.getElementById('customerSuggest').style.display = 'none'; }
+
+// --- 杂平台客户名自动提示 ---
+function getAllZaCustomers() { const names = new Set(); orders.forEach(o => { if (o.customer) names.add(o.customer); }); zaOrders.forEach(o => { if (o.customer) names.add(o.customer); }); return Array.from(names).sort(); }
+function suggestZaCustomer() {
+  const input = document.getElementById('fZaCustomer'), suggest = document.getElementById('zaCustomerSuggest');
+  const val = input.value.trim(), allNames = getAllZaCustomers();
+  if (!val) { const recent = allNames.slice(0,8); if (!recent.length) { suggest.style.display='none'; return; } suggest.innerHTML = recent.map(n => `<div class="cust-suggest-item" onmousedown="selectZaCustomer('${n.replace(/'/g,"\\'")}')">${n}</div>`).join(''); suggest.style.display='block'; return; }
+  const matched = allNames.filter(n => n.includes(val)); if (!matched.length) { suggest.style.display='none'; return; }
+  suggest.innerHTML = matched.map(n => `<div class="cust-suggest-item" onmousedown="selectZaCustomer('${n.replace(/'/g,"\\'")}')">${n}</div>`).join(''); suggest.style.display='block';
+}
+function selectZaCustomer(name) { document.getElementById('fZaCustomer').value = name; hideZaSuggestion(); }
+function hideZaSuggestion() { document.getElementById('zaCustomerSuggest').style.display = 'none'; }
 
 // --- 供应商自动提示 ---
 function getAllSuppliers() { const names = new Set(); purchases.forEach(p => { if (p.supplier) names.add(p.supplier); }); return Array.from(names).sort(); }
