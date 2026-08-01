@@ -2112,7 +2112,7 @@ function drawProfitChart(months) {
       const barH = (m.profit / maxProfit) * chartH;
       const x = padL + i * barW;
       const y = padT + chartH - barH;
-      html += `<rect x="${x + 14}" y="${y}" width="${Math.max(barW - 28, 6)}" height="${barH}" rx="2" fill="var(--primary-light)" opacity="0.85"><title>${m.label}: ¥${formatNum(m.profit)}</title></rect>`;
+      html += `<rect x="${x + 28}" y="${y}" width="${Math.max(barW - 56, 4)}" height="${barH}" rx="2" fill="var(--primary-light)" opacity="0.85"><title>${m.label}: ¥${formatNum(m.profit)}</title></rect>`;
     }
     // X轴月份标签
     const midX = padL + i * barW + barW / 2;
