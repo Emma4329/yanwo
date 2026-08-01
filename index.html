@@ -110,16 +110,16 @@
 
   /* 打卡 Toggle 开关 */
   .toggle-group { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
-  .toggle-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-  .toggle-item .toggle-label { font-size: 11px; color: var(--text-light); }
-  .toggle-switch { width: 44px; height: 24px; border-radius: 12px; background: #ccc; position: relative; cursor: pointer; transition: background 0.2s; flex-shrink: 0; }
-  .toggle-switch::after { content: ''; position: absolute; width: 20px; height: 20px; border-radius: 50%; background: #FFF; top: 2px; left: 2px; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
-  .toggle-switch.on { background: var(--success); }
-  .toggle-switch.on::after { transform: translateX(20px); }
-  .checkin-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-  .checkin-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--bg); border-radius: 8px; border: 1px solid var(--border); }
-  .checkin-item .ci-label { font-size: 13px; font-weight: 500; color: var(--text); }
-  .checkin-item.done .ci-label { color: var(--success); }
+  .checkin-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .checkin-item { display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: var(--bg); border-radius: 24px; border: 2px solid var(--border); cursor: pointer; transition: all 0.2s; user-select: none; }
+  .checkin-item:hover { border-color: var(--primary-light); }
+  .checkin-item .ci-label { font-size: 13px; font-weight: 500; color: var(--text-light); transition: color 0.2s; }
+  .toggle-switch { width: 40px; height: 22px; border-radius: 11px; background: #D8D0C5; position: relative; transition: background 0.25s; flex-shrink: 0; }
+  .toggle-switch::after { content: ''; position: absolute; width: 18px; height: 18px; border-radius: 50%; background: #FFF; top: 2px; left: 2px; transition: transform 0.25s; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+  .checkin-item.done { background: #EDF7F0; border-color: var(--success); }
+  .checkin-item.done .ci-label { color: var(--success); font-weight: 600; }
+  .checkin-item.done .toggle-switch { background: var(--success); }
+  .checkin-item.done .toggle-switch::after { transform: translateX(18px); }
   .search-box { flex: 1; min-width: 160px; position: relative; }
   .search-box input {
     width: 100%; padding: 8px 12px 8px 32px; border: 1px solid var(--border);
@@ -556,11 +556,9 @@
       <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;">
         <div class="form-group" style="width:140px;"><label>日期</label><input type="date" id="fGrowthDate" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
         <div class="checkin-row">
-          <div class="checkin-item" id="ciWx1" onclick="toggleCheckin('ciWx1')"><span class="ci-label">朋友圈第1条</span><div class="toggle-switch"></div></div>
-          <div class="checkin-item" id="ciWx2" onclick="toggleCheckin('ciWx2')"><span class="ci-label">朋友圈第2条</span><div class="toggle-switch"></div></div>
-          <div class="checkin-item" id="ciWx3" onclick="toggleCheckin('ciWx3')"><span class="ci-label">朋友圈第3条</span><div class="toggle-switch"></div></div>
-          <div class="checkin-item" id="ciXhs" onclick="toggleCheckin('ciXhs')"><span class="ci-label">小红书笔记</span><div class="toggle-switch"></div></div>
-          <div class="checkin-item" id="ciStudy" onclick="toggleCheckin('ciStudy')"><span class="ci-label">学习2小时</span><div class="toggle-switch"></div></div>
+          <div class="checkin-item" id="ciWx" onclick="toggleCheckin('ciWx')"><span class="ci-label">📅 发朋友圈（3条）</span><div class="toggle-switch"></div></div>
+          <div class="checkin-item" id="ciXhs" onclick="toggleCheckin('ciXhs')"><span class="ci-label">📕 小红书笔记</span><div class="toggle-switch"></div></div>
+          <div class="checkin-item" id="ciStudy" onclick="toggleCheckin('ciStudy')"><span class="ci-label">📚 学习2小时</span><div class="toggle-switch"></div></div>
         </div>
         <button class="btn btn-primary" onclick="saveGrowthRecord()" style="height:40px;">💾 保存打卡</button>
       </div>
@@ -1865,13 +1863,12 @@ function getWeekRange(dateStr) {
 function toggleCheckin(id) {
   const el = document.getElementById(id);
   el.classList.toggle('done');
-  el.querySelector('.toggle-switch').classList.toggle('on');
 }
 
 function saveGrowthRecord() {
   const date = document.getElementById('fGrowthDate').value;
   if (!date) { alert('请选择日期'); return; }
-  const wx = ['ciWx1','ciWx2','ciWx3'].filter(id => document.getElementById(id).classList.contains('done')).length;
+  const wx = document.getElementById('ciWx').classList.contains('done') ? 3 : 0;
   const xhs = document.getElementById('ciXhs').classList.contains('done') ? 1 : 0;
   const study = document.getElementById('ciStudy').classList.contains('done') ? 2 : 0;
   const existing = growthRecords.find(r => r.date === date);
@@ -1886,20 +1883,14 @@ function saveGrowthRecord() {
 }
 
 function resetCheckin() {
-  ['ciWx1','ciWx2','ciWx3','ciXhs','ciStudy'].forEach(id => {
-    const el = document.getElementById(id);
-    el.classList.remove('done');
-    el.querySelector('.toggle-switch').classList.remove('on');
-  });
+  ['ciWx','ciXhs','ciStudy'].forEach(id => document.getElementById(id).classList.remove('done'));
 }
 
 function setCheckin(wx, xhs, study) {
   resetCheckin();
-  ['ciWx1','ciWx2','ciWx3'].forEach((id, i) => {
-    if (i < wx) { const el = document.getElementById(id); el.classList.add('done'); el.querySelector('.toggle-switch').classList.add('on'); }
-  });
-  if (xhs >= 1) { const el = document.getElementById('ciXhs'); el.classList.add('done'); el.querySelector('.toggle-switch').classList.add('on'); }
-  if (study >= 2) { const el = document.getElementById('ciStudy'); el.classList.add('done'); el.querySelector('.toggle-switch').classList.add('on'); }
+  if (wx >= 3) document.getElementById('ciWx').classList.add('done');
+  if (xhs >= 1) document.getElementById('ciXhs').classList.add('done');
+  if (study >= 2) document.getElementById('ciStudy').classList.add('done');
 }
 
 function renderGrowthTable() {
