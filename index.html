@@ -304,7 +304,7 @@
     <span class="nav-icon stock">库存</span>
   </div>
   <div class="nav-item" data-page="yun">
-    <span class="nav-icon yun">账本</span>
+    <span class="nav-icon yun">yb</span>
   </div>
   <div class="nav-item" data-page="compare">
     <span class="nav-icon compare">同行</span>
@@ -315,7 +315,7 @@
 <div class="main">
 
   <!-- ========== 燕窝接单平台 ========== -->
-  <div class="page active" id="page-orders">
+  <div class="page" id="page-orders">
     <div class="page-header">
       <div>
         <h1>📋 燕窝接单平台</h1>
@@ -529,7 +529,7 @@
   </div>
 
   <!-- ========== 个人成长平台 ========== -->
-  <div class="page" id="page-growth">
+  <div class="page active" id="page-growth">
     <div class="page-header">
       <div>
         <h1>🎯 个人成长平台</h1>
@@ -608,7 +608,7 @@
   <div class="page" id="page-yun">
     <div class="page-header">
       <div>
-        <h1>💳 云账本</h1>
+        <h1>💳 雲的账本</h1>
         <div class="sub">与云的进出账记录</div>
       </div>
       <div class="header-actions">
@@ -2343,11 +2343,11 @@ function openYunModal(editId) {
       document.getElementById('fYunRemark').value = rec.remark || '';
     }
   }
-  document.getElementById('yunModal').classList.add('active');
+  document.getElementById('yunModal').classList.add('show');
 }
 
 function closeYunModal() {
-  document.getElementById('yunModal').classList.remove('active');
+  document.getElementById('yunModal').classList.remove('show');
   editingYunId = null;
 }
 
