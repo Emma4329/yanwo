@@ -2510,7 +2510,7 @@ function syncYunboOrders() {
         amount: totalAmount,
         type: 'out',
         source: '燕窝',
-        remark: `${qty}${product.includes('两') || product.includes('斤') || product.includes('克') || product.includes('盏') ? '' : '两'}${product}`,
+        remark: `${qty}两${product}`,
         clearBatchId: null,
         orderId: o.id,
         orderItemKey: itemKey
