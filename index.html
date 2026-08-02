@@ -57,6 +57,7 @@
   .nav-icon.za { background: #8B5A2B; color: #FFF; }
   .nav-icon.growth { background: #6B3FA0; color: #FFF; }
   .nav-icon.stock { background: #3B7DD8; color: #FFF; }
+  .nav-icon.yun { background: #D46A6A; color: #FFF; }
   .nav-divider {
     margin: 6px 10px; border-top: 1px solid rgba(255,255,255,0.08);
   }
@@ -287,20 +288,23 @@
     📋 HP的工作台
     <div class="sub">WORKBENCH</div>
   </div>
-  <div class="nav-item active" data-page="orders">
+  <div class="nav-item active" data-page="growth">
+    <span class="nav-icon growth">学习</span>
+  </div>
+  <div class="nav-item" data-page="orders">
     <span class="nav-icon sell">燕窝</span>
   </div>
   <div class="nav-item" data-page="za">
     <span class="nav-icon za">杂货</span>
-  </div>
-  <div class="nav-item" data-page="growth">
-    <span class="nav-icon growth">学习</span>
   </div>
   <div class="nav-item" data-page="purchase">
     <span class="nav-icon buy">进货</span>
   </div>
   <div class="nav-item" data-page="inventory">
     <span class="nav-icon stock">库存</span>
+  </div>
+  <div class="nav-item" data-page="yun">
+    <span class="nav-icon yun">账本</span>
   </div>
   <div class="nav-item" data-page="compare">
     <span class="nav-icon compare">同行</span>
@@ -600,7 +604,76 @@
     </div>
   </div>
 
+  <!-- ========== 云账本（yun） ========== -->
+  <div class="page" id="page-yun">
+    <div class="page-header">
+      <div>
+        <h1>💳 云账本</h1>
+        <div class="sub">与云的进出账记录</div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-primary" onclick="openYunModal()">+ 新增记录</button>
+      </div>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="stats">
+      <div class="stat-card info"><div class="label">总入账（云收/云转）</div><div class="value" id="yunStatIn" style="color:var(--success);">¥0</div></div>
+      <div class="stat-card warning"><div class="label">总出账（转云/代付）</div><div class="value" id="yunStatOut" style="color:var(--danger);">¥0</div></div>
+      <div class="stat-card"><div class="label">净额（入 - 出）</div><div class="value" id="yunStatNet">¥0</div></div>
+    </div>
+
+    <!-- 清账区域 -->
+    <div style="background:var(--card);border-radius:10px;padding:14px;box-shadow:var(--shadow);margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <span style="font-size:13px;font-weight:600;">📋 清账周期：</span>
+      <input type="number" id="yunClearDays" min="1" value="30" style="width:60px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;text-align:center;">
+      <span style="font-size:12px;color:var(--text-light);">天</span>
+      <button class="btn btn-outline btn-sm" onclick="yunCheckClear()">🔍 检查清账状态</button>
+      <span id="yunClearStatus" style="font-size:12px;font-weight:600;"></span>
+    </div>
+
+    <!-- 记录表格 -->
+    <div class="toolbar">
+      <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="yunSearch" placeholder="搜索备注..." oninput="renderYunTable()"></div>
+    </div>
+    <div class="table-wrapper"><div class="table-scroll">
+      <table>
+        <thead><tr>
+          <th style="width:32px;">#</th><th>日期</th><th>金额</th><th>类型</th><th>来源</th><th>备注</th><th>操作</th>
+        </tr></thead>
+        <tbody id="yunTableBody"></tbody>
+      </table>
+    </div></div>
+  </div>
+
 </div><!-- /main -->
+
+<!-- ====== 云账本弹窗 ====== -->
+<div class="modal-overlay" id="yunModal"><div class="modal">
+  <div class="modal-header"><h2 id="yunModalTitle">新增记录</h2><button class="modal-close" onclick="closeYunModal()">✕</button></div>
+  <div class="modal-body">
+    <div class="form-row">
+      <div class="form-group w140"><label>日期 <span class="required">*</span></label><input type="date" id="fYunDate"></div>
+      <div class="form-group w140"><label>金额(元) <span class="required">*</span></label><input type="number" id="fYunAmount" min="0" step="0.01" placeholder="金额"></div>
+      <div class="form-group w160"><label>方向 <span class="required">*</span></label><select id="fYunType"><option value="out">转给云 / 代付给云</option><option value="in">云转来 / 云代付</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group w200"><label>金额来源 <span class="required">*</span></label><select id="fYunSource">
+        <option value="微信转云">微信转云</option><option value="微信收到">微信收到</option>
+        <option value="支付宝转云">支付宝转云</option><option value="支付宝收到">支付宝收到</option>
+        <option value="平安转云">平安转云</option><option value="平安收到">平安收到</option>
+        <option value="工行转云">工行转云</option><option value="工行收到">工行收到</option>
+        <option value="月供">月供</option><option value="燕窝">燕窝</option>
+        <option value="帮云代付给同行">帮云代付给同行</option><option value="云帮你代付给同行">云帮你代付给同行</option>
+      </select></div>
+      <div class="form-group flex1"><label>备注</label><input type="text" id="fYunRemark" placeholder="备注..."></div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" onclick="closeYunModal()">取消</button>
+    <button class="btn btn-primary" onclick="saveYunRecord()">保存</button>
+  </div>
+</div></div>
 
 <!-- ====== 杂平台弹窗 ====== -->
 <div class="modal-overlay" id="zaModal"><div class="modal">
@@ -787,6 +860,7 @@ const KEY_INVENTORY = 'yw_inventory_v1';
 const KEY_COMPARE = 'yw_compare_v1';
 const KEY_ZA = 'yw_za_v1';
 const KEY_GROWTH = 'yw_growth_v1';
+const KEY_YUN = 'yw_yun_v1';
 const KEY_BACKUP = 'yw_last_backup';
 const BACKUP_INTERVAL = 15;
 
@@ -795,6 +869,7 @@ let orders = [], purchases = [], inventoryLog = [];
 let compareData = { suppliers: [], prices: {} }; // 比价独立数据
 let zaOrders = []; // 杂平台独立数据
 let growthRecords = []; // 个人成长打卡数据
+let yunRecords = []; // 云账本数据
 let editingZaOrderId = null;
 let zaShipTarget = null;
 let editingOrderId = null, editingPurchaseId = null;
@@ -823,12 +898,13 @@ document.querySelectorAll('.nav-item').forEach(item => {
     this.classList.add('active');
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById('page-' + this.dataset.page).classList.add('active');
+    if (this.dataset.page === 'growth') renderGrowthTable();
     if (this.dataset.page === 'orders') renderOrderTable();
     if (this.dataset.page === 'purchase') renderPurchaseTable();
     if (this.dataset.page === 'compare') renderCompareTable();
     if (this.dataset.page === 'za') renderZaTable();
-    if (this.dataset.page === 'growth') renderGrowthTable();
     if (this.dataset.page === 'inventory') renderInventoryTable();
+    if (this.dataset.page === 'yun') renderYunTable();
   });
 });
 
@@ -836,7 +912,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
 // 通用导入导出
 // ==========================================
 function exportAll() {
-  const data = { orders, purchases, inventoryLog, compareData, zaOrders, growthRecords };
+  const data = { orders, purchases, inventoryLog, compareData, zaOrders, growthRecords, yunRecords };
   const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -865,11 +941,13 @@ function importAll(event) {
           if (data.compareData) compareData = data.compareData;
           if (data.zaOrders) zaOrders = data.zaOrders;
           if (data.growthRecords) growthRecords = data.growthRecords;
+          if (data.yunRecords) yunRecords = data.yunRecords;
         } else {
           orders = orders.concat(data.orders || []); purchases = purchases.concat(data.purchases || []);
           inventoryLog = inventoryLog.concat(data.inventoryLog || []);
           if (data.zaOrders) zaOrders = zaOrders.concat(data.zaOrders || []);
           if (data.growthRecords) growthRecords = growthRecords.concat(data.growthRecords || []);
+          if (data.yunRecords) yunRecords = yunRecords.concat(data.yunRecords || []);
         }
         saveAll(); refreshAll();
       }
@@ -887,10 +965,11 @@ function saveAll() {
   localStorage.setItem(KEY_COMPARE, JSON.stringify(compareData));
   localStorage.setItem(KEY_ZA, JSON.stringify(zaOrders));
   localStorage.setItem(KEY_GROWTH, JSON.stringify(growthRecords));
+  localStorage.setItem(KEY_YUN, JSON.stringify(yunRecords));
 }
 
 function refreshAll() {
-  renderOrderTable(); renderPurchaseTable(); renderInventoryTable(); renderZaTable(); renderGrowthTable();
+  renderOrderTable(); renderPurchaseTable(); renderInventoryTable(); renderZaTable(); renderGrowthTable(); renderYunTable();
 }
 
 // ==========================================
@@ -904,6 +983,7 @@ function init() {
   try { compareData = JSON.parse(localStorage.getItem(KEY_COMPARE) || '{"suppliers":[],"prices":{}}'); } catch(e) { compareData = { suppliers: [], prices: {} }; }
   try { zaOrders = JSON.parse(localStorage.getItem(KEY_ZA) || '[]'); } catch(e) { zaOrders = []; }
   try { growthRecords = JSON.parse(localStorage.getItem(KEY_GROWTH) || '[]'); } catch(e) { growthRecords = []; }
+  try { yunRecords = JSON.parse(localStorage.getItem(KEY_YUN) || '[]'); } catch(e) { yunRecords = []; }
 
   if (orders.length === 0 && purchases.length === 0) {
     orders = [{ id: Date.now(), orderDate: new Date().toISOString().split('T')[0], customer: '示例客户', payment: '定金', deposit: 800, remark: '示例数据，可删除',
@@ -2231,6 +2311,166 @@ function updateInvProdFilter() {
 }
 
 // ==========================================
+// ========== 云账本（yun） ==========
+// ==========================================
+let editingYunId = null;
+
+// 清账周期从 localStorage 读取
+function getYunClearDays() {
+  const saved = localStorage.getItem('yun_clear_days');
+  return saved ? parseInt(saved) : 30;
+}
+function setYunClearDays(days) {
+  localStorage.setItem('yun_clear_days', String(days));
+}
+
+function openYunModal(editId) {
+  editingYunId = editId || null;
+  document.getElementById('yunModalTitle').textContent = editId ? '编辑记录' : '新增记录';
+  document.getElementById('fYunDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('fYunAmount').value = '';
+  document.getElementById('fYunType').value = 'out';
+  document.getElementById('fYunSource').value = '微信转云';
+  document.getElementById('fYunRemark').value = '';
+
+  if (editId) {
+    const rec = yunRecords.find(r => r.id === editId);
+    if (rec) {
+      document.getElementById('fYunDate').value = rec.date;
+      document.getElementById('fYunAmount').value = rec.amount;
+      document.getElementById('fYunType').value = rec.type;
+      document.getElementById('fYunSource').value = rec.source;
+      document.getElementById('fYunRemark').value = rec.remark || '';
+    }
+  }
+  document.getElementById('yunModal').classList.add('active');
+}
+
+function closeYunModal() {
+  document.getElementById('yunModal').classList.remove('active');
+  editingYunId = null;
+}
+
+function saveYunRecord() {
+  const date = document.getElementById('fYunDate').value;
+  const amount = parseFloat(document.getElementById('fYunAmount').value) || 0;
+  const type = document.getElementById('fYunType').value;
+  const source = document.getElementById('fYunSource').value;
+  const remark = document.getElementById('fYunRemark').value;
+
+  if (!date || amount <= 0) { alert('请填写日期和金额'); return; }
+
+  if (editingYunId) {
+    const rec = yunRecords.find(r => r.id === editingYunId);
+    if (rec) { rec.date = date; rec.amount = amount; rec.type = type; rec.source = source; rec.remark = remark; }
+  } else {
+    yunRecords.push({ id: Date.now(), date, amount, type, source, remark });
+  }
+  saveAll(); renderYunTable(); closeYunModal();
+}
+
+function deleteYunRecord(id) {
+  if (!confirm('确定删除此记录？')) return;
+  yunRecords = yunRecords.filter(r => r.id !== id);
+  saveAll(); renderYunTable();
+}
+
+function yunCheckClear() {
+  const days = parseInt(document.getElementById('yunClearDays').value) || 30;
+  setYunClearDays(days);
+
+  if (yunRecords.length === 0) {
+    document.getElementById('yunClearStatus').innerHTML = '<span style="color:var(--text-light);">暂无记录</span>';
+    return;
+  }
+
+  const sorted = [...yunRecords].sort((a, b) => b.date.localeCompare(a.date));
+  const lastDate = sorted[0].date;
+  const lastTime = new Date(lastDate);
+  const now = new Date();
+  const diffDays = Math.floor((now - lastTime) / 86400000);
+
+  // 计算周期内净额
+  const cutoff = new Date(now.getTime() - days * 86400000).toISOString().split('T')[0];
+  let inSum = 0, outSum = 0;
+  yunRecords.forEach(r => {
+    if (r.date >= cutoff) {
+      if (r.type === 'in') inSum += r.amount;
+      else outSum += r.amount;
+    }
+  });
+  const net = inSum - outSum;
+  const netAbs = Math.abs(net);
+
+  let statusHtml = '';
+  if (net === 0) {
+    statusHtml = '<span style="color:var(--success);">✅ 已清！净额 ¥0，可以重新开始记录了</span>';
+  } else if (net > 0) {
+    statusHtml = `<span style="color:var(--info);">⚠️ 云还欠你 <b>¥${formatNum(net)}</b>（${days}天内）</span>`;
+  } else {
+    statusHtml = `<span style="color:var(--danger);">⚠️ 你欠云 <b>¥${formatNum(netAbs)}</b>（${days}天内）</span>`;
+  }
+  statusHtml += `<div style="font-size:10px;color:var(--text-light);margin-top:2px;">最近记录：${lastDate}（${diffDays}天前）</div>`;
+  document.getElementById('yunClearStatus').innerHTML = statusHtml;
+}
+
+function renderYunTable() {
+  const tbody = document.getElementById('yunTableBody');
+  const search = (document.getElementById('yunSearch')?.value || '').toLowerCase();
+
+  let rows = [...yunRecords];
+  if (search) {
+    rows = rows.filter(r => (r.remark || '').toLowerCase().includes(search) || r.source.includes(search));
+  }
+  rows.sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
+
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-row"><div class="icon">💳</div><div>暂无账本记录</div></div></td></tr>`;
+    updateYunStats();
+    return;
+  }
+
+  tbody.innerHTML = rows.map((r, i) => {
+    const isIn = r.type === 'in';
+    const amtColor = isIn ? 'color:var(--success);' : 'color:var(--danger);';
+    const typeLabel = isIn ? '<span style="color:var(--success);font-weight:600;">← 入账</span>' : '<span style="color:var(--danger);font-weight:600;">→ 出账</span>';
+    return `<tr>
+      <td>${i + 1}</td>
+      <td>${r.date}</td>
+      <td style="font-weight:700;${amtColor}">${isIn ? '+' : '-'}¥${formatNum(r.amount)}</td>
+      <td>${typeLabel}</td>
+      <td>${r.source}</td>
+      <td style="max-width:120px;white-space:normal;font-size:10px;color:var(--text-light);">${r.remark || '-'}</td>
+      <td><div class="row-actions">
+        <button class="icon-btn" title="编辑" onclick="openYunModal(${r.id})">✏️</button>
+        <button class="icon-btn" title="删除" onclick="deleteYunRecord(${r.id})">🗑️</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+  updateYunStats();
+}
+
+function updateYunStats() {
+  let inSum = 0, outSum = 0;
+  yunRecords.forEach(r => {
+    if (r.type === 'in') inSum += r.amount;
+    else outSum += r.amount;
+  });
+  const net = inSum - outSum;
+  document.getElementById('yunStatIn').textContent = '¥' + formatNum(inSum);
+  document.getElementById('yunStatOut').textContent = '¥' + formatNum(outSum);
+  document.getElementById('yunStatNet').textContent = '¥' + formatNum(net);
+  document.getElementById('yunStatNet').style.color = net >= 0 ? 'var(--success)' : 'var(--danger)';
+}
+
+// 初始化清账天数
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(() => {
+    document.getElementById('yunClearDays').value = getYunClearDays();
+  }, 200);
+});
+
+// ==========================================
 // 备份提醒
 // ==========================================
 function checkBackupReminder() {
@@ -2254,6 +2494,7 @@ document.getElementById('purchaseModal').addEventListener('click', function(e) {
 document.getElementById('inventoryModal').addEventListener('click', function(e) { if (e.target===this) closeInventoryModal(); });
 document.getElementById('zaModal').addEventListener('click', function(e) { if (e.target===this) closeZaModal(); });
 document.getElementById('zaShipModal').addEventListener('click', function(e) { if (e.target===this) closeZaShipModal(); });
+document.getElementById('yunModal').addEventListener('click', function(e) { if (e.target===this) closeYunModal(); });
 
 init();
 </script>
