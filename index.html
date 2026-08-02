@@ -611,7 +611,7 @@
     <div class="page-header">
       <div>
         <h1>💳 雲的账本</h1>
-        <div class="sub">与云的进出账记录</div>
+        <div class="sub">与雲的进出账 · 雲博订单自动同步</div>
       </div>
       <div class="header-actions">
         <button class="btn btn-primary" onclick="openYunModal()">+ 新增记录</button>
@@ -626,9 +626,12 @@
     </div>
 
     <!-- 清账区域 -->
-    <div style="background:var(--card);border-radius:10px;padding:14px;box-shadow:var(--shadow);margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-      <button class="btn btn-warning" onclick="doYunClear()">🔒 一键清账</button>
-      <span id="yunClearStatus" style="font-size:12px;font-weight:600;"></span>
+    <div style="background:var(--card);border-radius:10px;padding:14px;box-shadow:var(--shadow);margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
+        <button class="btn btn-warning" onclick="doYunClear()">🔒 一键清账</button>
+        <span id="yunClearStatus" style="font-size:12px;font-weight:600;"></span>
+      </div>
+      <div id="yunClearHistory" style="font-size:11px;color:var(--text-light);"></div>
     </div>
 
     <!-- 记录表格 -->
@@ -2421,6 +2424,9 @@ function doYunClear() {
 }
 
 function renderYunTable() {
+  // 自动同步雲博的燕窝订单
+  syncYunboOrders();
+
   const tbody = document.getElementById('yunTableBody');
   const search = (document.getElementById('yunSearch')?.value || '').toLowerCase();
 
@@ -2466,15 +2472,80 @@ function renderYunTable() {
   updateYunStats();
 }
 
+// 自动同步雲博的燕窝订单到账本
+function syncYunboOrders() {
+  if (!orders || orders.length === 0) return;
+  // 只找客户名包含"雲博"或"云博"的订单
+  const yunboOrders = orders.filter(o => {
+    const name = (o.customer || '').replace(/\s/g, '');
+    return name.includes('雲博') || name.includes('云博');
+  });
+  if (yunboOrders.length === 0) return;
+
+  // 已同步过的订单ID集合
+  const syncedIds = new Set();
+  yunRecords.forEach(r => {
+    if (r.orderId) syncedIds.add(r.orderId);
+    // 也检查按单品拆分的情况（orderId + itemIndex）
+    if (r.orderItemKey) syncedIds.add(r.orderItemKey);
+  });
+
+  let changed = false;
+  yunboOrders.forEach(o => {
+    o.items.forEach((item, idx) => {
+      const itemKey = `${o.id}_${idx}`;
+      // 如果该订单+单品已同步过，跳过
+      if (syncedIds.has(itemKey)) return;
+
+      const qty = item.quantity || 0;
+      const product = item.product || '';
+      const unitPrice = item.unitPrice || 0;
+      const totalAmount = qty * unitPrice;
+      if (totalAmount <= 0) return;
+
+      // 登记为出账：转给雲，来源燕窝，备注=数量和品种
+      yunRecords.push({
+        id: Date.now() + idx, // 确保唯一
+        date: o.orderDate || new Date().toISOString().split('T')[0],
+        amount: totalAmount,
+        type: 'out',
+        source: '燕窝',
+        remark: `${qty}${product.includes('两') || product.includes('斤') || product.includes('克') || product.includes('盏') ? '' : '两'}${product}`,
+        clearBatchId: null,
+        orderId: o.id,
+        orderItemKey: itemKey
+      });
+      syncedIds.add(itemKey);
+      changed = true;
+    });
+  });
+
+  if (changed) { saveAll(); }
+}
+
 function updateYunClearStatus() {
   const uncleared = yunRecords.filter(r => !r.clearBatchId);
   const statusEl = document.getElementById('yunClearStatus');
+  const historyEl = document.getElementById('yunClearHistory');
+
+  // 清账历史（最近3条）
+  if (yunClearBatches.length > 0) {
+    const recent = yunClearBatches.slice(0, 3);
+    historyEl.innerHTML = recent.map((b, i) => {
+      const netStr = b.net === 0 ? '<span style="color:var(--success);">已平</span>'
+        : (b.net > 0 ? `<span style="color:var(--info);">云欠 ¥${formatNum(b.net)}</span>`
+        : `<span style="color:var(--danger);">欠云 ¥${formatNum(Math.abs(b.net))}</span>`);
+      const marker = i === 0 ? '📌 最近' : '   ';
+      return `${marker} ${b.fromDate} ~ ${b.toDate}（${b.recordCount}条）${netStr}`;
+    }).join('<br>');
+  } else {
+    historyEl.innerHTML = '';
+  }
+
   if (uncleared.length === 0 && yunRecords.length > 0) {
     statusEl.innerHTML = '<span style="color:var(--success);">✅ 所有记录已清</span>';
   } else if (yunClearBatches.length > 0) {
-    const last = yunClearBatches[0];
-    const netStr = last.net === 0 ? '已平' : (last.net > 0 ? `云欠 ¥${formatNum(last.net)}` : `欠云 ¥${formatNum(Math.abs(last.net))}`);
-    statusEl.innerHTML = `<span style="color:var(--text-light);">📌 上次清账：${last.fromDate}~${last.toDate}（${netStr}）| 未清：${uncleared.length}条</span>`;
+    statusEl.innerHTML = `<span style="color:var(--text-light);">📌 未清：${uncleared.length}条</span>`;
   } else if (uncleared.length > 0) {
     statusEl.innerHTML = `<span style="color:var(--text-light);">📌 未清记录：${uncleared.length}条 | 点击一键清账锁定</span>`;
   } else {
