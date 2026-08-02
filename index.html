@@ -2393,9 +2393,9 @@ function doYunClear() {
   if (net === 0) {
     statusText = '✅ 净额 ¥0，账目已平！';
   } else if (net > 0) {
-    statusText = `⚠️ 云还欠你 ¥${formatNum(net)}`;
+    statusText = `⚠️ 你欠云 ¥${formatNum(net)}`;
   } else {
-    statusText = `⚠️ 你欠云 ¥${formatNum(netAbs)}`;
+    statusText = `⚠️ 云欠你 ¥${formatNum(netAbs)}`;
   }
 
   const confirmMsg = `📋 待清账统计\n\n时间范围：${fromDate} ~ ${toDate}\n共 ${uncleared.length} 条记录\n总入账：¥${formatNum(inSum)}\n总出账：¥${formatNum(outSum)}\n${statusText}\n\n确认清账？清账后这些记录将标记为"账已清"。`;
@@ -2533,8 +2533,8 @@ function updateYunClearStatus() {
     const recent = yunClearBatches.slice(0, 3);
     historyEl.innerHTML = recent.map((b, i) => {
       const netStr = b.net === 0 ? '<span style="color:var(--success);">已平</span>'
-        : (b.net > 0 ? `<span style="color:var(--info);">云欠 ¥${formatNum(b.net)}</span>`
-        : `<span style="color:var(--danger);">欠云 ¥${formatNum(Math.abs(b.net))}</span>`);
+        : (b.net > 0 ? `<span style="color:var(--danger);">你欠云 ¥${formatNum(b.net)}</span>`
+        : `<span style="color:var(--info);">云欠你 ¥${formatNum(Math.abs(b.net))}</span>`);
       const marker = i === 0 ? '📌 最近' : '   ';
       return `${marker} ${b.fromDate} ~ ${b.toDate}（${b.recordCount}条）${netStr}`;
     }).join('<br>');
