@@ -147,6 +147,8 @@
   .btn-secondary:hover { border-color: var(--primary-light); }
   .btn-sm { padding: 4px 9px; font-size: 11px; }
   .btn-danger { background: var(--danger); color: white; }
+  .btn-warning { background: #E67E22; color: white; }
+  .btn-warning:hover { background: #D35400; }
   .btn-outline { background: transparent; color: var(--primary); border: 1px solid var(--primary-light); }
   .btn-outline:hover { background: #FDF6EE; }
 
@@ -625,10 +627,7 @@
 
     <!-- 清账区域 -->
     <div style="background:var(--card);border-radius:10px;padding:14px;box-shadow:var(--shadow);margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-      <span style="font-size:13px;font-weight:600;">📋 清账周期：</span>
-      <input type="number" id="yunClearDays" min="1" value="30" style="width:60px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;text-align:center;">
-      <span style="font-size:12px;color:var(--text-light);">天</span>
-      <button class="btn btn-outline btn-sm" onclick="yunCheckClear()">🔍 检查清账状态</button>
+      <button class="btn btn-warning" onclick="doYunClear()">🔒 一键清账</button>
       <span id="yunClearStatus" style="font-size:12px;font-weight:600;"></span>
     </div>
 
@@ -639,7 +638,7 @@
     <div class="table-wrapper"><div class="table-scroll">
       <table>
         <thead><tr>
-          <th style="width:32px;">#</th><th>日期</th><th>金额</th><th>类型</th><th>来源</th><th>备注</th><th>操作</th>
+          <th style="width:32px;">#</th><th>日期</th><th>金额</th><th>类型</th><th>来源</th><th>备注</th><th>清账状态</th><th>操作</th>
         </tr></thead>
         <tbody id="yunTableBody"></tbody>
       </table>
@@ -2314,15 +2313,9 @@ function updateInvProdFilter() {
 // ========== 云账本（yun） ==========
 // ==========================================
 let editingYunId = null;
-
-// 清账周期从 localStorage 读取
-function getYunClearDays() {
-  const saved = localStorage.getItem('yun_clear_days');
-  return saved ? parseInt(saved) : 30;
-}
-function setYunClearDays(days) {
-  localStorage.setItem('yun_clear_days', String(days));
-}
+// yunClearBatches: [{ id, clearedAt, fromDate, toDate, recordCount, inSum, outSum, net }]
+let yunClearBatches = [];
+try { yunClearBatches = JSON.parse(localStorage.getItem('yun_clear_batches') || '[]'); } catch(e) { yunClearBatches = []; }
 
 function openYunModal(editId) {
   editingYunId = editId || null;
@@ -2364,7 +2357,7 @@ function saveYunRecord() {
     const rec = yunRecords.find(r => r.id === editingYunId);
     if (rec) { rec.date = date; rec.amount = amount; rec.type = type; rec.source = source; rec.remark = remark; }
   } else {
-    yunRecords.push({ id: Date.now(), date, amount, type, source, remark });
+    yunRecords.push({ id: Date.now(), date, amount, type, source, remark, clearBatchId: null });
   }
   saveAll(); renderYunTable(); closeYunModal();
 }
@@ -2375,43 +2368,58 @@ function deleteYunRecord(id) {
   saveAll(); renderYunTable();
 }
 
-function yunCheckClear() {
-  const days = parseInt(document.getElementById('yunClearDays').value) || 30;
-  setYunClearDays(days);
-
-  if (yunRecords.length === 0) {
-    document.getElementById('yunClearStatus').innerHTML = '<span style="color:var(--text-light);">暂无记录</span>';
+function doYunClear() {
+  // 找出所有未清记录
+  const uncleared = yunRecords.filter(r => !r.clearBatchId);
+  if (uncleared.length === 0) {
+    document.getElementById('yunClearStatus').innerHTML = '<span style="color:var(--success);">✅ 所有记录已清，没有待清账的记录</span>';
     return;
   }
 
-  const sorted = [...yunRecords].sort((a, b) => b.date.localeCompare(a.date));
-  const lastDate = sorted[0].date;
-  const lastTime = new Date(lastDate);
-  const now = new Date();
-  const diffDays = Math.floor((now - lastTime) / 86400000);
-
-  // 计算周期内净额
-  const cutoff = new Date(now.getTime() - days * 86400000).toISOString().split('T')[0];
+  // 统计
+  const dates = uncleared.map(r => r.date).sort();
+  const fromDate = dates[0];
+  const toDate = dates[dates.length - 1];
   let inSum = 0, outSum = 0;
-  yunRecords.forEach(r => {
-    if (r.date >= cutoff) {
-      if (r.type === 'in') inSum += r.amount;
-      else outSum += r.amount;
-    }
+  uncleared.forEach(r => {
+    if (r.type === 'in') inSum += r.amount;
+    else outSum += r.amount;
   });
   const net = inSum - outSum;
   const netAbs = Math.abs(net);
 
-  let statusHtml = '';
+  let statusText = '';
   if (net === 0) {
-    statusHtml = '<span style="color:var(--success);">✅ 已清！净额 ¥0，可以重新开始记录了</span>';
+    statusText = '✅ 净额 ¥0，账目已平！';
   } else if (net > 0) {
-    statusHtml = `<span style="color:var(--info);">⚠️ 云还欠你 <b>¥${formatNum(net)}</b>（${days}天内）</span>`;
+    statusText = `⚠️ 云还欠你 ¥${formatNum(net)}`;
   } else {
-    statusHtml = `<span style="color:var(--danger);">⚠️ 你欠云 <b>¥${formatNum(netAbs)}</b>（${days}天内）</span>`;
+    statusText = `⚠️ 你欠云 ¥${formatNum(netAbs)}`;
   }
-  statusHtml += `<div style="font-size:10px;color:var(--text-light);margin-top:2px;">最近记录：${lastDate}（${diffDays}天前）</div>`;
-  document.getElementById('yunClearStatus').innerHTML = statusHtml;
+
+  const confirmMsg = `📋 待清账统计\n\n时间范围：${fromDate} ~ ${toDate}\n共 ${uncleared.length} 条记录\n总入账：¥${formatNum(inSum)}\n总出账：¥${formatNum(outSum)}\n${statusText}\n\n确认清账？清账后这些记录将标记为"账已清"。`;
+
+  if (!confirm(confirmMsg)) return;
+
+  // 创建清账批次
+  const batchId = Date.now();
+  const batch = {
+    id: batchId,
+    clearedAt: new Date().toISOString().split('T')[0],
+    fromDate, toDate,
+    recordCount: uncleared.length,
+    inSum, outSum, net
+  };
+  yunClearBatches.unshift(batch);
+  localStorage.setItem('yun_clear_batches', JSON.stringify(yunClearBatches));
+
+  // 标记所有未清记录
+  uncleared.forEach(r => { r.clearBatchId = batchId; });
+
+  saveAll(); renderYunTable();
+
+  const clearMsg = `✅ 清账完成！\n\n${fromDate} ~ ${toDate}\n共 ${uncleared.length} 条已锁定\n净额：¥${formatNum(net)}`;
+  document.getElementById('yunClearStatus').innerHTML = `<span style="color:var(--success);">${clearMsg.replace(/\n/g, '<br>')}</span>`;
 }
 
 function renderYunTable() {
@@ -2424,8 +2432,11 @@ function renderYunTable() {
   }
   rows.sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
 
+  // 更新清账状态显示
+  updateYunClearStatus();
+
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-row"><div class="icon">💳</div><div>暂无账本记录</div></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-row"><div class="icon">💳</div><div>暂无账本记录</div></div></td></tr>`;
     updateYunStats();
     return;
   }
@@ -2434,6 +2445,12 @@ function renderYunTable() {
     const isIn = r.type === 'in';
     const amtColor = isIn ? 'color:var(--success);' : 'color:var(--danger);';
     const typeLabel = isIn ? '<span style="color:var(--success);font-weight:600;">← 入账</span>' : '<span style="color:var(--danger);font-weight:600;">→ 出账</span>';
+    let clearedHtml = '<span style="color:var(--text-light);">-</span>';
+    if (r.clearBatchId) {
+      const batch = yunClearBatches.find(b => b.id === r.clearBatchId);
+      const batchLabel = batch ? `${batch.fromDate}~${batch.toDate}` : '';
+      clearedHtml = `<span style="color:var(--success);font-size:10px;font-weight:600;" title="清账批次：${batchLabel}">✅ 账已清</span>`;
+    }
     return `<tr>
       <td>${i + 1}</td>
       <td>${r.date}</td>
@@ -2441,6 +2458,7 @@ function renderYunTable() {
       <td>${typeLabel}</td>
       <td>${r.source}</td>
       <td style="max-width:120px;white-space:normal;font-size:10px;color:var(--text-light);">${r.remark || '-'}</td>
+      <td>${clearedHtml}</td>
       <td><div class="row-actions">
         <button class="icon-btn" title="编辑" onclick="openYunModal(${r.id})">✏️</button>
         <button class="icon-btn" title="删除" onclick="deleteYunRecord(${r.id})">🗑️</button>
@@ -2448,6 +2466,22 @@ function renderYunTable() {
     </tr>`;
   }).join('');
   updateYunStats();
+}
+
+function updateYunClearStatus() {
+  const uncleared = yunRecords.filter(r => !r.clearBatchId);
+  const statusEl = document.getElementById('yunClearStatus');
+  if (uncleared.length === 0 && yunRecords.length > 0) {
+    statusEl.innerHTML = '<span style="color:var(--success);">✅ 所有记录已清</span>';
+  } else if (yunClearBatches.length > 0) {
+    const last = yunClearBatches[0];
+    const netStr = last.net === 0 ? '已平' : (last.net > 0 ? `云欠 ¥${formatNum(last.net)}` : `欠云 ¥${formatNum(Math.abs(last.net))}`);
+    statusEl.innerHTML = `<span style="color:var(--text-light);">📌 上次清账：${last.fromDate}~${last.toDate}（${netStr}）| 未清：${uncleared.length}条</span>`;
+  } else if (uncleared.length > 0) {
+    statusEl.innerHTML = `<span style="color:var(--text-light);">📌 未清记录：${uncleared.length}条 | 点击一键清账锁定</span>`;
+  } else {
+    statusEl.innerHTML = '';
+  }
 }
 
 function updateYunStats() {
@@ -2462,13 +2496,6 @@ function updateYunStats() {
   document.getElementById('yunStatNet').textContent = '¥' + formatNum(net);
   document.getElementById('yunStatNet').style.color = net >= 0 ? 'var(--success)' : 'var(--danger)';
 }
-
-// 初始化清账天数
-document.addEventListener('DOMContentLoaded', function() {
-  setTimeout(() => {
-    document.getElementById('yunClearDays').value = getYunClearDays();
-  }, 200);
-});
 
 // ==========================================
 // 备份提醒
