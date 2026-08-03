@@ -450,7 +450,7 @@
     <div class="table-wrapper"><div class="table-scroll">
       <table>
         <thead><tr>
-          <th style="width:32px;">#</th><th style="width:52px;">状态</th><th style="width:52px;">品种</th><th>当前库存</th><th>待入库</th><th>入库累计</th>
+          <th style="width:32px;">#</th><th style="width:52px;">状态</th><th style="width:52px;">品种</th><th>在家库存</th><th>能卖库存</th><th>待入库</th><th>入库累计</th>
           <th>成本价</th><th>库存价值</th><th>待发数</th><th>出库累计</th>
         </tr></thead>
         <tbody id="invTableBody"></tbody>
@@ -2340,7 +2340,7 @@ function renderInventoryTable() {
 
   let list = Object.values(invMap).filter(v => v.totalIn > 0 || v.totalOut > 0 || v.pendingIn > 0);
   if (filterProd) list = list.filter(v => v.product === filterProd);
-  if (!list.length) { tbody.innerHTML = `<tr><td colspan="10"><div class="empty-row"><div class="icon">📊</div><div>暂无库存数据，点击「入库记录」添加</div></div></td></tr>`; updateInvStats(); updateInvProdFilter(); return; }
+  if (!list.length) { tbody.innerHTML = `<tr><td colspan="11"><div class="empty-row"><div class="icon">📊</div><div>暂无库存数据，点击「入库记录」添加</div></div></td></tr>`; updateInvStats(); updateInvProdFilter(); return; }
 
   // 按 ALL_PRODUCT_LIST 固定顺序排列
   const sortOrder = {};
@@ -2350,6 +2350,7 @@ function renderInventoryTable() {
   const batches = getPurchaseBatches();
   tbody.innerHTML = list.map((v,i) => {
     const current = v.totalIn - v.totalOut;
+    const sellable = v.totalIn - v.totalOut + v.pendingIn - v.pendingShip;
     // 用剩余库存的批次计算实际库存价值
     const prodBatches = batches[v.product] || [];
     let cost = 0, value = 0;
@@ -2357,13 +2358,13 @@ function renderInventoryTable() {
     cost = current > 0 ? value / current : 0;
     totalValue += value;
     let status = '正常', badgeClass = 'badge-info';
-    if (current <= 0) { status = '缺货'; badgeClass = 'badge-deposit'; }
-    else if (current < 5) { status = '低库存'; badgeClass = 'badge-deposit'; }
+    if (sellable <= 0) { status = '缺货'; badgeClass = 'badge-deposit'; }
     return `<tr>
       <td>${i+1}</td>
       <td><span class="badge ${badgeClass}">${status}</span></td>
       <td style="max-width:52px;overflow-wrap:break-word;"><span class="product-tag cat-${PRODUCT_CATEGORY[v.product]||'yanwo'}">${v.product}</span></td>
       <td style="font-weight:700;color:${current<=0?'var(--danger)':'var(--text)'};text-align:center;">${current}</td>
+      <td style="font-weight:700;color:${sellable<=0?'var(--danger)':sellable<5?'var(--warning)':'var(--success)'};text-align:center;">${sellable}</td>
       <td style="color:${v.pendingIn>0?'var(--warning)':'var(--text-light)'};text-align:center;">${v.pendingIn}</td>
       <td style="text-align:center;">${v.totalIn}</td>
       <td>${cost>0?formatNum(cost):'-'}</td><td style="font-weight:600;color:var(--primary);">${value>0?formatNum(value):'-'}</td>
