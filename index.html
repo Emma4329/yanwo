@@ -416,7 +416,7 @@
       <table>
         <thead><tr>
           <th style="width:32px;">#</th><th>进货日期</th><th>供应商</th><th style="width:52px;">品种</th>
-          <th>下单数</th><th>进价(元)</th><th>总金额</th><th>待入库</th><th>入库状态</th><th>入库日期</th><th>备注</th><th>操作</th>
+          <th>下单数</th><th>进价(元)</th><th>总金额</th><th>待入库</th><th>入库状态</th><th>入库日期</th><th>付款人</th><th>备注</th><th>操作</th>
         </tr></thead>
         <tbody id="purTableBody"></tbody>
       </table>
@@ -668,6 +668,7 @@
         <option value="平安">平安</option><option value="工商">工商</option>
         <option value="月供">月供</option><option value="燕窝">燕窝</option>
         <option value="同行">同行</option>
+        <option value="香港代付">香港代付</option>
       </select></div>
       <div class="form-group flex1"><label>备注</label><input type="text" id="fYunRemark" placeholder="备注..."></div>
     </div>
@@ -779,7 +780,10 @@
       <div id="purItemsContainer"></div>
       <div class="total-preview" style="margin-top:10px;"><span class="label">进货总金额</span><span class="amount" id="purTotalPreview">¥0.00</span></div>
     </div>
-    <div class="form-row"><div class="form-group flex1"><label>备注</label><input type="text" id="fPurRemark" placeholder="备注..."></div></div>
+    <div class="form-row">
+      <div class="form-group w140"><label>付款人</label><select id="fPurPayer"><option value="hp">hp</option><option value="雲博">雲博</option></select></div>
+      <div class="form-group flex1"><label>备注</label><input type="text" id="fPurRemark" placeholder="备注..."></div>
+    </div>
   </div>
   <div class="modal-footer"><div></div><div class="modal-footer-right"><button class="btn btn-secondary" onclick="closePurchaseModal()">取消</button><button class="btn btn-primary" onclick="savePurchase()">💾 保存进货</button></div></div>
 </div></div>
@@ -1460,19 +1464,21 @@ function openPurchaseModal(id) {
   document.getElementById('purModalTitle').textContent = id ? '编辑进货' : '新增进货';
   document.getElementById('fPurDate').value = new Date().toISOString().split('T')[0];
   document.getElementById('fPurSupplier').value = ''; document.getElementById('fPurRemark').value = '';
+  document.getElementById('fPurPayer').value = 'hp';
   document.getElementById('purItemsContainer').innerHTML = '';
   if (id) {
     const p = purchases.find(x => x.id === id); if (!p) return;
     document.getElementById('fPurDate').value = p.date || '';
     document.getElementById('fPurSupplier').value = p.supplier || '';
     document.getElementById('fPurRemark').value = p.remark || '';
+    document.getElementById('fPurPayer').value = p.payer || 'hp';
     p.items.forEach(item => addPurItemRow(item));
   }
   if (!id) addPurItemRow();
   updatePurTotal();
   document.getElementById('purchaseModal').classList.add('show');
 }
-function closePurchaseModal() { document.getElementById('purchaseModal').classList.remove('show'); editingPurchaseId = null; }
+function closePurchaseModal() { document.getElementById('purchaseModal').classList.remove('show'); editingPurchaseId = null; document.getElementById('fPurPayer').value = 'hp'; }
 
 function addPurItemRow(data) {
   const container = document.getElementById('purItemsContainer');
@@ -1550,6 +1556,7 @@ function updatePurTotal() {
 function savePurchase() {
   const date = document.getElementById('fPurDate').value, supplier = document.getElementById('fPurSupplier').value.trim();
   const remark = document.getElementById('fPurRemark').value.trim();
+  const payer = document.getElementById('fPurPayer').value;
   if (!date) { alert('请选择进货日期'); return; }
   if (!supplier) { alert('请输入供应商'); return; }
 
@@ -1571,10 +1578,26 @@ function savePurchase() {
   if (!valid) { alert('请完整填写每个品种'); return; }
   if (items.length === 0) { alert('请至少添加一个品种'); return; }
 
-  const purchase = { id: editingPurchaseId || Date.now(), date, supplier, items, remark };
+  const purchase = { id: editingPurchaseId || Date.now(), date, supplier, items, remark, payer };
   if (editingPurchaseId) { const idx = purchases.findIndex(x => x.id === editingPurchaseId); if (idx >= 0) purchases[idx] = purchase; }
   else { purchases.push(purchase); }
-  saveAll(); renderPurchaseTable(); closePurchaseModal();
+
+  // 付款人为雲博时，自动同步到雲账本
+  if (payer === '雲博') {
+    const totalAmount = items.reduce((sum, it) => sum + it.quantity * it.unitPrice, 0);
+    const productNames = items.map(it => `${it.product}×${it.quantity}`).join('、');
+    yunRecords.push({
+      id: Date.now() + 1,
+      date,
+      amount: totalAmount,
+      type: 'in',
+      source: '香港代付',
+      remark: `进货-${supplier}(${productNames})${remark ? ' ' + remark : ''}`,
+      clearBatchId: null
+    });
+  }
+
+  saveAll(); renderPurchaseTable(); renderYunTable(); closePurchaseModal();
 }
 
 function deletePurchase(id) {
@@ -1611,7 +1634,7 @@ function renderPurchaseTable() {
   }
   rows.sort((a,b) => (b.purchase.date||'').localeCompare(a.purchase.date||'') || b.purchase.id - a.purchase.id || a.itemIndex - b.itemIndex);
 
-  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="12"><div class="empty-row"><div class="icon">📦</div><div>暂无进货记录</div></div></td></tr>`; updatePurStats(); updatePurSupplierFilter(); return; }
+  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="13"><div class="empty-row"><div class="icon">📦</div><div>暂无进货记录</div></div></td></tr>`; updatePurStats(); updatePurSupplierFilter(); return; }
 
   let lastId = null, rowNum = 0;
   tbody.innerHTML = rows.map(r => {
@@ -1628,6 +1651,7 @@ function renderPurchaseTable() {
       <td style="max-width:52px;overflow-wrap:break-word;"><span class="product-tag cat-${PRODUCT_CATEGORY[item.product]||'yanwo'}">${item.product}</span></td>
       <td>${item.quantity}</td><td>${formatNum(item.unitPrice)}</td><td style="font-weight:600;color:var(--primary);">${formatNum(item.quantity*item.unitPrice)}</td>
       <td>${pendingDisplay}</td><td>${inStatus}</td><td style="font-size:11px;">${inDateText}</td>
+      <td style="font-weight:${isNew&&p.payer==='雲博'?'600;color:var(--primary)':'normal'};">${isNew?(p.payer||'hp'):''}</td>
       <td style="max-width:140px;white-space:normal;font-size:11px;color:var(--text-light);">${isNew?(p.remark||''):''}</td>
       <td>${isNew?`<div class="row-actions"><button class="icon-btn" title="编辑" onclick="openPurchaseModal(${p.id})">✏️</button><button class="icon-btn" title="删除" onclick="deletePurchase(${p.id})">🗑️</button></div>`:''}</td>
     </tr>`;
