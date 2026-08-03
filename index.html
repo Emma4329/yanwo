@@ -667,7 +667,7 @@
         <option value="微信">微信</option><option value="支付宝">支付宝</option>
         <option value="平安">平安</option><option value="工商">工商</option>
         <option value="月供">月供</option><option value="燕窝">燕窝</option>
-        <option value="同行">同行</option>
+        <option value="同行代付">同行代付</option>
         <option value="香港代付">香港代付</option>
       </select></div>
       <div class="form-group flex1"><label>备注</label><input type="text" id="fYunRemark" placeholder="备注..."></div>
@@ -1591,7 +1591,7 @@ function savePurchase() {
       date,
       amount: totalAmount,
       type: 'in',
-      source: '香港代付',
+      source: '同行代付',
       remark: `进货-${supplier}(${productNames})${remark ? ' ' + remark : ''}`,
       clearBatchId: null
     });
