@@ -1004,9 +1004,9 @@ function init() {
   initProductFilter();
   initInvProductSelect();
 
-  // 默认年份设为当年
-  document.getElementById('filterYear').value = String(new Date().getFullYear());
-  document.getElementById('zaFilterYear').value = String(new Date().getFullYear());
+  // 默认年份设为当年（通过 data-cur 标记，updateYearFilter 会读取）
+  document.getElementById('filterYear').setAttribute('data-cur', String(new Date().getFullYear()));
+  document.getElementById('zaFilterYear').setAttribute('data-cur', String(new Date().getFullYear()));
 
   renderOrderTable();
   updatePurSupplierFilter(); // 初始填充供应商下拉
@@ -1382,13 +1382,21 @@ function updateYearFilter() {
   const sel = document.getElementById('filterYear'), years = new Set();
   const currentYear = String(new Date().getFullYear());
   orders.forEach(o => { const y = (o.orderDate||'').substring(0,4); if (y) years.add(y); });
-  years.add(currentYear); // 确保当年始终可选
+  years.add(currentYear);
   const sorted = Array.from(years).sort().reverse();
-  // 保持当前选中值，没有则默认当年
-  const keepVal = sel.value || currentYear;
-  sel.innerHTML = '<option value="">全部</option>' + sorted.map(y => `<option value="${y}" ${y===keepVal?'selected':''}>${y}年</option>`).join('');
-  if (keepVal) sel.value = keepVal;
+  // data-cur: 用户最后选择的值（空串=全部，数字=具体年份，初始化时=当年）
+  let curVal = sel.getAttribute('data-cur');
+  if (!curVal) curVal = currentYear;
+  // 如果 data-cur 是 "__all__" 则映射为空串（全部）
+  if (curVal === '__all__') curVal = '';
+  sel.innerHTML = '<option value="">全部</option>' + sorted.map(y => `<option value="${y}" ${y===curVal?'selected':''}>${y}年</option>`).join('');
+  sel.value = curVal;
 }
+
+// 监听年份下拉变化，记录用户选择
+document.getElementById('filterYear').addEventListener('change', function() {
+  this.setAttribute('data-cur', this.value || '__all__');
+});
 
 function updateOrderStats() {
   const filterYear = document.getElementById('filterYear').value;
