@@ -1384,11 +1384,10 @@ function updateYearFilter() {
   orders.forEach(o => { const y = (o.orderDate||'').substring(0,4); if (y) years.add(y); });
   years.add(currentYear); // 确保当年始终可选
   const sorted = Array.from(years).sort().reverse();
-  // 保持当前选中值
-  const keepVal = sel.value;
+  // 保持当前选中值，没有则默认当年
+  const keepVal = sel.value || currentYear;
   sel.innerHTML = '<option value="">全部</option>' + sorted.map(y => `<option value="${y}" ${y===keepVal?'selected':''}>${y}年</option>`).join('');
   if (keepVal) sel.value = keepVal;
-  else sel.value = ''; // 保持"全部"选中
 }
 
 function updateOrderStats() {
