@@ -643,7 +643,7 @@
     <div class="table-wrapper"><div class="table-scroll">
       <table>
         <thead><tr>
-          <th style="width:32px;">#</th><th>日期</th><th>金额</th><th>类型</th><th>来源</th><th>备注</th><th>清账状态</th><th>操作</th>
+          <th style="width:32px;">#</th><th>日期</th><th>金额</th><th>方向</th><th>来源</th><th>备注</th><th>清账状态</th><th>操作</th>
         </tr></thead>
         <tbody id="yunTableBody"></tbody>
       </table>
@@ -2569,7 +2569,7 @@ function renderYunTable() {
   tbody.innerHTML = rows.map((r, i) => {
     const isIn = r.type === 'in';
     const amtColor = isIn ? 'color:var(--success);' : 'color:var(--danger);';
-    const typeLabel = isIn ? '<span style="color:var(--success);font-weight:600;">← 入账</span>' : '<span style="color:var(--danger);font-weight:600;">→ 出账</span>';
+    const typeLabel = isIn ? '<span style="color:var(--success);font-weight:600;">雲转来</span>' : '<span style="color:var(--danger);font-weight:600;">转给雲</span>';
     let clearedHtml = '<span style="color:var(--text-light);">-</span>';
     if (r.clearBatchId) {
       const batch = yunClearBatches.find(b => b.id === r.clearBatchId);
