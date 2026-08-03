@@ -1691,8 +1691,15 @@ function updatePurYearFilter() {
   purchases.forEach(p => { const y = (p.date||'').substring(0,4); if (y) years.add(y); });
   years.add(currentYear);
   const sorted = Array.from(years).sort().reverse();
-  const keepVal = sel.value || currentYear;
-  sel.innerHTML = '<option value="">全部</option>' + sorted.map(y => `<option value="${y}" ${y===keepVal?'selected':''}>${y}年</option>`).join('');
+  const keepVal = sel.value;
+  // 清空除"全部"外的选项
+  while (sel.options.length > 1) sel.remove(1);
+  sorted.forEach(y => {
+    const opt = document.createElement('option');
+    opt.value = y; opt.textContent = y + '年';
+    if (y === keepVal) opt.selected = true;
+    sel.appendChild(opt);
+  });
 }
 
 // ==========================================
