@@ -450,8 +450,8 @@
     <div class="table-wrapper"><div class="table-scroll">
       <table>
         <thead><tr>
-          <th style="width:32px;">#</th><th style="width:52px;">品种</th><th>当前库存</th><th>待入库</th><th>入库累计</th>
-          <th>成本价</th><th>库存价值</th><th>出库累计</th><th>状态</th>
+          <th style="width:32px;">#</th><th style="width:52px;">状态</th><th style="width:52px;">品种</th><th>当前库存</th><th>待入库</th><th>入库累计</th>
+          <th>成本价</th><th>库存价值</th><th>待发数</th><th>出库累计</th>
         </tr></thead>
         <tbody id="invTableBody"></tbody>
       </table>
@@ -2320,7 +2320,7 @@ function renderInventoryTable() {
   const filterProd = document.getElementById('invFilterProduct').value;
   // 汇总：入库从进货平台取（只算已入库数量），出库从接单已发数
   const invMap = {};
-  ALL_PRODUCT_LIST.forEach(p => { invMap[p] = { product: p, totalIn: 0, totalOut: 0, pendingIn: 0 }; });
+  ALL_PRODUCT_LIST.forEach(p => { invMap[p] = { product: p, totalIn: 0, totalOut: 0, pendingIn: 0, pendingShip: 0 }; });
   // 进货入库：只用 inRecords 中实际入库的数量
   purchases.forEach(p => { p.items.forEach(item => { 
     if (invMap[item.product]) {
@@ -2335,10 +2335,12 @@ function renderInventoryTable() {
   inventoryLog.forEach(log => { if (invMap[log.product]) invMap[log.product].totalIn += log.quantity; });
   // 出库：接单已发数
   orders.forEach(o => { o.items.forEach(item => { if (invMap[item.product]) invMap[item.product].totalOut += (item.shipped || 0); }); });
+  // 待发数：燕窝接单平台下单数 - 已发数
+  orders.forEach(o => { o.items.forEach(item => { if (invMap[item.product]) invMap[item.product].pendingShip += Math.max(0, (item.quantity || 0) - (item.shipped || 0)); }); });
 
   let list = Object.values(invMap).filter(v => v.totalIn > 0 || v.totalOut > 0 || v.pendingIn > 0);
   if (filterProd) list = list.filter(v => v.product === filterProd);
-  if (!list.length) { tbody.innerHTML = `<tr><td colspan="9"><div class="empty-row"><div class="icon">📊</div><div>暂无库存数据，点击「入库记录」添加</div></div></td></tr>`; updateInvStats(); updateInvProdFilter(); return; }
+  if (!list.length) { tbody.innerHTML = `<tr><td colspan="10"><div class="empty-row"><div class="icon">📊</div><div>暂无库存数据，点击「入库记录」添加</div></div></td></tr>`; updateInvStats(); updateInvProdFilter(); return; }
 
   // 按 ALL_PRODUCT_LIST 固定顺序排列
   const sortOrder = {};
@@ -2358,13 +2360,15 @@ function renderInventoryTable() {
     if (current <= 0) { status = '缺货'; badgeClass = 'badge-deposit'; }
     else if (current < 5) { status = '低库存'; badgeClass = 'badge-deposit'; }
     return `<tr>
-      <td>${i+1}</td><td style="max-width:52px;overflow-wrap:break-word;"><span class="product-tag cat-${PRODUCT_CATEGORY[v.product]||'yanwo'}">${v.product}</span></td>
-      <td style="font-weight:700;color:${current<=0?'var(--danger)':'var(--text)'};">${current}</td>
+      <td>${i+1}</td>
+      <td><span class="badge ${badgeClass}">${status}</span></td>
+      <td style="max-width:52px;overflow-wrap:break-word;"><span class="product-tag cat-${PRODUCT_CATEGORY[v.product]||'yanwo'}">${v.product}</span></td>
+      <td style="font-weight:700;color:${current<=0?'var(--danger)':'var(--text)'};text-align:center;">${current}</td>
       <td style="color:${v.pendingIn>0?'var(--warning)':'var(--text-light)'};text-align:center;">${v.pendingIn}</td>
       <td style="text-align:center;">${v.totalIn}</td>
       <td>${cost>0?formatNum(cost):'-'}</td><td style="font-weight:600;color:var(--primary);">${value>0?formatNum(value):'-'}</td>
+      <td style="text-align:center;color:${v.pendingShip>0?'var(--danger)':'var(--text-light)'};font-weight:${v.pendingShip>0?'600':'normal'};">${v.pendingShip}</td>
       <td style="text-align:center;">${v.totalOut}</td>
-      <td><span class="badge ${badgeClass}">${status}</span></td>
     </tr>`;
   }).join('');
   updateInvStats();
