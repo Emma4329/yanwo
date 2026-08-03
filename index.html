@@ -333,8 +333,8 @@
     </div>
 
     <div class="stats">
+      <div class="stat-card info"><div class="label">待发客户 / 待发数</div><div class="value" id="statItems">0 / 0</div></div>
       <div class="stat-card" id="statPendingCard"><div class="label">待收尾款</div><div class="value" id="statPending">¥0</div></div>
-      <div class="stat-card info"><div class="label">待发客户 / 待发数量</div><div class="value" id="statItems">0 / 0</div></div>
       <div class="stat-card warning"><div class="label">预估总利润/年</div><div class="value" id="statEstProfit">¥0</div></div>
       <div class="stat-card"><div class="label">订单总数/年</div><div class="value" id="statTotal">0 <span class="unit">单</span></div></div>
       <div class="stat-card"><div class="label">订单总金额/年</div><div class="value" id="statTotalAmount">¥0</div></div>
@@ -876,7 +876,7 @@ let zaShipTarget = null;
 let editingOrderId = null, editingPurchaseId = null;
 let shipTarget = null;
 
-function formatNum(n) { return parseFloat(n).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function formatNum(n) { return Math.round(parseFloat(n)).toLocaleString('zh-CN'); }
 function productSelectHTML(selected, cls) {
   let h = `<select class="${cls||''}" onchange="${cls==='pur-product-sel'?'onPurProductChange(this);':''}updatePurTotal();" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;">`;
   h += '<option value="">请选择</option>';
