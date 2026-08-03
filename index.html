@@ -351,7 +351,7 @@
         <span>付款：</span><label class="filter-cb"><input type="checkbox" class="filter-pay-cb" value="定金" onchange="renderOrderTable()"> 定金</label><label class="filter-cb"><input type="checkbox" class="filter-pay-cb" value="已结清" onchange="renderOrderTable()"> 已结清</label>
       </div>
       <div class="filter-item">
-        <span>年份：</span><select id="filterYear" onchange="this.setAttribute('data-cur',this.value||'__all__');renderOrderTable()"><option value="">全部</option></select>
+        <span>年份：</span><select id="filterYear" onchange="renderOrderTable()"><option value="">全部</option></select>
       </div>
       <div class="filter-item">
         <span>发货：</span>
@@ -1004,9 +1004,9 @@ function init() {
   initProductFilter();
   initInvProductSelect();
 
-  // 默认年份设为当年（通过 data-cur 标记，updateYearFilter 会读取）
-  document.getElementById('filterYear').setAttribute('data-cur', String(new Date().getFullYear()));
-  document.getElementById('zaFilterYear').setAttribute('data-cur', String(new Date().getFullYear()));
+  // 首次加载标记
+  document.getElementById('filterYear').setAttribute('data-first', '1');
+  document.getElementById('zaFilterYear').setAttribute('data-first', '1');
 
   renderOrderTable();
   updatePurSupplierFilter(); // 初始填充供应商下拉
@@ -1384,11 +1384,30 @@ function updateYearFilter() {
   orders.forEach(o => { const y = (o.orderDate||'').substring(0,4); if (y) years.add(y); });
   years.add(currentYear);
   const sorted = Array.from(years).sort().reverse();
-  // data-cur: 记录用户选择（__all__=全部，数字=具体年份，初始默认当年）
-  let curVal = sel.getAttribute('data-cur') || currentYear;
-  if (curVal === '__all__') curVal = '';
-  sel.innerHTML = '<option value="">全部</option>' + sorted.map(y => `<option value="${y}" ${y===curVal?'selected':''}>${y}年</option>`).join('');
-  sel.value = curVal;
+
+  // 首次加载标记：首次默认选当年
+  const isFirst = sel.getAttribute('data-first') === '1';
+  const keepVal = isFirst ? currentYear : sel.value;
+
+  // 清空除了"全部"以外的选项
+  while (sel.options.length > 1) sel.remove(1);
+
+  // 添加年份选项
+  sorted.forEach(y => {
+    const opt = document.createElement('option');
+    opt.value = y;
+    opt.textContent = y + '年';
+    if (y === keepVal) opt.selected = true;
+    sel.appendChild(opt);
+  });
+
+  // 设置最终值
+  if (keepVal === '') sel.value = '';
+  else if (keepVal && sorted.includes(keepVal)) sel.value = keepVal;
+  else sel.value = currentYear;
+
+  // 清除首次标记
+  if (isFirst) sel.removeAttribute('data-first');
 }
 
 function updateOrderStats() {
