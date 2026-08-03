@@ -332,12 +332,12 @@
     </div>
 
     <div class="stats">
-      <div class="stat-card"><div class="label">订单总数</div><div class="value" id="statTotal">0 <span class="unit">单</span></div></div>
+      <div class="stat-card"><div class="label">订单总数/年</div><div class="value" id="statTotal">0 <span class="unit">单</span></div></div>
       <div class="stat-card info"><div class="label">待发客户 / 待发数量</div><div class="value" id="statItems">0 / 0</div></div>
       <div class="stat-card warning"><div class="label">待收尾款</div><div class="value" id="statPending">¥0</div></div>
-      <div class="stat-card"><div class="label">订单总金额</div><div class="value" id="statTotalAmount">¥0</div></div>
-      <div class="stat-card info"><div class="label">已实现利润</div><div class="value" id="statProfit">¥0</div></div>
-      <div class="stat-card warning"><div class="label">预估总利润</div><div class="value" id="statEstProfit">¥0</div></div>
+      <div class="stat-card"><div class="label">订单总金额/年</div><div class="value" id="statTotalAmount">¥0</div></div>
+      <div class="stat-card info"><div class="label">已实现利润/年</div><div class="value" id="statProfit">¥0</div></div>
+      <div class="stat-card warning"><div class="label">预估总利润/年</div><div class="value" id="statEstProfit">¥0</div></div>
     </div>
 
     <div class="toolbar">
@@ -1384,13 +1384,14 @@ function updateYearFilter() {
   orders.forEach(o => { const y = (o.orderDate||'').substring(0,4); if (y) years.add(y); });
   years.add(currentYear); // 确保当年始终可选
   const sorted = Array.from(years).sort().reverse();
-  // 保持当前选中值，如果为空则默认当年
-  const keepVal = sel.value || currentYear;
+  // 保持当前选中值
+  const keepVal = sel.value;
   sel.innerHTML = '<option value="">全部</option>' + sorted.map(y => `<option value="${y}" ${y===keepVal?'selected':''}>${y}年</option>`).join('');
+  if (!keepVal || !sorted.includes(keepVal)) sel.value = currentYear;
 }
 
 function updateOrderStats() {
-  const filterYear = document.getElementById('filterYear').value;
+  const filterYear = document.getElementById('filterYear').value || String(new Date().getFullYear());
   const statsOrders = filterYear ? orders.filter(o => (o.orderDate||'').substring(0,4) === filterYear) : orders;
   const total = statsOrders.length;
   let pendingCustomers = new Set(), pendingQty = 0, pendingAmount = 0, totalAmount = 0, realizedProfit = 0, estProfit = 0;
