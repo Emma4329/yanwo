@@ -1585,6 +1585,8 @@ function savePurchase() {
   if (payer === '雲博') {
     const totalAmount = items.reduce((sum, it) => sum + it.quantity * it.unitPrice, 0);
     const productNames = items.map(it => `${it.product}×${it.quantity}`).join('、');
+    // 删除旧关联记录（编辑时）
+    yunRecords = yunRecords.filter(r => r.purId !== purchase.id);
     yunRecords.push({
       id: Date.now() + 1,
       date,
@@ -1592,7 +1594,8 @@ function savePurchase() {
       type: 'in',
       source: '同行代付',
       remark: `进货-${supplier}(${productNames})${remark ? ' ' + remark : ''}`,
-      clearBatchId: null
+      clearBatchId: null,
+      purId: purchase.id
     });
   }
 
@@ -1601,7 +1604,10 @@ function savePurchase() {
 
 function deletePurchase(id) {
   if (!confirm('确认删除该进货记录？')) return;
-  purchases = purchases.filter(x => x.id !== id); saveAll(); renderPurchaseTable();
+  purchases = purchases.filter(x => x.id !== id);
+  // 联动删除雲账本中关联的记录
+  yunRecords = yunRecords.filter(r => r.purId !== id);
+  saveAll(); renderPurchaseTable(); renderYunTable();
 }
 
 function renderPurchaseTable() {
