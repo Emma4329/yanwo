@@ -92,8 +92,11 @@
 
   .stats {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: 10px; margin-bottom: 14px;
+  }
+  @media (max-width: 480px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
   }
   .stat-card {
     background: var(--card); padding: 10px 14px; border-radius: 8px;
@@ -101,6 +104,7 @@
   }
   .stat-card.warning { border-left-color: var(--warning); }
   .stat-card.success { border-left-color: var(--success); }
+  .stat-card.danger { border-left-color: var(--danger); background: #FFF5F5; }
   .stat-card.info { border-left-color: var(--info); }
   .stat-card .label { font-size: 11px; color: var(--text-light); margin-bottom: 2px; }
   .stat-card .value { font-size: 17px; font-weight: 700; }
@@ -332,12 +336,12 @@
     </div>
 
     <div class="stats">
-      <div class="stat-card"><div class="label">订单总数/年</div><div class="value" id="statTotal">0 <span class="unit">单</span></div></div>
+      <div class="stat-card" id="statPendingCard"><div class="label">待收尾款</div><div class="value" id="statPending">¥0</div></div>
       <div class="stat-card info"><div class="label">待发客户 / 待发数量</div><div class="value" id="statItems">0 / 0</div></div>
-      <div class="stat-card warning"><div class="label">待收尾款</div><div class="value" id="statPending">¥0</div></div>
+      <div class="stat-card warning"><div class="label">预估总利润/年</div><div class="value" id="statEstProfit">¥0</div></div>
+      <div class="stat-card"><div class="label">订单总数/年</div><div class="value" id="statTotal">0 <span class="unit">单</span></div></div>
       <div class="stat-card"><div class="label">订单总金额/年</div><div class="value" id="statTotalAmount">¥0</div></div>
       <div class="stat-card info"><div class="label">已实现利润/年</div><div class="value" id="statProfit">¥0</div></div>
-      <div class="stat-card warning"><div class="label">预估总利润/年</div><div class="value" id="statEstProfit">¥0</div></div>
     </div>
 
     <div class="toolbar">
@@ -1440,6 +1444,10 @@ function updateOrderStats() {
   document.getElementById('statTotal').innerHTML = `${total} <span class="unit">单</span>`;
   document.getElementById('statItems').innerHTML = `${pendingCustomers.size} / ${pendingQty}`;
   document.getElementById('statPending').textContent = '¥' + formatNum(Math.max(0, pendingAmount));
+  // 待收尾款 > 0 时卡片变红
+  const pendingCard = document.getElementById('statPendingCard');
+  if (pendingAmount > 0) { pendingCard.classList.add('danger'); pendingCard.classList.remove('warning'); }
+  else { pendingCard.classList.remove('danger'); pendingCard.classList.add('warning'); }
   document.getElementById('statTotalAmount').textContent = '¥' + formatNum(totalAmount);
   document.getElementById('statProfit').textContent = '¥' + formatNum(realizedProfit);
   document.getElementById('statEstProfit').textContent = '¥' + formatNum(estProfit);
