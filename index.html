@@ -494,10 +494,12 @@
     </div>
 
     <div class="stats">
-      <div class="stat-card"><div class="label">订单总数</div><div class="value" id="zaStatTotal">0 <span class="unit">单</span></div></div>
-      <div class="stat-card info"><div class="label">待发客 / 待发数量</div><div class="value" id="zaStatItems">0 / 0</div></div>
-      <div class="stat-card warning"><div class="label">待收尾款</div><div class="value" id="zaStatPending">¥0</div></div>
-      <div class="stat-card"><div class="label">订单总金额</div><div class="value" id="zaStatTotalAmount">¥0</div></div>
+      <div class="stat-card info"><div class="label">待发客 / 待发数</div><div class="value" id="zaStatItems">0 / 0</div></div>
+      <div class="stat-card" id="zaStatPendingCard"><div class="label">待收尾款</div><div class="value" id="zaStatPending">¥0</div></div>
+      <div class="stat-card warning"><div class="label">预估总利润/年</div><div class="value" id="zaStatEstProfit">¥0</div></div>
+      <div class="stat-card"><div class="label">订单总数/年</div><div class="value" id="zaStatTotal">0 <span class="unit">单</span></div></div>
+      <div class="stat-card"><div class="label">订单总金额/年</div><div class="value" id="zaStatTotalAmount">¥0</div></div>
+      <div class="stat-card info"><div class="label">已实现利润/年</div><div class="value" id="zaStatProfit">¥0</div></div>
     </div>
 
     <div class="toolbar">
@@ -1815,7 +1817,7 @@ function updateZaStats() {
   const filterYear = document.getElementById('zaFilterYear').value;
   const statsOrders = filterYear ? zaOrders.filter(o => (o.orderDate||'').substring(0,4) === filterYear) : zaOrders;
   const total = statsOrders.length;
-  let pendingCustomers = new Set(), pendingQty = 0, pendingAmount = 0, totalAmount = 0;
+  let pendingCustomers = new Set(), pendingQty = 0, pendingAmount = 0, totalAmount = 0, realizedProfit = 0, estProfit = 0;
   statsOrders.forEach(o => {
     let orderHasPending = false;
     o.items.forEach(item => {
@@ -1824,6 +1826,11 @@ function updateZaStats() {
       if (remain > 0) { orderHasPending = true; pendingQty += remain; }
       const sub = item.quantity * item.unitPrice; totalAmount += sub;
       if (o.payment === '定金') pendingAmount += (sub - (parseFloat(o.deposit)||0));
+      // 已实现利润
+      const cost = item.cost || 0;
+      if (shipped > 0 && cost > 0) realizedProfit += (item.unitPrice - cost) * shipped;
+      // 预估利润
+      if (cost > 0) estProfit += (item.unitPrice - cost) * item.quantity;
     });
     if (orderHasPending) pendingCustomers.add(o.customer);
     if (o.payment === '定金') pendingAmount += (parseFloat(o.deposit)||0) * (o.items.length - 1);
@@ -1832,6 +1839,12 @@ function updateZaStats() {
   document.getElementById('zaStatItems').innerHTML = `${pendingCustomers.size} / ${pendingQty}`;
   document.getElementById('zaStatPending').textContent = '¥' + formatNum(Math.max(0, pendingAmount));
   document.getElementById('zaStatTotalAmount').textContent = '¥' + formatNum(totalAmount);
+  document.getElementById('zaStatProfit').textContent = '¥' + formatNum(realizedProfit);
+  document.getElementById('zaStatEstProfit').textContent = '¥' + formatNum(estProfit);
+  // 待收尾款 > 0 变红
+  const pendingCard = document.getElementById('zaStatPendingCard');
+  if (pendingAmount > 0) { pendingCard.classList.add('danger'); pendingCard.classList.remove('warning'); }
+  else { pendingCard.classList.remove('danger'); pendingCard.classList.add('warning'); }
 }
 
 function updateZaYearFilter() {
@@ -1840,8 +1853,24 @@ function updateZaYearFilter() {
   zaOrders.forEach(o => { const y = (o.orderDate||'').substring(0,4); if (y) years.add(y); });
   years.add(currentYear);
   const sorted = Array.from(years).sort().reverse();
-  const keepVal = sel.value || currentYear;
-  sel.innerHTML = '<option value="">全部</option>' + sorted.map(y => `<option value="${y}" ${y===keepVal?'selected':''}>${y}年</option>`).join('');
+
+  const isFirst = sel.getAttribute('data-first') === '1';
+  const keepVal = isFirst ? currentYear : sel.value;
+
+  while (sel.options.length > 1) sel.remove(1);
+  sorted.forEach(y => {
+    const opt = document.createElement('option');
+    opt.value = y;
+    opt.textContent = y + '年';
+    if (y === keepVal) opt.selected = true;
+    sel.appendChild(opt);
+  });
+
+  if (keepVal === '') sel.value = '';
+  else if (keepVal && sorted.includes(keepVal)) sel.value = keepVal;
+  else sel.value = currentYear;
+
+  if (isFirst) sel.removeAttribute('data-first');
 }
 
 function openZaModal(id) {
