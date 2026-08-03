@@ -1392,7 +1392,7 @@ function updateYearFilter() {
 }
 
 function updateOrderStats() {
-  const filterYear = document.getElementById('filterYear').value || String(new Date().getFullYear());
+  const filterYear = document.getElementById('filterYear').value;
   const statsOrders = filterYear ? orders.filter(o => (o.orderDate||'').substring(0,4) === filterYear) : orders;
   const total = statsOrders.length;
   let pendingCustomers = new Set(), pendingQty = 0, pendingAmount = 0, totalAmount = 0, realizedProfit = 0, estProfit = 0;
