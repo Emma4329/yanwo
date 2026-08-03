@@ -1387,7 +1387,8 @@ function updateYearFilter() {
   // 保持当前选中值
   const keepVal = sel.value;
   sel.innerHTML = '<option value="">全部</option>' + sorted.map(y => `<option value="${y}" ${y===keepVal?'selected':''}>${y}年</option>`).join('');
-  if (!keepVal || !sorted.includes(keepVal)) sel.value = currentYear;
+  if (keepVal) sel.value = keepVal;
+  else sel.value = ''; // 保持"全部"选中
 }
 
 function updateOrderStats() {
