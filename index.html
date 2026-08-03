@@ -398,7 +398,7 @@
     </div>
     <div class="filter-bar">
       <div class="filter-item">
-        <span>年份：</span><select id="purFilterYear" onchange="renderPurchaseTable()"><option value="">全部</option></select>
+        <span>年份：</span><select id="purFilterYear" data-first="1" onchange="renderPurchaseTable()"><option value="">全部</option></select>
       </div>
       <div class="filter-item">
         <span>入库：</span>
@@ -1691,15 +1691,30 @@ function updatePurYearFilter() {
   purchases.forEach(p => { const y = (p.date||'').substring(0,4); if (y) years.add(y); });
   years.add(currentYear);
   const sorted = Array.from(years).sort().reverse();
-  const keepVal = sel.value;
-  // 清空除"全部"外的选项
+
+  // 首次加载标记：首次默认选当年
+  const isFirst = sel.getAttribute('data-first') === '1';
+  const keepVal = isFirst ? currentYear : sel.value;
+
+  // 清空除了"全部"以外的选项
   while (sel.options.length > 1) sel.remove(1);
+
+  // 添加年份选项
   sorted.forEach(y => {
     const opt = document.createElement('option');
-    opt.value = y; opt.textContent = y + '年';
+    opt.value = y;
+    opt.textContent = y + '年';
     if (y === keepVal) opt.selected = true;
     sel.appendChild(opt);
   });
+
+  // 设置最终值
+  if (keepVal === '') sel.value = '';
+  else if (keepVal && sorted.includes(keepVal)) sel.value = keepVal;
+  else sel.value = currentYear;
+
+  // 清除首次标记
+  if (isFirst) sel.removeAttribute('data-first');
 }
 
 // ==========================================
