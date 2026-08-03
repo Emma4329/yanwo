@@ -351,7 +351,7 @@
         <span>付款：</span><label class="filter-cb"><input type="checkbox" class="filter-pay-cb" value="定金" onchange="renderOrderTable()"> 定金</label><label class="filter-cb"><input type="checkbox" class="filter-pay-cb" value="已结清" onchange="renderOrderTable()"> 已结清</label>
       </div>
       <div class="filter-item">
-        <span>年份：</span><select id="filterYear" onchange="renderOrderTable()"><option value="">全部</option></select>
+        <span>年份：</span><select id="filterYear" onchange="this.setAttribute('data-cur',this.value||'__all__');renderOrderTable()"><option value="">全部</option></select>
       </div>
       <div class="filter-item">
         <span>发货：</span>
@@ -1384,19 +1384,12 @@ function updateYearFilter() {
   orders.forEach(o => { const y = (o.orderDate||'').substring(0,4); if (y) years.add(y); });
   years.add(currentYear);
   const sorted = Array.from(years).sort().reverse();
-  // data-cur: 用户最后选择的值（空串=全部，数字=具体年份，初始化时=当年）
-  let curVal = sel.getAttribute('data-cur');
-  if (!curVal) curVal = currentYear;
-  // 如果 data-cur 是 "__all__" 则映射为空串（全部）
+  // data-cur: 记录用户选择（__all__=全部，数字=具体年份，初始默认当年）
+  let curVal = sel.getAttribute('data-cur') || currentYear;
   if (curVal === '__all__') curVal = '';
   sel.innerHTML = '<option value="">全部</option>' + sorted.map(y => `<option value="${y}" ${y===curVal?'selected':''}>${y}年</option>`).join('');
   sel.value = curVal;
 }
-
-// 监听年份下拉变化，记录用户选择
-document.getElementById('filterYear').addEventListener('change', function() {
-  this.setAttribute('data-cur', this.value || '__all__');
-});
 
 function updateOrderStats() {
   const filterYear = document.getElementById('filterYear').value;
