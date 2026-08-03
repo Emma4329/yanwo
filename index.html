@@ -95,16 +95,13 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 10px; margin-bottom: 14px;
   }
-  @media (max-width: 480px) {
-    .stats { grid-template-columns: repeat(2, 1fr); }
-  }
   .stat-card {
     background: var(--card); padding: 10px 14px; border-radius: 8px;
     box-shadow: var(--shadow); border-left: 3px solid var(--primary);
   }
   .stat-card.warning { border-left-color: var(--warning); }
   .stat-card.success { border-left-color: var(--success); }
-  .stat-card.danger { border-left-color: var(--danger); background: #FFF5F5; }
+  .stat-card.danger { border-left-color: var(--danger); background: #FDE8E8; }
   .stat-card.info { border-left-color: var(--info); }
   .stat-card .label { font-size: 11px; color: var(--text-light); margin-bottom: 2px; }
   .stat-card .value { font-size: 17px; font-weight: 700; }
