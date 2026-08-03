@@ -1755,9 +1755,22 @@ function renderCompareTable() {
 
   // 渲染所有品种行
   tbody.innerHTML = ALL_PRODUCT_LIST.map((prod, i) => {
+    // 先算出该品种各供应商的有效价格，找最低值
+    const vals = suppliers.map(s => {
+      const v = (prices[prod] && prices[prod][s] !== undefined && prices[prod][s] !== '') ? parseFloat(prices[prod][s]) : NaN;
+      return v;
+    });
+    const validVals = vals.filter(v => !isNaN(v) && v > 0);
+    const minVal = validVals.length > 0 ? Math.min(...validVals) : null;
+    const minCount = minVal !== null ? validVals.filter(v => v === minVal).length : 0;
+
     const cells = suppliers.map((s, si) => {
       const val = (prices[prod] && prices[prod][s] !== undefined) ? prices[prod][s] : '';
-      return `<td><input value="${val}" onchange="updateComparePrice('${prod}','${s}',this.value)" style="width:100%;border:none;background:transparent;font-size:11px;text-align:center;padding:4px 2px;" placeholder="-" type="number" step="0.01" min="0"></td>`;
+      const numVal = vals[si];
+      // 只有唯一最低值才加底色，并列最低不加
+      const isMin = minVal !== null && !isNaN(numVal) && numVal === minVal && minCount === 1;
+      const bg = isMin ? 'background:#d4f4d4;' : '';
+      return `<td style="${bg}"><input value="${val}" onchange="updateComparePrice('${prod}','${s}',this.value)" style="width:100%;border:none;background:transparent;font-size:11px;text-align:center;padding:4px 2px;${isMin?'color:var(--success);font-weight:600;':''}" placeholder="-" type="number" step="0.01" min="0"></td>`;
     }).join('');
     return `<tr>
       <td>${i+1}</td>
