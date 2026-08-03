@@ -1004,9 +1004,9 @@ function init() {
   initProductFilter();
   initInvProductSelect();
 
-  // 默认年份设为当年
-  document.getElementById('filterYear').value = String(new Date().getFullYear());
-  document.getElementById('zaFilterYear').value = String(new Date().getFullYear());
+  // 默认年份设为全部
+  document.getElementById('filterYear').value = '';
+  document.getElementById('zaFilterYear').value = '';
 
   renderOrderTable();
   updatePurSupplierFilter(); // 初始填充供应商下拉
