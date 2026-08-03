@@ -805,7 +805,7 @@
 // ====== 离线缓存 Service Worker ======
 if ('serviceWorker' in navigator) {
   // 内联 Service Worker - 缓存当前页面使离线可用
-  const cacheName = 'yanwo-v3';
+  const cacheName = 'yanwo-v4';
   const pageUrl = location.href;
   
   // 用 Blob 创建内联的 Service Worker
@@ -1604,9 +1604,20 @@ function savePurchase() {
 
 function deletePurchase(id) {
   if (!confirm('确认删除该进货记录？')) return;
+  // 先找到被删除的进货记录信息（用于匹配旧 yun 记录）
+  const deletedPur = purchases.find(x => x.id === id);
   purchases = purchases.filter(x => x.id !== id);
   // 联动删除雲账本中关联的记录
   yunRecords = yunRecords.filter(r => r.purId !== id);
+  // 兜底：匹配旧数据（无 purId 的同行代付记录，按备注匹配）
+  if (deletedPur) {
+    const productNames = deletedPur.items.map(it => `${it.product}×${it.quantity}`).join('、');
+    const matchRemark = `进货-${deletedPur.supplier}(${productNames})`;
+    yunRecords = yunRecords.filter(r => {
+      if (r.source === '同行代付' && !r.purId && r.remark && r.remark.startsWith(matchRemark)) return false;
+      return true;
+    });
+  }
   saveAll(); renderPurchaseTable(); renderYunTable();
 }
 
