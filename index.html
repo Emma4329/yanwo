@@ -622,9 +622,8 @@
 
     <!-- 统计卡片 -->
     <div class="stats">
-      <div class="stat-card info"><div class="label">总入账（云收/云转）</div><div class="value" id="yunStatIn" style="color:var(--success);">¥0</div></div>
-      <div class="stat-card warning"><div class="label">总出账（转云/代付）</div><div class="value" id="yunStatOut" style="color:var(--danger);">¥0</div></div>
-      <div class="stat-card"><div class="label">净额（入 - 出）</div><div class="value" id="yunStatNet">¥0</div></div>
+      <div class="stat-card"><div class="label">净额（总入-总出）</div><div class="value" id="yunStatNet">¥0</div></div>
+      <div class="stat-card warning"><div class="label">未清账净额（当次入-当次出）</div><div class="value" id="yunStatUnclearedNet">¥0</div></div>
     </div>
 
     <!-- 清账区域 -->
@@ -2689,15 +2688,22 @@ function updateYunClearStatus() {
 
 function updateYunStats() {
   let inSum = 0, outSum = 0;
+  let unclearedIn = 0, unclearedOut = 0;
   yunRecords.forEach(r => {
-    if (r.type === 'in') inSum += r.amount;
-    else outSum += r.amount;
+    if (r.type === 'in') {
+      inSum += r.amount;
+      if (!r.clearBatchId) unclearedIn += r.amount;
+    } else {
+      outSum += r.amount;
+      if (!r.clearBatchId) unclearedOut += r.amount;
+    }
   });
   const net = inSum - outSum;
-  document.getElementById('yunStatIn').textContent = '¥' + formatNum(inSum);
-  document.getElementById('yunStatOut').textContent = '¥' + formatNum(outSum);
+  const unclearedNet = unclearedIn - unclearedOut;
   document.getElementById('yunStatNet').textContent = '¥' + formatNum(net);
   document.getElementById('yunStatNet').style.color = net >= 0 ? 'var(--success)' : 'var(--danger)';
+  document.getElementById('yunStatUnclearedNet').textContent = '¥' + formatNum(unclearedNet);
+  document.getElementById('yunStatUnclearedNet').style.color = unclearedNet >= 0 ? 'var(--success)' : 'var(--danger)';
 }
 
 // ==========================================
