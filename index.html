@@ -325,9 +325,6 @@
         <div class="sub">多品种下单 · 分批发货 · 利润核算</div>
       </div>
       <div class="header-actions">
-        <button class="btn btn-secondary" onclick="exportAll()">📤 导出全部</button>
-        <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">📥 导入</button>
-        <input type="file" id="importFile" accept=".json" style="display:none" onchange="importAll(event)">
         <button class="btn btn-primary" onclick="openOrderModal()">➕ 新增订单</button>
       </div>
     </div>
@@ -539,6 +536,11 @@
       <div>
         <h1>🎯 个人成长平台</h1>
         <div class="sub">每日打卡 · 每周汇总 · 自我精进</div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-secondary" onclick="exportAll()">📤 导出全部</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">📥 导入</button>
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="importAll(event)">
       </div>
     </div>
 
