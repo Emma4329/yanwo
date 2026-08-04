@@ -489,7 +489,7 @@
       </div>
       <div class="header-actions">
         <button class="btn btn-primary" onclick="openZaModal()">➕ 新增订单</button>
-        <button class="btn btn-outline" onclick="openZaPendingPurchase()">📋 待采购</button>
+        <button class="btn btn-outline" onclick="openZaPendingPurchase()" style="color:#fff;border-color:#fff;">📋 待采购</button>
       </div>
     </div>
 
@@ -754,7 +754,7 @@
   <div class="modal-body">
     <div class="table-wrapper"><div class="table-scroll">
       <table>
-        <thead><tr><th style="width:32px;">#</th><th>商品名</th><th>待发总数</th></tr></thead>
+        <thead><tr><th style="width:32px;">#</th><th>商品名</th><th>待发总数</th><th style="width:60px;">已采购</th></tr></thead>
         <tbody id="zaPendingBody"></tbody>
       </table>
     </div></div>
@@ -1389,10 +1389,10 @@ function renderOrderTable() {
       <td style="font-weight:500;text-align:center;color:${pending>0?'var(--danger)':'var(--text-light)'};">${pending}</td>
       <td>${item.shipDate||'<span style="color:var(--text-light);">-</span>'}</td>
       <td>${formatNum(item.unitPrice)}</td>
-      <td style="font-weight:600;color:var(--primary);">${formatNum(subTotal)}</td>
-      <td style="color:var(--text-light);">${avgCost>0?formatNum(avgCost):'-'}</td>
-      <td style="color:var(--text-light);">${item.freight>0?formatNum(item.freight):'-'}</td>
-      <td style="font-weight:600;${profitClass}">${shipped>0&&avgCost>0?formatNum(profit):'-'}</td>
+      <td style="font-weight:600;color:var(--primary);text-align:center;">${formatNum(subTotal)}</td>
+      <td style="color:var(--text-light);text-align:center;">${avgCost>0?formatNum(avgCost):'-'}</td>
+      <td style="color:var(--text-light);text-align:center;">${item.freight>0?formatNum(item.freight):'-'}</td>
+      <td style="font-weight:600;${profitClass}text-align:center;">${shipped>0&&avgCost>0?formatNum(profit):'-'}</td>
       <td>${isNewGroup?`<span class="badge ${o.payment==='已结清'?'badge-paid':'badge-deposit'}">${o.payment}</span>${depositInfo}`:''}</td>
       <td style="max-width:100px;white-space:normal;font-size:9px;color:var(--text-light);">${isNewGroup && o.items.length > 1 ? o.items.filter((it,idx) => idx !== r.itemIndex).map(it => { const remain = it.quantity - (it.shipped||0); return remain > 0 ? `${remain}两${it.product}` : ''; }).filter(s => s).join('<br>') : ''}</td>
       <td style="max-width:120px;white-space:normal;font-size:10px;color:var(--text-light);">${isNewGroup?(o.remark||''):''}</td>
@@ -1895,10 +1895,10 @@ function renderZaTable() {
       <td style="font-weight:500;text-align:center;color:${pending>0?'var(--danger)':'var(--text-light)'};">${pending}</td>
       <td>${item.shipDate||'<span style="color:var(--text-light);">-</span>'}</td>
       <td>${formatNum(item.unitPrice)}</td>
-      <td style="font-weight:600;color:var(--primary);">${formatNum(subTotal)}</td>
-      <td>${formatNum(item.cost || 0)}</td>
-      <td>${item.freight>0?formatNum(item.freight):'-'}</td>
-      <td style="font-weight:600;color:var(--success);">${formatNum(subTotal - (item.cost || 0) * item.quantity - (item.freight || 0))}</td>
+      <td style="font-weight:600;color:var(--primary);text-align:center;">${formatNum(subTotal)}</td>
+      <td style="text-align:center;">${formatNum(item.cost || 0)}</td>
+      <td style="text-align:center;">${item.freight>0?formatNum(item.freight):'-'}</td>
+      <td style="font-weight:600;color:var(--success);text-align:center;">${formatNum(subTotal - (item.cost || 0) * item.quantity - (item.freight || 0))}</td>
       <td>${isNewGroup?`<span class="badge ${o.payment==='已结清'?'badge-paid':'badge-deposit'}">${o.payment}</span>${depositInfo}`:''}</td>
       <td style="max-width:120px;white-space:normal;font-size:10px;color:var(--text-light);">${isNewGroup?(o.remark||''):''}</td>
       <td><div class="row-actions">
@@ -2111,13 +2111,32 @@ function openZaPendingPurchase() {
   const list = Object.entries(pendingMap).sort((a, b) => a[0].localeCompare(b[0]));
   const tbody = document.getElementById('zaPendingBody');
   if (!list.length) {
-    tbody.innerHTML = '<tr><td colspan="3"><div class="empty-row"><div class="icon">✅</div><div>没有待采购的商品</div></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4"><div class="empty-row"><div class="icon">✅</div><div>没有待采购的商品</div></div></td></tr>';
   } else {
-    tbody.innerHTML = list.map(([name, qty], i) => `<tr><td>${i+1}</td><td style="font-weight:500;">${name}</td><td style="font-weight:700;color:var(--danger);text-align:center;">${qty}</td></tr>`).join('');
+    tbody.innerHTML = list.map(([name, qty], i) => {
+      const id = 'zaPending_' + i;
+      return `<tr id="${id}">
+        <td>${i+1}</td>
+        <td style="font-weight:500;" id="${id}_name">${name}</td>
+        <td style="font-weight:700;color:var(--danger);text-align:center;">${qty}</td>
+        <td style="text-align:center;"><input type="checkbox" onchange="toggleZaPendingCheck(this, '${id}')" style="width:16px;height:16px;cursor:pointer;"></td>
+      </tr>`;
+    }).join('');
   }
   document.getElementById('zaPendingModal').classList.add('show');
 }
 function closeZaPendingPurchase() { document.getElementById('zaPendingModal').classList.remove('show'); }
+
+function toggleZaPendingCheck(cb, rowId) {
+  const nameCell = document.getElementById(rowId + '_name');
+  if (cb.checked) {
+    nameCell.style.textDecoration = 'line-through';
+    nameCell.style.color = 'var(--text-light)';
+  } else {
+    nameCell.style.textDecoration = '';
+    nameCell.style.color = '';
+  }
+}
 
 // ==========================================
 // ========== 个人成长平台 ==========
