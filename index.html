@@ -88,7 +88,7 @@
   }
   .page-header h1 { font-size: 20px; font-weight: 700; }
   .page-header .sub { font-size: 11px; opacity: 0.85; margin-top: 2px; }
-  .header-actions { display: flex; gap: 8px; }
+  .header-actions { display: flex; gap: 8px; flex-shrink: 0; }
 
   .stats {
     display: grid;
@@ -2096,6 +2096,14 @@ function confirmZaShip() {
 }
 
 // --- 杂待采购弹窗 ---
+// 已采购标记存储（localStorage key: za_purchased_checkmarks）
+function getZaPurchasedMarks() {
+  try { return JSON.parse(localStorage.getItem('za_purchased_marks') || '[]'); } catch(e) { return []; }
+}
+function setZaPurchasedMarks(arr) {
+  localStorage.setItem('za_purchased_marks', JSON.stringify(arr));
+}
+
 function openZaPendingPurchase() {
   // 聚合杂平台中所有待发货商品（shipped < quantity）
   const pendingMap = {};
@@ -2109,17 +2117,21 @@ function openZaPendingPurchase() {
     });
   });
   const list = Object.entries(pendingMap).sort((a, b) => a[0].localeCompare(b[0]));
+  const checkedMarks = getZaPurchasedMarks();
   const tbody = document.getElementById('zaPendingBody');
   if (!list.length) {
     tbody.innerHTML = '<tr><td colspan="4"><div class="empty-row"><div class="icon">✅</div><div>没有待采购的商品</div></div></td></tr>';
   } else {
     tbody.innerHTML = list.map(([name, qty], i) => {
       const id = 'zaPending_' + i;
+      const isChecked = checkedMarks.includes(name);
+      const lineStyle = isChecked ? 'text-decoration:line-through;color:var(--text-light);' : '';
+      const chkAttr = isChecked ? ' checked' : '';
       return `<tr id="${id}">
         <td>${i+1}</td>
-        <td style="font-weight:500;" id="${id}_name">${name}</td>
+        <td style="font-weight:500;${lineStyle}" id="${id}_name">${name}</td>
         <td style="font-weight:700;color:var(--danger);text-align:center;">${qty}</td>
-        <td style="text-align:center;"><input type="checkbox" onchange="toggleZaPendingCheck(this, '${id}')" style="width:16px;height:16px;cursor:pointer;"></td>
+        <td style="text-align:center;"><input type="checkbox" onchange="toggleZaPendingCheck(this, '${name.replace(/'/g,"\\'")}', '${id}')"${chkAttr} style="width:16px;height:16px;cursor:pointer;"></td>
       </tr>`;
     }).join('');
   }
@@ -2127,15 +2139,19 @@ function openZaPendingPurchase() {
 }
 function closeZaPendingPurchase() { document.getElementById('zaPendingModal').classList.remove('show'); }
 
-function toggleZaPendingCheck(cb, rowId) {
+function toggleZaPendingCheck(cb, productName, rowId) {
   const nameCell = document.getElementById(rowId + '_name');
+  let marks = getZaPurchasedMarks();
   if (cb.checked) {
+    marks.push(productName);
     nameCell.style.textDecoration = 'line-through';
     nameCell.style.color = 'var(--text-light)';
   } else {
+    marks = marks.filter(m => m !== productName);
     nameCell.style.textDecoration = '';
     nameCell.style.color = '';
   }
+  setZaPurchasedMarks(marks);
 }
 
 // ==========================================
