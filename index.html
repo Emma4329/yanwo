@@ -372,7 +372,7 @@
         <label><input type="checkbox" value="pending" class="filter-ship-cb" onchange="renderOrderTable()" checked>待发</label>
         <label><input type="checkbox" value="partial" class="filter-ship-cb" onchange="renderOrderTable()" checked>部分</label>
         <label><input type="checkbox" value="done" class="filter-ship-cb" onchange="renderOrderTable()">已发完</label>
-        <input type="text" id="filterShipDate" onchange="renderOrderTable()" placeholder="发货日" style="width:80px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:11px;margin-left:8px;">
+        <span style="margin-left:10px;">发货日：</span><input type="date" id="filterShipDate" onchange="renderOrderTable()" style="width:120px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
       </div>
     </div>
 
@@ -531,7 +531,7 @@
         <label><input type="checkbox" value="pending" class="za-filter-ship-cb" onchange="renderZaTable()" checked>待发</label>
         <label><input type="checkbox" value="partial" class="za-filter-ship-cb" onchange="renderZaTable()" checked>部分</label>
         <label><input type="checkbox" value="done" class="za-filter-ship-cb" onchange="renderZaTable()">已发完</label>
-        <input type="text" id="zaFilterShipDate" onchange="renderZaTable()" placeholder="发货日" style="width:80px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:11px;margin-left:8px;">
+        <span style="margin-left:10px;">发货日：</span><input type="date" id="zaFilterShipDate" onchange="renderZaTable()" style="width:120px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
       </div>
     </div>
 
@@ -1411,7 +1411,7 @@ function renderOrderTable() {
     const showPartial = filterShipChecks.includes('partial') && hasPending && hasShipped;
     const showDone = filterShipChecks.includes('done') && isDone;
     if (!(showPending || showPartial || showDone)) return false;
-    if (filterShipDate && formatShipDateShort(r.item.shipDate) !== filterShipDate) return false;
+    if (filterShipDate && r.item.shipDate !== filterShipDate) return false;
     if (search) { const text = (r.order.customer + r.item.product + r.order.remark + r.order.orderDate).toLowerCase(); if (!text.includes(search)) return false; }
     return true;
   });
@@ -1924,7 +1924,7 @@ function renderZaTable() {
     const showPartial = filterShipChecks.includes('partial') && hasPending && hasShipped;
     const showDone = filterShipChecks.includes('done') && isDone;
     if (!(showPending || showPartial || showDone)) return false;
-    if (filterZaShipDate && formatShipDateShort(r.item.shipDate) !== filterZaShipDate) return false;
+    if (filterZaShipDate && r.item.shipDate !== filterZaShipDate) return false;
     if (search) { const text = (r.order.customer + r.item.product + r.order.remark + r.order.orderDate).toLowerCase(); if (!text.includes(search)) return false; }
     return true;
   });
