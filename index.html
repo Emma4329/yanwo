@@ -588,12 +588,12 @@
     <div style="background:var(--card);border-radius:10px;padding:16px;box-shadow:var(--shadow);margin-top:14px;">
       <h3 style="margin:0 0 12px;font-size:14px;">📊 每周汇总</h3>
       <div class="stats" style="margin-bottom:10px;">
-        <div class="stat-card"><div class="label">打卡天数</div><div class="value" id="growthSumDays">0</div></div>
+        <div class="stat-card"><div class="label calc-label" onclick="showCalcTip(event,'本周完成率 = 本周内截至今天的打卡天数 ÷ 本周截至今天的日历天数\n例如本周还没过完，只要到今天为止每天都打了卡，即算100%')">本周完成率</div><div class="value" id="growthSumRate">0%</div></div>
         <div class="stat-card info"><div class="label">朋友圈达标天</div><div class="value" id="growthSumWx">0</div></div>
         <div class="stat-card info"><div class="label">小红书达标天</div><div class="value" id="growthSumXhs">0</div></div>
         <div class="stat-card info"><div class="label">学习达标天</div><div class="value" id="growthSumStudy">0</div></div>
-        <div class="stat-card success"><div class="label">卖货周利润</div><div class="value" id="growthSumSellProfit">¥0</div></div>
-        <div class="stat-card success"><div class="label">杂货周利润</div><div class="value" id="growthSumZaProfit">¥0</div></div>
+        <div class="stat-card success"><div class="label calc-label" onclick="showCalcTip(event,'燕窝周利润 = 本周（所选周）燕窝接单平台中下单的利润合计')">燕窝周利润</div><div class="value" id="growthSumSellProfit">¥0</div></div>
+        <div class="stat-card success"><div class="label calc-label" onclick="showCalcTip(event,'杂货周利润 = 本周（所选周）杂货平台中下单的利润合计')">杂货周利润</div><div class="value" id="growthSumZaProfit">¥0</div></div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;">
         <select id="growthWeekSelect" onchange="renderGrowthSummary()" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></select>
@@ -609,9 +609,9 @@
         <button class="btn btn-outline btn-sm" onclick="changeGrowthMonth(1)">下月 ▶</button>
       </div>
       <div class="stats" style="margin-bottom:14px;">
-        <div class="stat-card success"><div class="label">本月卖货利润</div><div class="value" id="growthMonthSellProfit">¥0</div></div>
-        <div class="stat-card success"><div class="label">本月杂货利润</div><div class="value" id="growthMonthZaProfit">¥0</div></div>
-        <div class="stat-card success" style="border-left-color:var(--primary);"><div class="label">本月利润合计</div><div class="value" id="growthMonthTotalProfit">¥0</div></div>
+        <div class="stat-card success"><div class="label calc-label" onclick="showCalcTip(event,'本月燕窝利润 = 本月燕窝接单平台中下单的利润合计')">本月燕窝利润</div><div class="value" id="growthMonthSellProfit">¥0</div></div>
+        <div class="stat-card success"><div class="label calc-label" onclick="showCalcTip(event,'本月杂货利润 = 本月杂货平台中下单的利润合计')">本月杂货利润</div><div class="value" id="growthMonthZaProfit">¥0</div></div>
+        <div class="stat-card success" style="border-left-color:var(--primary);"><div class="label calc-label" onclick="showCalcTip(event,'本月利润合计 = 本月燕窝利润 + 本月杂货利润')">本月利润合计</div><div class="value" id="growthMonthTotalProfit">¥0</div></div>
       </div>
       <div id="growthChartContainer" style="background:var(--bg);border-radius:8px;padding:12px;overflow-x:auto;">
         <svg id="growthProfitChart" width="100%" height="320" viewBox="0 0 600 320" style="min-width:100%;"></svg>
@@ -2539,7 +2539,15 @@ function renderGrowthSummary() {
   const weekEnd = new Date(new Date(weekStart).getTime() + 6*86400000).toISOString().split('T')[0];
   const weekRecords = growthRecords.filter(r => r.date >= weekStart && r.date <= weekEnd);
 
-  document.getElementById('growthSumDays').textContent = weekRecords.length;
+  // 本周完成率：截至今天（含）的日历天数内，已打卡天数占比
+  const eligibleEnd = (weekEnd <= today) ? weekEnd : today;
+  const startMs = new Date(weekStart + 'T00:00:00').getTime();
+  const endMs = new Date(eligibleEnd + 'T00:00:00').getTime();
+  const eligibleDays = Math.max(Math.round((endMs - startMs) / 86400000) + 1, 1);
+  const checkedDays = weekRecords.filter(r => r.date <= eligibleEnd).length;
+  const completionRate = Math.round((checkedDays / eligibleDays) * 100);
+  document.getElementById('growthSumRate').textContent = completionRate + '%';
+
   document.getElementById('growthSumWx').textContent = weekRecords.filter(r => parseInt(r.wx) >= 3).length;
   document.getElementById('growthSumXhs').textContent = weekRecords.filter(r => parseInt(r.xhs) >= 1).length;
   document.getElementById('growthSumStudy').textContent = weekRecords.filter(r => parseFloat(r.study) >= 2).length;
