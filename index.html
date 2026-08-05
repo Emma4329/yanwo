@@ -2074,11 +2074,11 @@ function updateZaStats() {
       if (remain > 0) { orderHasPending = true; pendingQty += remain; }
       const sub = item.quantity * item.unitPrice; totalAmount += sub;
       if (o.payment === '定金') pendingAmount += (sub - (parseFloat(o.deposit)||0));
-      // 已实现利润
+      // 已实现利润（已发货部分；成本为0/未填时按0计，利润即售价-运费）
       const cost = item.cost || 0, freight = item.freight || 0;
-      if (shipped > 0 && cost > 0) realizedProfit += (item.unitPrice - cost) * shipped - freight;
-      // 预估利润
-      if (cost > 0) estProfit += (item.unitPrice - cost) * item.quantity - freight;
+      if (shipped > 0) realizedProfit += (item.unitPrice - cost) * shipped - freight;
+      // 预估利润（全部下单；成本为0/未填时按0计）
+      estProfit += (item.unitPrice - cost) * item.quantity - freight;
     });
     if (orderHasPending) pendingCustomers.add(o.customer);
     if (o.payment === '定金') pendingAmount += (parseFloat(o.deposit)||0) * (o.items.length - 1);
