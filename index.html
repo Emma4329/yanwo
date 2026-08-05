@@ -2047,9 +2047,9 @@ function renderZaTable() {
       <td style="font-weight:500;text-align:center;color:${pending>0?'var(--danger)':'var(--text-light)'};">${pending}</td>
       <td>${formatNum(item.unitPrice)}</td>
       <td style="font-weight:600;color:var(--primary);text-align:center;">${formatNum(subTotal)}</td>
-      <td style="text-align:center;">${formatNum(item.cost || 0)}</td>
+      <td style="text-align:center;">${(item.cost || 0) > 0 ? formatNum(item.cost) : '-'}</td>
       <td style="text-align:center;">${item.freight>0?formatNum(item.freight):'-'}</td>
-      <td style="font-weight:600;color:var(--success);text-align:center;">${formatNum(subTotal - (item.cost || 0) * item.quantity - (item.freight || 0))}</td>
+      <td style="font-weight:600;color:var(--success);text-align:center;">${(item.cost || 0) > 0 ? formatNum(subTotal - (item.cost || 0) * item.quantity - (item.freight || 0)) : '-'}</td>
       <td>${isNewGroup?`<span class="badge ${o.payment==='已结清'?'badge-paid':'badge-deposit'}">${o.payment}</span>${depositInfo}`:''}</td>
       <td style="max-width:120px;white-space:normal;font-size:10px;color:var(--text-light);">${isNewGroup?(o.remark||''):''}</td>
       <td style="font-size:11px;">${formatShipRecords(item)}</td>
