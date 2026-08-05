@@ -1122,10 +1122,13 @@ function itemHasShipDate(item, date) {
 function formatShipRecords(item) {
   const recs = (item.shipRecords || []).filter(r => (parseFloat(r.qty) || 0) > 0 || r.date);
   if (!recs.length) return '<span style="color:var(--text-light);">-</span>';
+  // 根据品种判断单位：燕窝类用"两"，杂货/其他默认"个"
+  const isYanwo = PRODUCT_CATEGORY[item.product] === 'yanwo';
+  const unit = isYanwo ? '两' : '个';
   return recs.map(r => {
     const q = parseFloat(r.qty) || 0;
-    const d = r.date || '无日期';
-    return `<div style="line-height:1.5;">${q} · ${d}</div>`;
+    const d = r.date || '';
+    return `<div style="line-height:1.6;font-size:11px;white-space:nowrap;">${q}${unit} ${d}</div>`;
   }).join('');
 }
 
