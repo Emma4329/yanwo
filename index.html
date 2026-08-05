@@ -306,7 +306,7 @@
 <div class="sidebar">
   <div class="sidebar-logo">
     📋 HP的工作台
-    <div class="sub">WORKBENCH</div>
+    <div class="sub">WORKBENCH <span id="appVer" style="font-size:9px;opacity:.6;"></span></div>
   </div>
   <div class="nav-item active" data-page="growth">
     <span class="nav-icon growth">学习</span>
@@ -887,44 +887,26 @@ document.addEventListener('click', function(e) {
   }
 });
 
-// ====== 离线缓存 Service Worker ======
-// 说明：之前用 Blob URL 注册且「缓存优先」，导致浏览器一直返回旧文件、改了代码也不生效。
-// 现在改为：① 每次加载先清掉所有旧缓存；② 网络优先（在线永远返回最新文件，离线才回退缓存）。
-if ('serviceWorker' in navigator) {
-  const cacheName = 'yanwo-v8';
-  const pageUrl = location.href;
+// ====== 不再使用 Service Worker（旧版 Blob SW 会缓存页面、改了代码也不更新）======
+// 加载时主动清掉任何遗留的 Service Worker 注册与 Cache，保证始终读取服务器上的最新文件
+(function clearStaleCache() {
+  try {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(regs){
+        regs.forEach(function(r){ r.unregister(); });
+      }).catch(function(){});
+    }
+    if (window.caches) {
+      caches.keys().then(function(keys){
+        keys.forEach(function(k){ caches.delete(k); });
+      }).catch(function(){});
+    }
+  } catch (e) {}
+})();
 
-  // 先清掉历史遗留的旧缓存与旧 Service Worker（关键：否则浏览器一直跑旧代码）
-  if (window.caches) {
-    caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).catch(() => {});
-  }
-  navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister())).catch(() => {});
-
-  const swCode = `
-    const CACHE = '${cacheName}';
-    self.addEventListener('install', e => { self.skipWaiting(); });
-    self.addEventListener('activate', e => {
-      e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))));
-      e.waitUntil(self.clients.claim());
-    });
-    self.addEventListener('fetch', e => {
-      // 网络优先：在线时始终返回最新文件，并把新内容写入缓存；离线时回退缓存
-      e.respondWith(
-        fetch(e.request).then(res => {
-          const copy = res.clone();
-          caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
-          return res;
-        }).catch(() => caches.match(e.request))
-      );
-    });
-  `;
-
-  const blob = new Blob([swCode], { type: 'application/javascript' });
-  const swUrl = URL.createObjectURL(blob);
-  navigator.serviceWorker.register(swUrl, { updateViaCache: 'none' })
-    .then(() => console.log('✅ 离线缓存已启用（网络优先，始终为最新）'))
-    .catch(() => {});
-}
+// 版本号（每次发布修改，方便确认是否加载到最新代码）
+const APP_VERSION = 'v20260805-4';
+try { const v = document.getElementById('appVer'); if (v) v.textContent = APP_VERSION; } catch (e) {}
 
 // ==========================================
 // 全局数据 & 品种配置
