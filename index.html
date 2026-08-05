@@ -379,9 +379,9 @@
       <table>
         <thead><tr>
           <th style="width:32px;">#</th><th>下单日期</th><th style="width:52px;">客户名</th><th style="width:52px;">品种</th>
-          <th>下单数</th><th style="width:54px;">进度</th><th>已发数</th><th class="calc-label" onclick="showCalcTip(event,'待发数 = 下单数 - 已发数')">待发数</th><th>发货日</th>
+          <th>下单数</th><th style="width:54px;">进度</th><th>已发数</th><th class="calc-label" onclick="showCalcTip(event,'待发数 = 下单数 - 已发数')">待发数</th>
           <th>售价</th><th class="calc-label" onclick="showCalcTip(event,'总价 = 下单数 × 售价')">总价</th><th>成本</th><th>运费</th><th class="calc-label" onclick="showCalcTip(event,'利润 = 售价 × 已发数 - FIFO实际成本 - 运费')">利润</th>
-          <th>付款</th><th>关联品种</th><th>备注</th><th>操作</th>
+          <th>付款</th><th>关联品种</th><th>备注</th><th>发货日</th><th>操作</th>
         </tr></thead>
         <tbody id="orderTableBody"></tbody>
       </table>
@@ -537,9 +537,9 @@
       <table>
         <thead><tr>
           <th style="width:32px;">#</th><th>下单日期</th><th style="width:52px;">客户名</th><th>商品名</th>
-          <th>下单数</th><th style="width:54px;">进度</th><th>已发数</th><th class="calc-label" onclick="showCalcTip(event,'待发数 = 下单数 - 已发数')">待发数</th><th>发货日</th>
+          <th>下单数</th><th style="width:54px;">进度</th><th>已发数</th><th class="calc-label" onclick="showCalcTip(event,'待发数 = 下单数 - 已发数')">待发数</th>
           <th>售价</th><th class="calc-label" onclick="showCalcTip(event,'总价 = 下单数 × 售价')">总价</th><th>成本</th><th>运费</th><th class="calc-label" onclick="showCalcTip(event,'利润 = 总价 - 成本 × 下单数 - 运费')">利润</th>
-          <th>付款</th><th>备注</th><th>操作</th>
+          <th>付款</th><th>备注</th><th>发货日</th><th>操作</th>
         </tr></thead>
         <tbody id="zaTableBody"></tbody>
       </table>
@@ -1437,7 +1437,6 @@ function renderOrderTable() {
       <td><div class="ship-progress"><div class="bar-bg"><div class="bar-fill ${shipBarClass}" style="width:${shipPct}%;"></div></div><span class="ship-text ${shipTextClass}">${shipLabel}</span></div></td>
       <td style="font-weight:500;text-align:center;">${shipped}</td>
       <td style="font-weight:500;text-align:center;color:${pending>0?'var(--danger)':'var(--text-light)'};">${pending}</td>
-      <td>${item.shipDate||'<span style="color:var(--text-light);">-</span>'}</td>
       <td>${formatNum(item.unitPrice)}</td>
       <td style="font-weight:600;color:var(--primary);text-align:center;">${formatNum(subTotal)}</td>
       <td style="color:var(--text-light);text-align:center;">${avgCost>0?formatNum(avgCost):'-'}</td>
@@ -1446,6 +1445,7 @@ function renderOrderTable() {
       <td>${isNewGroup?`<span class="badge ${o.payment==='已结清'?'badge-paid':'badge-deposit'}">${o.payment}</span>${depositInfo}`:''}</td>
       <td style="max-width:100px;white-space:normal;font-size:9px;color:var(--text-light);">${isNewGroup && o.items.length > 1 ? o.items.filter((it,idx) => idx !== r.itemIndex).map(it => { const remain = it.quantity - (it.shipped||0); return remain > 0 ? `${remain}两${it.product}` : ''; }).filter(s => s).join('<br>') : ''}</td>
       <td style="max-width:120px;white-space:normal;font-size:10px;color:var(--text-light);">${isNewGroup?(o.remark||''):''}</td>
+      <td>${item.shipDate||'<span style="color:var(--text-light);">-</span>'}</td>
       <td><div class="row-actions">
         <button class="icon-btn" title="发货" onclick="openShipModal(${o.id},${r.itemIndex})" style="font-size:16px;">📦</button>
         ${isNewGroup?`${o.payment==='定金'?`<button class="icon-btn" title="结清" onclick="markPaid(${o.id})">✅</button>`:''}<button class="icon-btn" title="编辑" onclick="openOrderModal(${o.id})">✏️</button><button class="icon-btn" title="删除" onclick="deleteOrder(${o.id})">🗑️</button>`:''}
@@ -1943,7 +1943,6 @@ function renderZaTable() {
       <td><div class="ship-progress"><div class="bar-bg"><div class="bar-fill ${shipBarClass}" style="width:${shipPct}%;"></div></div><span class="ship-text ${shipTextClass}">${shipLabel}</span></div></td>
       <td style="font-weight:500;text-align:center;">${shipped}</td>
       <td style="font-weight:500;text-align:center;color:${pending>0?'var(--danger)':'var(--text-light)'};">${pending}</td>
-      <td>${item.shipDate||'<span style="color:var(--text-light);">-</span>'}</td>
       <td>${formatNum(item.unitPrice)}</td>
       <td style="font-weight:600;color:var(--primary);text-align:center;">${formatNum(subTotal)}</td>
       <td style="text-align:center;">${formatNum(item.cost || 0)}</td>
@@ -1951,6 +1950,7 @@ function renderZaTable() {
       <td style="font-weight:600;color:var(--success);text-align:center;">${formatNum(subTotal - (item.cost || 0) * item.quantity - (item.freight || 0))}</td>
       <td>${isNewGroup?`<span class="badge ${o.payment==='已结清'?'badge-paid':'badge-deposit'}">${o.payment}</span>${depositInfo}`:''}</td>
       <td style="max-width:120px;white-space:normal;font-size:10px;color:var(--text-light);">${isNewGroup?(o.remark||''):''}</td>
+      <td>${item.shipDate||'<span style="color:var(--text-light);">-</span>'}</td>
       <td><div class="row-actions">
         <button class="icon-btn" title="发货" onclick="openZaShipModal(${o.id},${r.itemIndex})" style="font-size:16px;">📦</button>
         ${isNewGroup?`${o.payment==='定金'?`<button class="icon-btn" title="结清" onclick="markZaPaid(${o.id})">✅</button>`:''}<button class="icon-btn" title="编辑" onclick="openZaModal(${o.id})">✏️</button><button class="icon-btn" title="删除" onclick="deleteZaOrder(${o.id})">🗑️</button>`:''}
