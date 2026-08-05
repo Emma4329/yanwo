@@ -369,12 +369,10 @@
       </div>
       <div class="filter-item">
         <span>发货：</span>
-        <label><input type="checkbox" value="pending" class="filter-ship-cb" onchange="renderOrderTable()" checked>待发货</label>
-        <label><input type="checkbox" value="partial" class="filter-ship-cb" onchange="renderOrderTable()" checked>部分发货</label>
-        <label><input type="checkbox" value="done" class="filter-ship-cb" onchange="renderOrderTable()">已全部发完</label>
-      </div>
-      <div class="filter-item">
-        <span>发货日：</span><input type="date" id="filterShipDate" onchange="renderOrderTable()" style="width:130px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+        <label><input type="checkbox" value="pending" class="filter-ship-cb" onchange="renderOrderTable()" checked>待发</label>
+        <label><input type="checkbox" value="partial" class="filter-ship-cb" onchange="renderOrderTable()" checked>部分</label>
+        <label><input type="checkbox" value="done" class="filter-ship-cb" onchange="renderOrderTable()">已发完</label>
+        <input type="text" id="filterShipDate" onchange="renderOrderTable()" placeholder="发货日" style="width:80px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:11px;margin-left:8px;">
       </div>
     </div>
 
@@ -530,12 +528,10 @@
       </div>
       <div class="filter-item">
         <span>发货：</span>
-        <label><input type="checkbox" value="pending" class="za-filter-ship-cb" onchange="renderZaTable()" checked>待发货</label>
-        <label><input type="checkbox" value="partial" class="za-filter-ship-cb" onchange="renderZaTable()" checked>部分发货</label>
-        <label><input type="checkbox" value="done" class="za-filter-ship-cb" onchange="renderZaTable()">已全部发完</label>
-      </div>
-      <div class="filter-item">
-        <span>发货日：</span><input type="date" id="zaFilterShipDate" onchange="renderZaTable()" style="width:130px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+        <label><input type="checkbox" value="pending" class="za-filter-ship-cb" onchange="renderZaTable()" checked>待发</label>
+        <label><input type="checkbox" value="partial" class="za-filter-ship-cb" onchange="renderZaTable()" checked>部分</label>
+        <label><input type="checkbox" value="done" class="za-filter-ship-cb" onchange="renderZaTable()">已发完</label>
+        <input type="text" id="zaFilterShipDate" onchange="renderZaTable()" placeholder="发货日" style="width:80px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:11px;margin-left:8px;">
       </div>
     </div>
 
@@ -722,10 +718,10 @@
   <div class="modal-body">
     <div id="zaShipInfo" style="margin-bottom:12px;font-size:12px;color:var(--text-light);"></div>
     <div class="form-row">
-      <div class="form-group w140"><label>本次发货数量 <span class="required">*</span></label><input type="number" id="fZaShipQty" min="0.1" step="0.1" placeholder="发货数量"></div>
+      <div class="form-group w140"><label>发货数量 <span class="required">*</span></label><input type="number" id="fZaShipQty" min="0" step="0.1" placeholder="发货数量"></div>
       <div class="form-group w160"><label>发货日期</label><input type="date" id="fZaShipDate"></div>
     </div>
-    <div style="font-size:11px;color:var(--text-light);margin-top:4px;">已发 <span id="zaShipAlready" style="font-weight:600;"></span> / 下单 <span id="zaShipTotal" style="font-weight:600;"></span>，本次后剩余 <span id="zaShipRemain" style="font-weight:600;color:var(--danger);"></span></div>
+    <div style="font-size:11px;color:var(--text-light);margin-top:4px;">下单 <span id="zaShipTotal" style="font-weight:600;"></span>，剩余 <span id="zaShipRemain" style="font-weight:600;color:var(--danger);"></span></div>
   </div>
   <div class="modal-footer"><div></div><div class="modal-footer-right"><button class="btn btn-secondary" onclick="closeZaShipModal()">取消</button><button class="btn btn-primary" onclick="confirmZaShip()">✅ 确认发货</button></div></div>
 </div></div>
@@ -794,10 +790,10 @@
   <div class="modal-body">
     <div id="shipInfo" style="margin-bottom:12px;font-size:12px;color:var(--text-light);"></div>
     <div class="form-row">
-      <div class="form-group w140"><label>本次发货数量 <span class="required">*</span></label><input type="number" id="fShipQty" min="0.1" step="0.1" placeholder="发货数量"></div>
+      <div class="form-group w140"><label>发货数量 <span class="required">*</span></label><input type="number" id="fShipQty" min="0" step="0.1" placeholder="发货数量"></div>
       <div class="form-group w160"><label>发货日期</label><input type="date" id="fShipDate"></div>
     </div>
-    <div style="font-size:11px;color:var(--text-light);margin-top:4px;">已发 <span id="shipAlready" style="font-weight:600;"></span> / 下单 <span id="shipTotal" style="font-weight:600;"></span>，本次后剩余 <span id="shipRemain" style="font-weight:600;color:var(--danger);"></span></div>
+    <div style="font-size:11px;color:var(--text-light);margin-top:4px;">下单 <span id="shipTotal" style="font-weight:600;"></span>，剩余 <span id="shipRemain" style="font-weight:600;color:var(--danger);"></span></div>
   </div>
   <div class="modal-footer"><div></div><div class="modal-footer-right"><button class="btn btn-secondary" onclick="closeShipModal()">取消</button><button class="btn btn-primary" onclick="confirmShip()">✅ 确认发货</button></div></div>
 </div></div>
@@ -952,6 +948,13 @@ let editingOrderId = null, editingPurchaseId = null;
 let shipTarget = null;
 
 function formatNum(n) { return Math.round(parseFloat(n)).toLocaleString('zh-CN'); }
+function formatShipDateShort(dateStr) {
+  // "2026-08-05" → "8月5日"
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  return parseInt(parts[1]) + '月' + parseInt(parts[2]) + '日';
+}
 function productSelectHTML(selected, cls) {
   let h = `<select class="${cls||''}" onchange="${cls==='pur-product-sel'?'onPurProductChange(this);':''}updatePurTotal();" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;">`;
   h += '<option value="">请选择</option>';
@@ -1352,32 +1355,25 @@ function saveOrder() {
 function openShipModal(orderId, itemIndex) {
   const o = orders.find(x => x.id === orderId); if (!o) return;
   const item = o.items[itemIndex]; shipTarget = { orderId, itemIndex };
-  document.getElementById('shipInfo').innerHTML = `<strong>${o.customer}</strong> · <span class="product-tag cat-${PRODUCT_CATEGORY[item.product]||'yanwo'}">${item.product}</span>`;
-  document.getElementById('fShipQty').value = '';
-  document.getElementById('fShipDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('shipInfo').innerHTML = `<strong>${o.customer}</strong> · <span class="product-tag cat-${PRODUCT_CATEGORY[item.product]||'yanwo'}">${item.product}</span> · 下单 ${item.quantity}`;
+  document.getElementById('fShipQty').value = item.shipped || 0;
+  document.getElementById('fShipDate').value = item.shipDate || new Date().toISOString().split('T')[0];
   document.getElementById('shipAlready').textContent = item.shipped || 0;
   document.getElementById('shipTotal').textContent = item.quantity;
-  updateShipRemain();
+  document.getElementById('shipRemain').textContent = Math.max(0, item.quantity - (item.shipped || 0));
   document.getElementById('shipModal').classList.add('show');
 }
 function closeShipModal() { document.getElementById('shipModal').classList.remove('show'); shipTarget = null; }
-function updateShipRemain() {
-  if (!shipTarget) return;
-  const o = orders.find(x => x.id === shipTarget.orderId); if (!o) return;
-  const item = o.items[shipTarget.itemIndex];
-  const thisShip = parseFloat(document.getElementById('fShipQty').value) || 0;
-  document.getElementById('shipRemain').textContent = Math.max(0, item.quantity - item.shipped - thisShip);
-}
-document.getElementById('fShipQty')?.addEventListener('input', updateShipRemain);
 
 function confirmShip() {
   if (!shipTarget) return;
   const o = orders.find(x => x.id === shipTarget.orderId); if (!o) return;
   const item = o.items[shipTarget.itemIndex];
-  const shipQty = parseFloat(document.getElementById('fShipQty').value), shipDate = document.getElementById('fShipDate').value;
-  if (!shipQty || shipQty <= 0) { alert('请输入发货数量'); return; }
-  if (item.shipped + shipQty > item.quantity) { alert(`发货数量超过未发数量！未发：${item.quantity - item.shipped}`); return; }
-  item.shipped += shipQty; if (shipDate) item.shipDate = shipDate;
+  const shipQty = parseFloat(document.getElementById('fShipQty').value) || 0;
+  const shipDate = document.getElementById('fShipDate').value;
+  if (shipQty > item.quantity) { alert(`发货数量不能超过下单数 ${item.quantity}！`); return; }
+  item.shipped = shipQty;
+  if (shipDate) item.shipDate = shipDate;
   saveAll(); renderOrderTable(); closeShipModal();
 }
 
@@ -1415,7 +1411,7 @@ function renderOrderTable() {
     const showPartial = filterShipChecks.includes('partial') && hasPending && hasShipped;
     const showDone = filterShipChecks.includes('done') && isDone;
     if (!(showPending || showPartial || showDone)) return false;
-    if (filterShipDate && r.item.shipDate !== filterShipDate) return false;
+    if (filterShipDate && formatShipDateShort(r.item.shipDate) !== filterShipDate) return false;
     if (search) { const text = (r.order.customer + r.item.product + r.order.remark + r.order.orderDate).toLowerCase(); if (!text.includes(search)) return false; }
     return true;
   });
@@ -1928,7 +1924,7 @@ function renderZaTable() {
     const showPartial = filterShipChecks.includes('partial') && hasPending && hasShipped;
     const showDone = filterShipChecks.includes('done') && isDone;
     if (!(showPending || showPartial || showDone)) return false;
-    if (filterZaShipDate && r.item.shipDate !== filterZaShipDate) return false;
+    if (filterZaShipDate && formatShipDateShort(r.item.shipDate) !== filterZaShipDate) return false;
     if (search) { const text = (r.order.customer + r.item.product + r.order.remark + r.order.orderDate).toLowerCase(); if (!text.includes(search)) return false; }
     return true;
   });
@@ -2133,12 +2129,12 @@ function markZaPaid(id) {
 function openZaShipModal(orderId, itemIndex) {
   const o = zaOrders.find(x => x.id === orderId); if (!o) return;
   const item = o.items[itemIndex]; zaShipTarget = { orderId, itemIndex };
-  document.getElementById('zaShipInfo').innerHTML = `<strong>${o.customer}</strong> · ${item.product}`;
+  document.getElementById('zaShipInfo').innerHTML = `<strong>${o.customer}</strong> · ${item.product} · 下单 ${item.quantity}`;
   document.getElementById('zaShipAlready').textContent = item.shipped || 0;
   document.getElementById('zaShipTotal').textContent = item.quantity;
-  document.getElementById('zaShipRemain').textContent = item.quantity - (item.shipped || 0);
-  document.getElementById('fZaShipQty').value = '';
-  document.getElementById('fZaShipDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('zaShipRemain').textContent = Math.max(0, item.quantity - (item.shipped || 0));
+  document.getElementById('fZaShipQty').value = item.shipped || 0;
+  document.getElementById('fZaShipDate').value = item.shipDate || new Date().toISOString().split('T')[0];
   document.getElementById('zaShipModal').classList.add('show');
 }
 function closeZaShipModal() { document.getElementById('zaShipModal').classList.remove('show'); zaShipTarget = null; }
@@ -2147,12 +2143,10 @@ function confirmZaShip() {
   if (!zaShipTarget) return;
   const qty = parseFloat(document.getElementById('fZaShipQty').value) || 0;
   const date = document.getElementById('fZaShipDate').value;
-  if (qty <= 0) { alert('请输入发货数量'); return; }
   const o = zaOrders.find(x => x.id === zaShipTarget.orderId); if (!o) return;
   const item = o.items[zaShipTarget.itemIndex]; if (!item) return;
-  const newShipped = (item.shipped || 0) + qty;
-  if (newShipped > item.quantity) { alert(`发货总数不能超过下单数（${item.quantity}）`); return; }
-  item.shipped = newShipped; item.shipDate = date;
+  if (qty > item.quantity) { alert(`发货数量不能超过下单数 ${item.quantity}！`); return; }
+  item.shipped = qty; item.shipDate = date;
   saveAll(); renderZaTable(); closeZaShipModal();
 }
 
