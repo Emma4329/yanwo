@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN" manifest="cache.appcache">
 <head>
+<meta name="cache-bust" content="1785926939">
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -713,16 +715,26 @@
 </div></div>
 
 <!-- ====== 杂发货弹窗 ====== -->
-<div class="modal-overlay" id="zaShipModal"><div class="modal" style="max-width:450px;">
+<div class="modal-overlay" id="zaShipModal"><div class="modal" style="max-width:520px;">
   <div class="modal-header"><h2>📦 记录发货</h2><button class="modal-close" onclick="closeZaShipModal()">✕</button></div>
   <div class="modal-body">
-    <div id="zaShipInfo" style="margin-bottom:12px;font-size:12px;color:var(--text-light);"></div>
-    <div style="font-size:12px;color:var(--text-light);margin-bottom:6px;">发货记录（可多次发货，每条可改数量与日期）</div>
-    <div id="zaShipRecordsList"></div>
-    <button type="button" class="btn btn-outline btn-sm" style="margin-top:6px;" onclick="addZaShipRecord()">+ 添加发货记录</button>
-    <div style="font-size:11px;color:var(--text-light);margin-top:8px;">下单 <span id="zaShipTotal" style="font-weight:600;"></span>，已发合计 <span id="zaShipRemain" style="font-weight:600;color:var(--danger);"></span></div>
+    <div id="zaShipInfo" style="margin-bottom:10px;font-size:13px;color:var(--text);"></div>
+    <div class="items-section">
+      <h3>📦 发货明细 <button class="btn btn-outline btn-sm" onclick="addZaShipRecordRow()">+ 添加发货记录</button></h3>
+      <div id="zaShipRecordsList"></div>
+    </div>
+    <div class="total-preview" style="margin-top:10px;">
+      <span class="label">下单数量</span><span id="zaShipTotal" style="font-weight:600;"></span>
+      <span style="margin-left:16px;" class="label">已发合计</span><span id="zaShipRemain" style="font-weight:600;color:var(--danger);"></span>
+    </div>
   </div>
-  <div class="modal-footer"><div></div><div class="modal-footer-right"><button class="btn btn-secondary" onclick="closeZaShipModal()">取消</button><button class="btn btn-primary" onclick="confirmZaShip()">✅ 确认发货</button></div></div>
+  <div class="modal-footer">
+    <div style="font-size:11px;color:var(--text-light);">💡 可添加多条发货记录，每条独立设置数量和日期</div>
+    <div class="modal-footer-right">
+      <button class="btn btn-secondary" onclick="closeZaShipModal()">取消</button>
+      <button class="btn btn-primary" onclick="confirmZaShip()">✅ 确认发货</button>
+    </div>
+  </div>
 </div></div>
 
 <!-- ====== 接单弹窗 ====== -->
@@ -784,16 +796,26 @@
 </div></div>
 
 <!-- ====== 发货弹窗 ====== -->
-<div class="modal-overlay" id="shipModal"><div class="modal" style="max-width:450px;">
+<div class="modal-overlay" id="shipModal"><div class="modal" style="max-width:520px;">
   <div class="modal-header"><h2>📦 记录发货</h2><button class="modal-close" onclick="closeShipModal()">✕</button></div>
   <div class="modal-body">
-    <div id="shipInfo" style="margin-bottom:12px;font-size:12px;color:var(--text-light);"></div>
-    <div style="font-size:12px;color:var(--text-light);margin-bottom:6px;">发货记录（可多次发货，每条可改数量与日期）</div>
-    <div id="shipRecordsList"></div>
-    <button type="button" class="btn btn-outline btn-sm" style="margin-top:6px;" onclick="addShipRecord()">+ 添加发货记录</button>
-    <div style="font-size:11px;color:var(--text-light);margin-top:8px;">下单 <span id="shipTotal" style="font-weight:600;"></span>，已发合计 <span id="shipRemain" style="font-weight:600;color:var(--danger);"></span></div>
+    <div id="shipInfo" style="margin-bottom:10px;font-size:13px;color:var(--text);"></div>
+    <div class="items-section">
+      <h3>📦 发货明细 <button class="btn btn-outline btn-sm" onclick="addShipRecordRow()">+ 添加发货记录</button></h3>
+      <div id="shipRecordsList"></div>
+    </div>
+    <div class="total-preview" style="margin-top:10px;">
+      <span class="label">下单数量</span><span id="shipTotal" style="font-weight:600;"></span>
+      <span style="margin-left:16px;" class="label">已发合计</span><span id="shipRemain" style="font-weight:600;color:var(--danger);"></span>
+    </div>
   </div>
-  <div class="modal-footer"><div></div><div class="modal-footer-right"><button class="btn btn-secondary" onclick="closeShipModal()">取消</button><button class="btn btn-primary" onclick="confirmShip()">✅ 确认发货</button></div></div>
+  <div class="modal-footer">
+    <div style="font-size:11px;color:var(--text-light);">💡 可添加多条发货记录，每条独立设置数量和日期</div>
+    <div class="modal-footer-right">
+      <button class="btn btn-secondary" onclick="closeShipModal()">取消</button>
+      <button class="btn btn-primary" onclick="confirmShip()">✅ 确认发货</button>
+    </div>
+  </div>
 </div></div>
 
 <!-- ====== 进货弹窗 ====== -->
@@ -1386,63 +1408,75 @@ function saveOrder() {
   saveAll(); renderOrderTable(); closeOrderModal();
 }
 
-// --- 发货弹窗（支持多次发货） ---
+// --- 发货弹窗（支持多次发货，行列表模式） ---
 function openShipModal(orderId, itemIndex) {
-  const o = orders.find(x => x.id === orderId); if (!o) return;
-  const item = o.items[itemIndex]; shipTarget = { orderId, itemIndex };
-  if (!item.shipRecords) { item.shipRecords = item.shipped > 0 ? [{ qty: item.shipped, date: item.shipDate || '' }] : []; }
-  document.getElementById('shipInfo').innerHTML = `<strong>${o.customer}</strong> · <span class="product-tag cat-${PRODUCT_CATEGORY[item.product]||'yanwo'}">${item.product}</span> · 下单 ${item.quantity}`;
+  var o = orders.find(function(x){return x.id===orderId;}); if (!o) return;
+  var item = o.items[itemIndex]; shipTarget = { orderId: orderId, itemIndex: itemIndex };
+  if (!item.shipRecords || !item.shipRecords.length) {
+    item.shipRecords = (item.shipped > 0) ? [{ qty: item.shipped, date: item.shipDate || '' }] : [];
+    if (!item.shipRecords.length) item.shipRecords.push({ qty: 0, date: new Date().toISOString().split('T')[0] });
+  }
+  document.getElementById('shipInfo').innerHTML = '<strong>' + o.customer + '</strong> · <span class="product-tag cat-' + (PRODUCT_CATEGORY[item.product]||'yanwo') + '">' + item.product + '</span> · 下单 <b>' + item.quantity + '</b>';
   document.getElementById('shipTotal').textContent = item.quantity;
-  renderShipRecordsEditor();
+  renderShipRows();
   document.getElementById('shipModal').classList.add('show');
 }
-function renderShipRecordsEditor() {
-  const o = orders.find(x => x.id === shipTarget.orderId); if (!o) return;
-  const item = o.items[shipTarget.itemIndex];
-  const list = document.getElementById('shipRecordsList');
-  list.innerHTML = (item.shipRecords || []).map((r, i) => `
-    <div class="ship-rec-row" style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
-      <input type="number" class="ship-rec-qty" data-i="${i}" min="0" step="0.1" value="${r.qty}" placeholder="数量" style="width:72px;padding:5px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
-      <input type="date" class="ship-rec-date" data-i="${i}" value="${r.date}" style="flex:1;padding:5px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
-      <button type="button" class="icon-btn" title="删除该条" onclick="removeShipRecord(${i})" style="font-size:15px;">🗑️</button>
-    </div>`).join('');
+
+function createShipRow(data) {
+  var div = document.createElement('div'); div.className = 'item-row';
+  div.innerHTML =
+    '<div class="form-group" style="width:110px;"><label>数量 <span class="required">*</span></label>' +
+    '<input type="number" class="ship-rec-qty" min="0" step="0.1" value="' + (data.qty||0) + '" placeholder="数量" oninput="updateShipSummary()" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>' +
+    '<div class="form-group" style="flex:1;min-width:150px;"><label>发货日期</label>' +
+    '<input type="date" class="ship-rec-date" value="' + (data.date||'') + '" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>' +
+    '<div style="padding-top:20px;"><button class="btn btn-danger btn-sm" onclick="this.closest(\'.item-row\').remove();updateShipSummary();">✕</button></div>';
+  return div;
+}
+
+function renderShipRows() {
+  var container = document.getElementById('shipRecordsList');
+  container.innerHTML = '';
+  if (!shipTarget) return;
+  var o = orders.find(function(x){return x.id===shipTarget.orderId;}); if (!o) return;
+  var item = o.items[shipTarget.itemIndex];
+  (item.shipRecords || []).forEach(function(r){ container.appendChild(createShipRow(r)); });
   updateShipSummary();
 }
-function addShipRecord() {
-  const o = orders.find(x => x.id === shipTarget.orderId); if (!o) return;
-  const item = o.items[shipTarget.itemIndex];
-  item.shipRecords.push({ qty: 0, date: new Date().toISOString().split('T')[0] });
-  renderShipRecordsEditor();
+
+function addShipRecordRow() {
+  if (!shipTarget) return;
+  var o = orders.find(function(x){return x.id===shipTarget.orderId;}); if (!o) return;
+  var item = o.items[shipTarget.itemIndex];
+  if (!item.shipRecords) item.shipRecords = [];
+  var newRow = { qty: 0, date: new Date().toISOString().split('T')[0] };
+  item.shipRecords.push(newRow);
+  document.getElementById('shipRecordsList').appendChild(createShipRow(newRow));
+  updateShipSummary();
 }
-function removeShipRecord(i) {
-  const o = orders.find(x => x.id === shipTarget.orderId); if (!o) return;
-  const item = o.items[shipTarget.itemIndex];
-  item.shipRecords.splice(i, 1);
-  renderShipRecordsEditor();
-}
+
 function updateShipSummary() {
-  const o = orders.find(x => x.id === shipTarget.orderId); if (!o) return;
-  const item = o.items[shipTarget.itemIndex];
-  const total = (item.shipRecords || []).reduce((s, r) => s + (parseFloat(r.qty) || 0), 0);
+  if (!shipTarget) return;
+  var qtyInputs = document.querySelectorAll('#shipRecordsList .ship-rec-qty');
+  var total = 0;
+  qtyInputs.forEach(function(el){ total += (parseFloat(el.value)||0); });
   document.getElementById('shipRemain').textContent = total;
 }
 function closeShipModal() { document.getElementById('shipModal').classList.remove('show'); shipTarget = null; }
 
 function confirmShip() {
   if (!shipTarget) return;
-  const o = orders.find(x => x.id === shipTarget.orderId); if (!o) return;
-  const item = o.items[shipTarget.itemIndex];
-  const qtyInputs = document.querySelectorAll('#shipRecordsList .ship-rec-qty');
-  const dateInputs = document.querySelectorAll('#shipRecordsList .ship-rec-date');
-  const records = [];
-  for (let i = 0; i < qtyInputs.length; i++) {
-    const q = parseFloat(qtyInputs[i].value) || 0;
-    const d = dateInputs[i].value;
-    if (q > 0 || d) records.push({ qty: q, date: d });
-  }
-  const total = records.reduce((s, r) => s + r.qty, 0);
-  if (total > item.quantity) { alert(`发货总数量 ${total} 超过下单数 ${item.quantity}！`); return; }
-  item.shipRecords = records;
+  var o = orders.find(function(x){return x.id===shipTarget.orderId;}); if (!o) return;
+  var item = o.items[shipTarget.itemIndex]; if (!item) return;
+  var rows = document.querySelectorAll('#shipRecordsList .item-row');
+  var records = [];
+  rows.forEach(function(row){
+    var q = parseFloat(row.querySelector('.ship-rec-qty')?.value)||0;
+    var d = row.querySelector('.ship-rec-date')?.value||'';
+    records.push({ qty: q, date: d });
+  });
+  var total = records.reduce(function(s,r){return s+r.qty;},0);
+  if (total > item.quantity) { alert('发货总数量 ' + total + ' 超过下单数 ' + item.quantity + '！'); return; }
+  item.shipRecords = records.filter(function(r){return r.qty>0 || r.date;});
   recomputeShipped(item);
   item.shipDate = getLatestShipDate(item);
   saveAll(); renderOrderTable(); closeShipModal();
@@ -2203,66 +2237,73 @@ function markZaPaid(id) {
 }
 
 function openZaShipModal(orderId, itemIndex) {
-  const o = zaOrders.find(x => x.id === orderId); if (!o) return;
-  const item = o.items[itemIndex]; zaShipTarget = { orderId, itemIndex };
-  if (!item.shipRecords) { item.shipRecords = item.shipped > 0 ? [{ qty: item.shipped, date: item.shipDate || '' }] : []; }
-  document.getElementById('zaShipInfo').innerHTML = `<strong>${o.customer}</strong> · ${item.product} · 下单 ${item.quantity}`;
+  var o = zaOrders.find(function(x){return x.id===orderId;}); if (!o) return;
+  var item = o.items[itemIndex]; zaShipTarget = { orderId: orderId, itemIndex: itemIndex };
+  if (!item.shipRecords || !item.shipRecords.length) {
+    item.shipRecords = (item.shipped > 0) ? [{ qty: item.shipped, date: item.shipDate || '' }] : [];
+    if (!item.shipRecords.length) item.shipRecords.push({ qty: 0, date: new Date().toISOString().split('T')[0] });
+  }
+  document.getElementById('zaShipInfo').innerHTML = '<strong>' + o.customer + '</strong> · ' + item.product + ' · 下单 <b>' + item.quantity + '</b>';
   document.getElementById('zaShipTotal').textContent = item.quantity;
-  renderZaShipRecordsEditor();
+  renderZaShipRows();
   document.getElementById('zaShipModal').classList.add('show');
 }
-function renderZaShipRecordsEditor() {
-  const o = zaOrders.find(x => x.id === zaShipTarget.orderId); if (!o) return;
-  const item = o.items[zaShipTarget.itemIndex];
-  const list = document.getElementById('zaShipRecordsList');
-  list.innerHTML = (item.shipRecords || []).map((r, i) => `
-    <div class="ship-rec-row" style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
-      <input type="number" class="za-ship-rec-qty" data-i="${i}" min="0" step="0.1" value="${r.qty}" placeholder="数量" style="width:72px;padding:5px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
-      <input type="date" class="za-ship-rec-date" data-i="${i}" value="${r.date}" style="flex:1;padding:5px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
-      <button type="button" class="icon-btn" title="删除该条" onclick="removeZaShipRecord(${i})" style="font-size:15px;">🗑️</button>
-    </div>`).join('');
+
+function createZaShipRow(data) {
+  var div = document.createElement('div'); div.className = 'item-row';
+  div.innerHTML =
+    '<div class="form-group" style="width:110px;"><label>数量 <span class="required">*</span></label>' +
+    '<input type="number" class="za-ship-rec-qty" min="0" step="0.1" value="' + (data.qty||0) + '" placeholder="数量" oninput="updateZaShipSummary()" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>' +
+    '<div class="form-group" style="flex:1;min-width:150px;"><label>发货日期</label>' +
+    '<input type="date" class="za-ship-rec-date" value="' + (data.date||'') + '" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>' +
+    '<div style="padding-top:20px;"><button class="btn btn-danger btn-sm" onclick="this.closest(\'.item-row\').remove();updateZaShipSummary();">✕</button></div>';
+  return div;
+}
+
+function renderZaShipRows() {
+  var container = document.getElementById('zaShipRecordsList');
+  container.innerHTML = '';
+  if (!zaShipTarget) return;
+  var o = zaOrders.find(function(x){return x.id===zaShipTarget.orderId;}); if (!o) return;
+  var item = o.items[zaShipTarget.itemIndex];
+  (item.shipRecords || []).forEach(function(r){ container.appendChild(createZaShipRow(r)); });
   updateZaShipSummary();
 }
-function addZaShipRecord() {
+
+function addZaShipRecordRow() {
   if (!zaShipTarget) return;
-  const o = zaOrders.find(x => x.id === zaShipTarget.orderId); if (!o) return;
-  const item = o.items[zaShipTarget.itemIndex];
+  var o = zaOrders.find(function(x){return x.id===zaShipTarget.orderId;}); if (!o) return;
+  var item = o.items[zaShipTarget.itemIndex];
   if (!item.shipRecords) item.shipRecords = [];
-  item.shipRecords.push({ qty: 0, date: new Date().toISOString().split('T')[0] });
-  renderZaShipRecordsEditor();
+  var newRow = { qty: 0, date: new Date().toISOString().split('T')[0] };
+  item.shipRecords.push(newRow);
+  document.getElementById('zaShipRecordsList').appendChild(createZaShipRow(newRow));
+  updateZaShipSummary();
 }
-function removeZaShipRecord(i) {
-  if (!zaShipTarget) return;
-  const o = zaOrders.find(x => x.id === zaShipTarget.orderId); if (!o) return;
-  const item = o.items[zaShipTarget.itemIndex];
-  if (!item.shipRecords) return;
-  item.shipRecords.splice(i, 1);
-  renderZaShipRecordsEditor();
-}
+
 function updateZaShipSummary() {
   if (!zaShipTarget) return;
-  const o = zaOrders.find(x => x.id === zaShipTarget.orderId); if (!o) return;
-  const item = o.items[zaShipTarget.itemIndex];
-  const total = (item.shipRecords || []).reduce((s, r) => s + (parseFloat(r.qty) || 0), 0);
+  var qtyInputs = document.querySelectorAll('#zaShipRecordsList .za-ship-rec-qty');
+  var total = 0;
+  qtyInputs.forEach(function(el){ total += (parseFloat(el.value)||0); });
   document.getElementById('zaShipRemain').textContent = total;
 }
 function closeZaShipModal() { document.getElementById('zaShipModal').classList.remove('show'); zaShipTarget = null; }
 
 function confirmZaShip() {
   if (!zaShipTarget) return;
-  const o = zaOrders.find(x => x.id === zaShipTarget.orderId); if (!o) return;
-  const item = o.items[zaShipTarget.itemIndex]; if (!item) return;
-  const qtyInputs = document.querySelectorAll('#zaShipRecordsList .za-ship-rec-qty');
-  const dateInputs = document.querySelectorAll('#zaShipRecordsList .za-ship-rec-date');
-  const records = [];
-  for (let i = 0; i < qtyInputs.length; i++) {
-    const q = parseFloat(qtyInputs[i].value) || 0;
-    const d = dateInputs[i].value;
-    if (q > 0 || d) records.push({ qty: q, date: d });
-  }
-  const total = records.reduce((s, r) => s + r.qty, 0);
-  if (total > item.quantity) { alert(`发货总数量 ${total} 超过下单数 ${item.quantity}！`); return; }
-  item.shipRecords = records;
+  var o = zaOrders.find(function(x){return x.id===zaShipTarget.orderId;}); if (!o) return;
+  var item = o.items[zaShipTarget.itemIndex]; if (!item) return;
+  var rows = document.querySelectorAll('#zaShipRecordsList .item-row');
+  var records = [];
+  rows.forEach(function(row){
+    var q = parseFloat(row.querySelector('.za-ship-rec-qty')?.value)||0;
+    var d = row.querySelector('.za-ship-rec-date')?.value||'';
+    records.push({ qty: q, date: d });
+  });
+  var total = records.reduce(function(s,r){return s+r.qty;},0);
+  if (total > item.quantity) { alert('发货总数量 ' + total + ' 超过下单数 ' + item.quantity + '！'); return; }
+  item.shipRecords = records.filter(function(r){return r.qty>0 || r.date;});
   recomputeShipped(item);
   item.shipDate = getLatestShipDate(item);
   saveAll(); renderZaTable(); closeZaShipModal();
