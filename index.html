@@ -1450,7 +1450,7 @@ function confirmShip() {
   if (!shipTarget) return;
   var o = orders.find(function(x){return x.id===shipTarget.orderId;}); if (!o) return;
   var item = o.items[shipTarget.itemIndex]; if (!item) return;
-  var rows = document.querySelectorAll('#shipRecordsList .item-row');
+  var rows = document.querySelectorAll('#shipRecordsList > div');
   var records = [];
   rows.forEach(function(row){
     var q = parseFloat(row.querySelector('.ship-rec-qty')?.value)||0;
@@ -2278,7 +2278,7 @@ function confirmZaShip() {
   if (!zaShipTarget) return;
   var o = zaOrders.find(function(x){return x.id===zaShipTarget.orderId;}); if (!o) return;
   var item = o.items[zaShipTarget.itemIndex]; if (!item) return;
-  var rows = document.querySelectorAll('#zaShipRecordsList .item-row');
+  var rows = document.querySelectorAll('#zaShipRecordsList > div');
   var records = [];
   rows.forEach(function(row){
     var q = parseFloat(row.querySelector('.za-ship-rec-qty')?.value)||0;
