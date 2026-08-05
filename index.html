@@ -350,10 +350,10 @@
     <div class="stats">
       <div class="stat-card info"><div class="label calc-label" onclick="showCalcTip(event,'待发客 = 有未发货订单的客户数\n待发数 = 下单数 - 已发数')">待发客 / 待发数</div><div class="value" id="statItems">0 / 0</div></div>
       <div class="stat-card" id="statPendingCard"><div class="label">待收尾款</div><div class="value" id="statPending">¥0</div></div>
+      <div class="stat-card info"><div class="label calc-label" onclick="showCalcTip(event,'预估利润/月 = 当月（与预估总利润/年同口径）\nΣ((售价 - 库存均价) × 下单数 - 运费)，库存均价>0才计')">预估利润/月</div><div class="value" id="statEstProfitMonth">¥0</div></div>
       <div class="stat-card warning"><div class="label calc-label" onclick="showCalcTip(event,'预估总利润 = Σ((售价 - 库存均价) × 下单数 - 运费)\n仅限当年')">预估总利润/年</div><div class="value" id="statEstProfit">¥0</div></div>
       <div class="stat-card"><div class="label">订单总数/年</div><div class="value" id="statTotal">0 <span class="unit">单</span></div></div>
       <div class="stat-card"><div class="label">订单总金额/年</div><div class="value" id="statTotalAmount">¥0</div></div>
-      <div class="stat-card info"><div class="label calc-label" onclick="showCalcTip(event,'已实现利润 = Σ(售价 × 已发数 - FIFO实际成本 - 运费)\n仅限当年')">已实现利润/年</div><div class="value" id="statProfit">¥0</div></div>
     </div>
 
     <div class="toolbar">
@@ -1594,7 +1594,7 @@ function updateOrderStats() {
   const filterYear = document.getElementById('filterYear').value;
   const statsOrders = filterYear ? orders.filter(o => (o.orderDate||'').substring(0,4) === filterYear) : orders;
   const total = statsOrders.length;
-  let pendingCustomers = new Set(), pendingQty = 0, pendingAmount = 0, totalAmount = 0, realizedProfit = 0, estProfit = 0;
+  let pendingCustomers = new Set(), pendingQty = 0, pendingAmount = 0, totalAmount = 0, estProfit = 0;
   statsOrders.forEach(o => {
     let orderHasPending = false;
     o.items.forEach(item => {
@@ -1602,11 +1602,6 @@ function updateOrderStats() {
       const remain = item.quantity - shipped;
       if (remain > 0) { orderHasPending = true; pendingQty += remain; }
       const sub = item.quantity * item.unitPrice; totalAmount += sub;
-      // 已实现利润：FIFO 实际成本 - 运费
-      if (shipped > 0) {
-        const fifo = calcFIFOCost(item.product, shipped);
-        realizedProfit += (item.unitPrice * shipped) - fifo.cost - (item.freight || 0);
-      }
       // 预估利润：用当前库存均价算 - 运费
       const avgCost = getAvgCost(item.product);
       if (avgCost > 0) {
@@ -1625,8 +1620,19 @@ function updateOrderStats() {
   if (pendingAmount > 0) { pendingCard.classList.add('danger'); pendingCard.classList.remove('warning'); }
   else { pendingCard.classList.remove('danger'); pendingCard.classList.add('warning'); }
   document.getElementById('statTotalAmount').textContent = '¥' + formatNum(totalAmount);
-  document.getElementById('statProfit').textContent = '¥' + formatNum(realizedProfit);
   document.getElementById('statEstProfit').textContent = '¥' + formatNum(estProfit);
+  // 预估利润/月（当月，与预估总利润/年同口径：库存均价>0才计，扣运费）
+  const mr = getMonthRange(0);
+  let estProfitMonth = 0;
+  orders.forEach(o => {
+    if ((o.orderDate||'') >= mr.start && (o.orderDate||'') <= mr.end) {
+      o.items.forEach(item => {
+        const avgCost = getAvgCost(item.product);
+        if (avgCost > 0) estProfitMonth += (item.unitPrice - avgCost) * item.quantity - (item.freight || 0);
+      });
+    }
+  });
+  document.getElementById('statEstProfitMonth').textContent = '¥' + formatNum(estProfitMonth);
 }
 
 // ==========================================
