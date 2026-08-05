@@ -975,7 +975,12 @@ document.querySelectorAll('.nav-item').forEach(item => {
     this.classList.add('active');
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById('page-' + this.dataset.page).classList.add('active');
-    if (this.dataset.page === 'growth') renderGrowthTable();
+    if (this.dataset.page === 'growth') {
+      renderGrowthTable();
+      // 保险：如果打卡日期为空则默认今天
+      var gd = document.getElementById('fGrowthDate');
+      if (gd && !gd.value) gd.value = new Date().toISOString().split('T')[0];
+    }
     if (this.dataset.page === 'orders') renderOrderTable();
     if (this.dataset.page === 'purchase') renderPurchaseTable();
     if (this.dataset.page === 'compare') renderCompareTable();
@@ -2623,7 +2628,8 @@ function renderGrowthMonth() {
     const mp = calcMonthProfit(m.start, m.end);
     months.push({ label: m.label, profit: mp.total });
   }
-  drawProfitChart(months);
+  // 延迟绘制图表，确保容器已完成布局（解决首次打开学习平台图表为空的问题）
+  requestAnimationFrame(function(){ drawProfitChart(months); });
 }
 
 function drawProfitChart(months) {
