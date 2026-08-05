@@ -2505,7 +2505,7 @@ function drawProfitChart(months) {
     // 数值标签在点上方（字体18px）
     html += `<text x="${cx}" y="${cy - 14}" text-anchor="middle" font-size="18" fill="var(--primary)" font-weight="600">¥${formatNum(m.profit)}</text>`;
     // X轴月份标签（字体20px）
-    const shortLabel = m.label.replace('年', '/').replace('月', '');
+    const shortLabel = m.label.replace(/^(\d+)年(\d+)月$/, '$2/$1');
     html += `<text x="${cx}" y="${H - 16}" text-anchor="middle" font-size="20" fill="var(--text)" font-weight="600">${shortLabel}</text>`;
   });
   // 折线
