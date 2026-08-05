@@ -977,9 +977,9 @@ document.querySelectorAll('.nav-item').forEach(item => {
     document.getElementById('page-' + this.dataset.page).classList.add('active');
     if (this.dataset.page === 'growth') {
       renderGrowthTable();
-      // 保险：如果打卡日期为空则默认今天
+      // 每次打开学习平台都把打卡日期设为今天
       var gd = document.getElementById('fGrowthDate');
-      if (gd && !gd.value) gd.value = new Date().toISOString().split('T')[0];
+      if (gd) gd.value = new Date().toISOString().split('T')[0];
     }
     if (this.dataset.page === 'orders') renderOrderTable();
     if (this.dataset.page === 'purchase') renderPurchaseTable();
@@ -1100,6 +1100,13 @@ function init() {
   updateInvProdFilter();     // 初始填充库存品种筛选
   renderGrowthTable();       // 初始化个人成长平台数据
   checkBackupReminder();
+
+  // 学习平台图表二次渲染：等页面完全显示后重绘（解决首次打开空白问题）
+  setTimeout(function(){
+    if (document.querySelector('.page.active#page-growth')) {
+      renderGrowthMonth();
+    }
+  }, 500);
 }
 
 // 发货记录迁移：旧数据只有单个 shipped/shipDate，迁移为 shipRecords 数组
@@ -2628,8 +2635,11 @@ function renderGrowthMonth() {
     const mp = calcMonthProfit(m.start, m.end);
     months.push({ label: m.label, profit: mp.total });
   }
-  // 延迟绘制图表，确保容器已完成布局（解决首次打开学习平台图表为空的问题）
-  requestAnimationFrame(function(){ drawProfitChart(months); });
+  // 延迟绘制图表：requestAnimationFrame + setTimeout 双保险
+  // 解决首次打开学习平台时 SVG 容器尺寸为0 导致图表为空的问题
+  var tryDraw = function(){ drawProfitChart(months); };
+  requestAnimationFrame(tryDraw);
+  setTimeout(tryDraw, 300);
 }
 
 function drawProfitChart(months) {
