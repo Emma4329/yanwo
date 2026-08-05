@@ -1405,13 +1405,14 @@ function openShipModal(orderId, itemIndex) {
 }
 
 function createShipRow(data) {
-  var div = document.createElement('div'); div.className = 'item-row';
+  var div = document.createElement('div');
+  div.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:6px;';
   div.innerHTML =
-    '<div class="form-group" style="width:72px;"><label>数量 <span class="required">*</span></label>' +
-    '<input type="number" class="ship-rec-qty" min="0" step="0.1" value="' + (data.qty||0) + '" placeholder="数量" oninput="updateShipSummary()" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>' +
-    '<div class="form-group" style="flex:1;min-width:120px;display:flex;align-items:flex-end;gap:6px;"><label>发货日期</label>' +
-    '<input type="date" class="ship-rec-date" value="' + (data.date||'') + '" style="flex:1;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;">' +
-    '<button type="button" class="btn btn-danger btn-sm" style="padding:8px 10px;white-space:nowrap;" onclick="this.closest(\'.item-row\').remove();updateShipSummary();">✕</button></div>';
+    '<div style="display:flex;align-items:center;gap:2px;width:70px;"><span style="font-size:11px;color:var(--text-light);white-space:nowrap;">数量</span><span style="color:var(--danger);font-size:10px;">*</span></div>' +
+    '<input type="number" class="ship-rec-qty" min="0" step="0.1" value="' + (data.qty||0) + '" placeholder="数量" oninput="updateShipSummary()" style="width:60px;padding:6px 7px;border:1px solid var(--border);border-radius:5px;font-size:13px;">' +
+    '<div style="font-size:11px;color:var(--text-light);white-space:nowrap;">发货日</div>' +
+    '<input type="date" class="ship-rec-date" value="' + (data.date||'') + '" style="flex:1;min-width:110px;padding:6px 7px;border:1px solid var(--border);border-radius:5px;font-size:13px;">' +
+    '<button type="button" class="btn btn-danger btn-sm" style="padding:6px 9px;font-size:14px;line-height:1;" onclick="this.parentElement.remove();updateShipSummary();">✕</button>';
   return div;
 }
 
@@ -2232,13 +2233,14 @@ function openZaShipModal(orderId, itemIndex) {
 }
 
 function createZaShipRow(data) {
-  var div = document.createElement('div'); div.className = 'item-row';
+  var div = document.createElement('div');
+  div.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:6px;';
   div.innerHTML =
-    '<div class="form-group" style="width:72px;"><label>数量 <span class="required">*</span></label>' +
-    '<input type="number" class="za-ship-rec-qty" min="0" step="0.1" value="' + (data.qty||0) + '" placeholder="数量" oninput="updateZaShipSummary()" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>' +
-    '<div class="form-group" style="flex:1;min-width:120px;display:flex;align-items:flex-end;gap:6px;"><label>发货日期</label>' +
-    '<input type="date" class="za-ship-rec-date" value="' + (data.date||'') + '" style="flex:1;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;">' +
-    '<button type="button" class="btn btn-danger btn-sm" style="padding:8px 10px;white-space:nowrap;" onclick="this.closest(\'.item-row\').remove();updateZaShipSummary();">✕</button></div>';
+    '<div style="display:flex;align-items:center;gap:2px;width:70px;"><span style="font-size:11px;color:var(--text-light);white-space:nowrap;">数量</span><span style="color:var(--danger);font-size:10px;">*</span></div>' +
+    '<input type="number" class="za-ship-rec-qty" min="0" step="0.1" value="' + (data.qty||0) + '" placeholder="数量" oninput="updateZaShipSummary()" style="width:60px;padding:6px 7px;border:1px solid var(--border);border-radius:5px;font-size:13px;">' +
+    '<div style="font-size:11px;color:var(--text-light);white-space:nowrap;">发货日</div>' +
+    '<input type="date" class="za-ship-rec-date" value="' + (data.date||'') + '" style="flex:1;min-width:110px;padding:6px 7px;border:1px solid var(--border);border-radius:5px;font-size:13px;">' +
+    '<button type="button" class="btn btn-danger btn-sm" style="padding:6px 9px;font-size:14px;line-height:1;" onclick="this.parentElement.remove();updateZaShipSummary();">✕</button>';
   return div;
 }
 
