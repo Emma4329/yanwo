@@ -515,7 +515,7 @@
       <div class="stat-card warning"><div class="label calc-label" onclick="showCalcTip(event,'预估总利润 = Σ((售价 - 成本) × 下单数 - 运费)\n仅限当年')">预估总利润/年</div><div class="value" id="zaStatEstProfit">¥0</div></div>
       <div class="stat-card"><div class="label">订单总数/年</div><div class="value" id="zaStatTotal">0 <span class="unit">单</span></div></div>
       <div class="stat-card"><div class="label">订单总金额/年</div><div class="value" id="zaStatTotalAmount">¥0</div></div>
-      <div class="stat-card info"><div class="label calc-label" onclick="showCalcTip(event,'已实现利润 = Σ((售价 - 成本) × 已发数 - 运费)\n仅限当年')">已实现利润/年</div><div class="value" id="zaStatProfit">¥0</div></div>
+      <div class="stat-card info"><div class="label calc-label" onclick="showCalcTip(event,'预估利润/月 = 当月（与预估总利润/年同口径）\nΣ((售价 - 成本) × 下单数 - 运费)，仅计有成本的单')">预估利润/月</div><div class="value" id="zaStatEstProfitMonth">¥0</div></div>
     </div>
 
     <div class="toolbar">
@@ -2069,7 +2069,7 @@ function updateZaStats() {
   const filterYear = document.getElementById('zaFilterYear').value;
   const statsOrders = filterYear ? zaOrders.filter(o => (o.orderDate||'').substring(0,4) === filterYear) : zaOrders;
   const total = statsOrders.length;
-  let pendingCustomers = new Set(), pendingQty = 0, pendingAmount = 0, totalAmount = 0, realizedProfit = 0, estProfit = 0;
+  let pendingCustomers = new Set(), pendingQty = 0, pendingAmount = 0, totalAmount = 0, estProfit = 0;
   statsOrders.forEach(o => {
     let orderHasPending = false;
     o.items.forEach(item => {
@@ -2078,10 +2078,8 @@ function updateZaStats() {
       if (remain > 0) { orderHasPending = true; pendingQty += remain; }
       const sub = item.quantity * item.unitPrice; totalAmount += sub;
       if (o.payment === '定金') pendingAmount += (sub - (parseFloat(o.deposit)||0));
-      // 已实现利润
-      const cost = item.cost || 0, freight = item.freight || 0;
-      if (shipped > 0 && cost > 0) realizedProfit += (item.unitPrice - cost) * shipped - freight;
       // 预估利润
+      const cost = item.cost || 0, freight = item.freight || 0;
       if (cost > 0) estProfit += (item.unitPrice - cost) * item.quantity - freight;
     });
     if (orderHasPending) pendingCustomers.add(o.customer);
@@ -2091,8 +2089,19 @@ function updateZaStats() {
   document.getElementById('zaStatItems').innerHTML = `${pendingCustomers.size} / ${pendingQty}`;
   document.getElementById('zaStatPending').textContent = '¥' + formatNum(Math.max(0, pendingAmount));
   document.getElementById('zaStatTotalAmount').textContent = '¥' + formatNum(totalAmount);
-  document.getElementById('zaStatProfit').textContent = '¥' + formatNum(realizedProfit);
   document.getElementById('zaStatEstProfit').textContent = '¥' + formatNum(estProfit);
+  // 预估利润/月（当月，与预估总利润/年同口径）
+  const mr = getMonthRange(0);
+  let estProfitMonth = 0;
+  zaOrders.forEach(o => {
+    if ((o.orderDate||'') >= mr.start && (o.orderDate||'') <= mr.end) {
+      o.items.forEach(item => {
+        const cost = item.cost || 0, freight = item.freight || 0;
+        if (cost > 0) estProfitMonth += (item.unitPrice - cost) * item.quantity - freight;
+      });
+    }
+  });
+  document.getElementById('zaStatEstProfitMonth').textContent = '¥' + formatNum(estProfitMonth);
   // 待收尾款 > 0 变红
   const pendingCard = document.getElementById('zaStatPendingCard');
   if (pendingAmount > 0) { pendingCard.classList.add('danger'); pendingCard.classList.remove('warning'); }
