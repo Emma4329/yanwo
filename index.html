@@ -866,46 +866,42 @@ document.addEventListener('click', function(e) {
 });
 
 // ====== 离线缓存 Service Worker ======
+// 说明：之前用 Blob URL 注册且「缓存优先」，导致浏览器一直返回旧文件、改了代码也不生效。
+// 现在改为：① 每次加载先清掉所有旧缓存；② 网络优先（在线永远返回最新文件，离线才回退缓存）。
 if ('serviceWorker' in navigator) {
-  // 内联 Service Worker - 缓存当前页面使离线可用
-  const cacheName = 'yanwo-v7';
+  const cacheName = 'yanwo-v8';
   const pageUrl = location.href;
-  
-  // 用 Blob 创建内联的 Service Worker
+
+  // 先清掉历史遗留的旧缓存与旧 Service Worker（关键：否则浏览器一直跑旧代码）
+  if (window.caches) {
+    caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).catch(() => {});
+  }
+  navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister())).catch(() => {});
+
   const swCode = `
     const CACHE = '${cacheName}';
-    const URLS = ['${pageUrl}'];
-    
-    self.addEventListener('install', e => {
-      e.waitUntil(caches.open(CACHE).then(c => c.addAll(URLS)));
-      self.skipWaiting();
-    });
-    
+    self.addEventListener('install', e => { self.skipWaiting(); });
     self.addEventListener('activate', e => {
-      e.waitUntil(caches.keys().then(keys => 
-        Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-      ));
-      clients.claim();
+      e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))));
+      e.waitUntil(self.clients.claim());
     });
-    
     self.addEventListener('fetch', e => {
+      // 网络优先：在线时始终返回最新文件，并把新内容写入缓存；离线时回退缓存
       e.respondWith(
-        caches.match(e.request).then(r => r || fetch(e.request))
+        fetch(e.request).then(res => {
+          const copy = res.clone();
+          caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
+          return res;
+        }).catch(() => caches.match(e.request))
       );
     });
   `;
-  
-  const blob = new Blob([swCode], {type: 'application/javascript'});
+
+  const blob = new Blob([swCode], { type: 'application/javascript' });
   const swUrl = URL.createObjectURL(blob);
-  
-  navigator.serviceWorker.register(swUrl)
-    .then(() => console.log('✅ 离线缓存已启用'))
-    .catch(() => {
-      // 如果 SW 注册失败，用简单的 Cache API 兜底
-      if (window.caches) {
-        caches.open(cacheName).then(c => c.add(pageUrl));
-      }
-    });
+  navigator.serviceWorker.register(swUrl, { updateViaCache: 'none' })
+    .then(() => console.log('✅ 离线缓存已启用（网络优先，始终为最新）'))
+    .catch(() => {});
 }
 
 // ==========================================
