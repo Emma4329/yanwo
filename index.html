@@ -373,6 +373,9 @@
         <label><input type="checkbox" value="partial" class="filter-ship-cb" onchange="renderOrderTable()" checked>部分发货</label>
         <label><input type="checkbox" value="done" class="filter-ship-cb" onchange="renderOrderTable()">已全部发完</label>
       </div>
+      <div class="filter-item">
+        <span>发货日：</span><input type="date" id="filterShipDate" onchange="renderOrderTable()" style="width:130px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+      </div>
     </div>
 
     <div class="table-wrapper"><div class="table-scroll">
@@ -530,6 +533,9 @@
         <label><input type="checkbox" value="pending" class="za-filter-ship-cb" onchange="renderZaTable()" checked>待发货</label>
         <label><input type="checkbox" value="partial" class="za-filter-ship-cb" onchange="renderZaTable()" checked>部分发货</label>
         <label><input type="checkbox" value="done" class="za-filter-ship-cb" onchange="renderZaTable()">已全部发完</label>
+      </div>
+      <div class="filter-item">
+        <span>发货日：</span><input type="date" id="zaFilterShipDate" onchange="renderZaTable()" style="width:130px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
       </div>
     </div>
 
@@ -931,6 +937,7 @@ const KEY_ZA = 'yw_za_v1';
 const KEY_GROWTH = 'yw_growth_v1';
 const KEY_YUN = 'yw_yun_v1';
 const KEY_BACKUP = 'yw_last_backup';
+const KEY_BACKUP_REMINDER = 'yw_backup_reminder_date';
 const BACKUP_INTERVAL = 15;
 
 // 全局数据
@@ -1393,6 +1400,7 @@ function renderOrderTable() {
   const filterPay = Array.from(document.querySelectorAll('.filter-pay-cb:checked')).map(cb => cb.value);
   const filterShipChecks = Array.from(document.querySelectorAll('.filter-ship-cb:checked')).map(cb => cb.value);
   const filterProd = document.getElementById('filterProduct').value;
+  const filterShipDate = document.getElementById('filterShipDate').value;
 
   let rows = []; orders.forEach(o => { o.items.forEach((item, idx) => { rows.push({ order: o, item, itemIndex: idx }); }); });
   rows = rows.filter(r => {
@@ -1407,6 +1415,7 @@ function renderOrderTable() {
     const showPartial = filterShipChecks.includes('partial') && hasPending && hasShipped;
     const showDone = filterShipChecks.includes('done') && isDone;
     if (!(showPending || showPartial || showDone)) return false;
+    if (filterShipDate && r.item.shipDate !== filterShipDate) return false;
     if (search) { const text = (r.order.customer + r.item.product + r.order.remark + r.order.orderDate).toLowerCase(); if (!text.includes(search)) return false; }
     return true;
   });
@@ -1906,6 +1915,7 @@ function renderZaTable() {
   const filterYear = document.getElementById('zaFilterYear').value;
   const filterPay = Array.from(document.querySelectorAll('.za-filter-pay-cb:checked')).map(cb => cb.value);
   const filterShipChecks = Array.from(document.querySelectorAll('.za-filter-ship-cb:checked')).map(cb => cb.value);
+  const filterZaShipDate = document.getElementById('zaFilterShipDate').value;
 
   let rows = []; zaOrders.forEach(o => { o.items.forEach((item, idx) => { rows.push({ order: o, item, itemIndex: idx }); }); });
   rows = rows.filter(r => {
@@ -1918,6 +1928,7 @@ function renderZaTable() {
     const showPartial = filterShipChecks.includes('partial') && hasPending && hasShipped;
     const showDone = filterShipChecks.includes('done') && isDone;
     if (!(showPending || showPartial || showDone)) return false;
+    if (filterZaShipDate && r.item.shipDate !== filterZaShipDate) return false;
     if (search) { const text = (r.order.customer + r.item.product + r.order.remark + r.order.orderDate).toLowerCase(); if (!text.includes(search)) return false; }
     return true;
   });
@@ -2900,10 +2911,15 @@ function updateYunStats() {
 // 备份提醒
 // ==========================================
 function checkBackupReminder() {
+  // 每天只弹一次
+  const today = new Date().toISOString().split('T')[0];
+  const lastReminder = localStorage.getItem(KEY_BACKUP_REMINDER);
+  if (lastReminder === today) return;
+  
   const lastBackup = localStorage.getItem(KEY_BACKUP);
-  if (!lastBackup) { if (orders.length > 0) showBackupReminder('欢迎使用HP的工作台！\n\n建议立即备份全部数据。'); return; }
+  if (!lastBackup) { if (orders.length > 0) { localStorage.setItem(KEY_BACKUP_REMINDER, today); showBackupReminder('欢迎使用HP的工作台！\n\n建议立即备份全部数据。'); } return; }
   const diffDays = Math.floor((new Date() - new Date(lastBackup)) / 86400000);
-  if (diffDays >= BACKUP_INTERVAL) showBackupReminder(`⚠️ 距上次备份已过 ${diffDays} 天\n\n建议立即导出备份！`);
+  if (diffDays >= BACKUP_INTERVAL) { localStorage.setItem(KEY_BACKUP_REMINDER, today); showBackupReminder(`⚠️ 距上次备份已过 ${diffDays} 天\n\n建议立即导出备份！`); }
 }
 function showBackupReminder(msg) {
   setTimeout(() => {
