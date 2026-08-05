@@ -587,13 +587,17 @@
     <!-- 每周汇总 -->
     <div style="background:var(--card);border-radius:10px;padding:16px;box-shadow:var(--shadow);margin-top:14px;">
       <h3 style="margin:0 0 12px;font-size:14px;">📊 每周汇总</h3>
-      <div class="stats" style="margin-bottom:10px;">
-        <div class="stat-card"><div class="label calc-label" onclick="showCalcTip(event,'本周完成率 = 本周内截至今天的打卡天数 ÷ 本周截至今天的日历天数\n例如本周还没过完，只要到今天为止每天都打了卡，即算100%')">本周完成率</div><div class="value" id="growthSumRate">0%</div></div>
-        <div class="stat-card info"><div class="label">朋友圈达标天</div><div class="value" id="growthSumWx">0</div></div>
-        <div class="stat-card info"><div class="label">小红书达标天</div><div class="value" id="growthSumXhs">0</div></div>
-        <div class="stat-card info"><div class="label">学习达标天</div><div class="value" id="growthSumStudy">0</div></div>
-        <div class="stat-card success"><div class="label calc-label" onclick="showCalcTip(event,'燕窝周利润 = 本周（所选周）燕窝接单平台中下单的利润合计')">燕窝周利润</div><div class="value" id="growthSumSellProfit">¥0</div></div>
-        <div class="stat-card success"><div class="label calc-label" onclick="showCalcTip(event,'杂货周利润 = 本周（所选周）杂货平台中下单的利润合计')">杂货周利润</div><div class="value" id="growthSumZaProfit">¥0</div></div>
+      <div style="margin-bottom:10px;">
+        <div class="stats" style="margin-bottom:8px;">
+          <div class="stat-card"><div class="label calc-label" onclick="showCalcTip(event,'本周完成率 = 本周内截至今天的打卡天数 ÷ 本周截至今天的日历天数\n例如本周还没过完，只要到今天为止每天都打了卡，即算100%')">本周完成率</div><div class="value" id="growthSumRate">0%</div></div>
+          <div class="stat-card success"><div class="label calc-label" onclick="showCalcTip(event,'燕窝周利润 = 本周（所选周）燕窝接单平台中下单的利润合计')">燕窝周利润</div><div class="value" id="growthSumSellProfit">¥0</div></div>
+          <div class="stat-card success"><div class="label calc-label" onclick="showCalcTip(event,'杂货周利润 = 本周（所选周）杂货平台中下单的利润合计')">杂货周利润</div><div class="value" id="growthSumZaProfit">¥0</div></div>
+        </div>
+        <div class="stats">
+          <div class="stat-card info"><div class="label">朋友圈达标天</div><div class="value" id="growthSumWx">0</div></div>
+          <div class="stat-card info"><div class="label">小红书达标天</div><div class="value" id="growthSumXhs">0</div></div>
+          <div class="stat-card info"><div class="label">学习达标天</div><div class="value" id="growthSumStudy">0</div></div>
+        </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;">
         <select id="growthWeekSelect" onchange="renderGrowthSummary()" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></select>
