@@ -2516,9 +2516,8 @@ function updateGrowthStats() {
   zaOrders.forEach(o => {
     if (o.orderDate >= weekStart && o.orderDate <= weekEnd) {
       o.items.forEach(item => {
-        const itemCost = (item.cost || 0) * item.quantity;
-        sellProfit += (item.unitPrice * item.quantity) - itemCost;
-        zaProfit += (item.unitPrice * item.quantity) - itemCost;
+        const cost = item.cost || 0, freight = item.freight || 0;
+        if (cost > 0) zaProfit += (item.unitPrice - cost) * item.quantity - freight;
       });
     }
   });
@@ -2568,13 +2567,13 @@ function renderGrowthSummary() {
   });
   document.getElementById('growthSumSellProfit').textContent = '¥' + formatNum(sellProfit);
 
-  // 杂货周利润（按下单数）
+  // 杂货周利润（按下单数；与杂货平台"预估总利润/年"口径一致：仅计有成本的单，并扣运费）
   let zaProfit = 0;
   zaOrders.forEach(o => {
     if (o.orderDate >= weekStart && o.orderDate <= weekEnd) {
       o.items.forEach(item => {
-        const itemCost = (item.cost || 0) * item.quantity;
-        zaProfit += (item.unitPrice * item.quantity) - itemCost;
+        const cost = item.cost || 0, freight = item.freight || 0;
+        if (cost > 0) zaProfit += (item.unitPrice - cost) * item.quantity - freight;
       });
     }
   });
@@ -2614,10 +2613,12 @@ function calcMonthProfit(monthStart, monthEnd) {
   zaOrders.forEach(o => {
     if (o.orderDate >= monthStart && o.orderDate <= monthEnd) {
       o.items.forEach(item => {
-        const itemCost = (item.cost || 0) * item.quantity;
-        const p = (item.unitPrice * item.quantity) - itemCost;
-        zaProfit += p;
-        dailyProfit[o.orderDate] = (dailyProfit[o.orderDate] || 0) + p;
+        const cost = item.cost || 0, freight = item.freight || 0;
+        if (cost > 0) {
+          const p = (item.unitPrice - cost) * item.quantity - freight;
+          zaProfit += p;
+          dailyProfit[o.orderDate] = (dailyProfit[o.orderDate] || 0) + p;
+        }
       });
     }
   });
