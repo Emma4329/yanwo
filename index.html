@@ -1358,7 +1358,6 @@ function openShipModal(orderId, itemIndex) {
   document.getElementById('shipInfo').innerHTML = `<strong>${o.customer}</strong> · <span class="product-tag cat-${PRODUCT_CATEGORY[item.product]||'yanwo'}">${item.product}</span> · 下单 ${item.quantity}`;
   document.getElementById('fShipQty').value = item.shipped || 0;
   document.getElementById('fShipDate').value = item.shipDate || new Date().toISOString().split('T')[0];
-  document.getElementById('shipAlready').textContent = item.shipped || 0;
   document.getElementById('shipTotal').textContent = item.quantity;
   document.getElementById('shipRemain').textContent = Math.max(0, item.quantity - (item.shipped || 0));
   document.getElementById('shipModal').classList.add('show');
@@ -2130,7 +2129,6 @@ function openZaShipModal(orderId, itemIndex) {
   const o = zaOrders.find(x => x.id === orderId); if (!o) return;
   const item = o.items[itemIndex]; zaShipTarget = { orderId, itemIndex };
   document.getElementById('zaShipInfo').innerHTML = `<strong>${o.customer}</strong> · ${item.product} · 下单 ${item.quantity}`;
-  document.getElementById('zaShipAlready').textContent = item.shipped || 0;
   document.getElementById('zaShipTotal').textContent = item.quantity;
   document.getElementById('zaShipRemain').textContent = Math.max(0, item.quantity - (item.shipped || 0));
   document.getElementById('fZaShipQty').value = item.shipped || 0;
