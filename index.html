@@ -2531,8 +2531,8 @@ function updateGrowthStats() {
   orders.forEach(o => {
     if (o.orderDate >= weekStart && o.orderDate <= weekEnd) {
       o.items.forEach(item => {
-        const fifo = calcFIFOCost(item.product, item.quantity);
-        sellProfit += (item.unitPrice * item.quantity) - fifo.cost;
+        const avgCost = getAvgCost(item.product);
+        if (avgCost > 0) sellProfit += (item.unitPrice - avgCost) * item.quantity - (item.freight || 0);
       });
     }
   });
@@ -2583,8 +2583,8 @@ function renderGrowthSummary() {
   orders.forEach(o => {
     if (o.orderDate >= weekStart && o.orderDate <= weekEnd) {
       o.items.forEach(item => {
-        const fifo = calcFIFOCost(item.product, item.quantity);
-        sellProfit += (item.unitPrice * item.quantity) - fifo.cost;
+        const avgCost = getAvgCost(item.product);
+        if (avgCost > 0) sellProfit += (item.unitPrice - avgCost) * item.quantity - (item.freight || 0);
       });
     }
   });
@@ -2626,10 +2626,12 @@ function calcMonthProfit(monthStart, monthEnd) {
   orders.forEach(o => {
     if (o.orderDate >= monthStart && o.orderDate <= monthEnd) {
       o.items.forEach(item => {
-        const fifo = calcFIFOCost(item.product, item.quantity);
-        const p = (item.unitPrice * item.quantity) - fifo.cost;
-        sellProfit += p;
-        dailyProfit[o.orderDate] = (dailyProfit[o.orderDate] || 0) + p;
+        const avgCost = getAvgCost(item.product);
+        if (avgCost > 0) {
+          const p = (item.unitPrice - avgCost) * item.quantity - (item.freight || 0);
+          sellProfit += p;
+          dailyProfit[o.orderDate] = (dailyProfit[o.orderDate] || 0) + p;
+        }
       });
     }
   });
