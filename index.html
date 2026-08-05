@@ -958,6 +958,13 @@ let editingOrderId = null, editingPurchaseId = null;
 let shipTarget = null;
 
 function formatNum(n) { return Math.round(parseFloat(n)).toLocaleString('zh-CN'); }
+// 本地日期（避免 toISOString 的 UTC 时区导致跨天偏差，例如中国时区凌晨显示成昨天）
+function fmtDate(d) {
+  d = (d instanceof Date) ? d : new Date(d);
+  const off = d.getTimezoneOffset();
+  return new Date(d.getTime() - off * 60000).toISOString().split('T')[0];
+}
+function todayStr() { return fmtDate(new Date()); }
 function formatShipDateShort(dateStr) {
   // "2026-08-05" → "8月5日"
   if (!dateStr) return '';
@@ -991,7 +998,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
       renderGrowthTable();
       // 每次打开学习平台都把打卡日期设为今天
       var gd = document.getElementById('fGrowthDate');
-      if (gd) gd.value = new Date().toISOString().split('T')[0];
+      if (gd) gd.value = todayStr();
     }
     if (this.dataset.page === 'orders') renderOrderTable();
     if (this.dataset.page === 'purchase') renderPurchaseTable();
@@ -1011,10 +1018,10 @@ function exportAll() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `HP工作台数据_${new Date().toISOString().split('T')[0]}.json`;
+  a.download = `HP工作台数据_${todayStr()}.json`;
   a.click();
   URL.revokeObjectURL(url);
-  localStorage.setItem(KEY_BACKUP, new Date().toISOString().split('T')[0]);
+  localStorage.setItem(KEY_BACKUP, todayStr());
 }
 
 function importAll(event) {
@@ -1084,18 +1091,18 @@ function init() {
   migrateShipRecords(zaOrders);
 
   if (orders.length === 0 && purchases.length === 0) {
-    orders = [{ id: Date.now(), orderDate: new Date().toISOString().split('T')[0], customer: '示例客户', payment: '定金', deposit: 800, remark: '示例数据，可删除',
+    orders = [{ id: Date.now(), orderDate: todayStr(), customer: '示例客户', payment: '定金', deposit: 800, remark: '示例数据，可删除',
       items: [{ product: '珍品天盏', quantity: 10, unitPrice: 88, cost: 0, shipped: 5, shipDate: '' }, { product: '贡品官燕盏', quantity: 5, unitPrice: 120, cost: 0, shipped: 0, shipDate: '' }]
     }];
     migrateShipRecords(orders);
     saveAll();
   }
 
-  document.getElementById('fOrderDate').value = new Date().toISOString().split('T')[0];
-  document.getElementById('fPurDate').value = new Date().toISOString().split('T')[0];
-  document.getElementById('fInvDate').value = new Date().toISOString().split('T')[0];
-  document.getElementById('fZaDate').value = new Date().toISOString().split('T')[0];
-  document.getElementById('fGrowthDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('fOrderDate').value = todayStr();
+  document.getElementById('fPurDate').value = todayStr();
+  document.getElementById('fInvDate').value = todayStr();
+  document.getElementById('fZaDate').value = todayStr();
+  document.getElementById('fGrowthDate').value = todayStr();
 
   // 初始化品种筛选下拉
   initProductFilter();
@@ -1210,7 +1217,7 @@ function hidePurSuggestion() { document.getElementById('supplierSuggest').style.
 function openOrderModal(id) {
   editingOrderId = id || null;
   document.getElementById('orderModalTitle').textContent = id ? '编辑订单' : '新增订单';
-  document.getElementById('fOrderDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('fOrderDate').value = todayStr();
   document.getElementById('fCustomer').value = ''; document.getElementById('fPayment').value = '定金';
   document.getElementById('fDeposit').value = ''; document.getElementById('fRemark').value = '';
   document.getElementById('itemsContainer').innerHTML = '';
@@ -1415,7 +1422,7 @@ function openShipModal(orderId, itemIndex) {
   var item = o.items[itemIndex]; shipTarget = { orderId: orderId, itemIndex: itemIndex };
   if (!item.shipRecords || !item.shipRecords.length) {
     item.shipRecords = (item.shipped > 0) ? [{ qty: item.shipped, date: item.shipDate || '' }] : [];
-    if (!item.shipRecords.length) item.shipRecords.push({ qty: 0, date: new Date().toISOString().split('T')[0] });
+    if (!item.shipRecords.length) item.shipRecords.push({ qty: 0, date: todayStr() });
   }
   document.getElementById('shipInfo').innerHTML = '<strong>' + o.customer + '</strong> · <span class="product-tag cat-' + (PRODUCT_CATEGORY[item.product]||'yanwo') + '">' + item.product + '</span> · 下单 <b>' + item.quantity + '</b>';
   document.getElementById('shipTotal').textContent = item.quantity;
@@ -1450,7 +1457,7 @@ function addShipRecordRow() {
   var o = orders.find(function(x){return x.id===shipTarget.orderId;}); if (!o) return;
   var item = o.items[shipTarget.itemIndex];
   if (!item.shipRecords) item.shipRecords = [];
-  var newRow = { qty: 0, date: new Date().toISOString().split('T')[0] };
+  var newRow = { qty: 0, date: todayStr() };
   item.shipRecords.push(newRow);
   document.getElementById('shipRecordsList').appendChild(createShipRow(newRow));
   updateShipSummary();
@@ -1649,7 +1656,7 @@ function updateOrderStats() {
 function openPurchaseModal(id) {
   editingPurchaseId = id || null;
   document.getElementById('purModalTitle').textContent = id ? '编辑进货' : '新增进货';
-  document.getElementById('fPurDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('fPurDate').value = todayStr();
   document.getElementById('fPurSupplier').value = ''; document.getElementById('fPurRemark').value = '';
   document.getElementById('fPurPayer').value = 'hp';
   document.getElementById('purItemsContainer').innerHTML = '';
@@ -2151,7 +2158,7 @@ function updateZaYearFilter() {
 function openZaModal(id) {
   editingZaOrderId = id || null;
   document.getElementById('zaModalTitle').textContent = id ? '编辑订单' : '新增订单';
-  document.getElementById('fZaDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('fZaDate').value = todayStr();
   document.getElementById('fZaCustomer').value = ''; document.getElementById('fZaPayment').value = '定金';
   document.getElementById('fZaDeposit').value = ''; document.getElementById('fZaRemark').value = '';
   document.getElementById('zaItemsContainer').innerHTML = '';
@@ -2258,7 +2265,7 @@ function openZaShipModal(orderId, itemIndex) {
   var item = o.items[itemIndex]; zaShipTarget = { orderId: orderId, itemIndex: itemIndex };
   if (!item.shipRecords || !item.shipRecords.length) {
     item.shipRecords = (item.shipped > 0) ? [{ qty: item.shipped, date: item.shipDate || '' }] : [];
-    if (!item.shipRecords.length) item.shipRecords.push({ qty: 0, date: new Date().toISOString().split('T')[0] });
+    if (!item.shipRecords.length) item.shipRecords.push({ qty: 0, date: todayStr() });
   }
   document.getElementById('zaShipInfo').innerHTML = '<strong>' + o.customer + '</strong> · ' + item.product + ' · 下单 <b>' + item.quantity + '</b>';
   document.getElementById('zaShipTotal').textContent = item.quantity;
@@ -2293,7 +2300,7 @@ function addZaShipRecordRow() {
   var o = zaOrders.find(function(x){return x.id===zaShipTarget.orderId;}); if (!o) return;
   var item = o.items[zaShipTarget.itemIndex];
   if (!item.shipRecords) item.shipRecords = [];
-  var newRow = { qty: 0, date: new Date().toISOString().split('T')[0] };
+  var newRow = { qty: 0, date: todayStr() };
   item.shipRecords.push(newRow);
   document.getElementById('zaShipRecordsList').appendChild(createZaShipRow(newRow));
   updateZaShipSummary();
@@ -2467,7 +2474,7 @@ function getWeekRange(dateStr) {
   const day = d.getDay();
   const diff = d.getDate() - day + (day === 0 ? -6 : 1);
   const mon = new Date(d.setDate(diff));
-  return mon.toISOString().split('T')[0];
+  return fmtDate(mon);
 }
 
 function toggleCheckin(id) {
@@ -2522,9 +2529,9 @@ function deleteGrowthRecord(date) {
 
 function updateGrowthStats() {
   // 统计已保留的卡片数据
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayStr();
   const weekStart = getWeekRange(today);
-  const weekEnd = new Date(new Date(weekStart).getTime() + 6*86400000).toISOString().split('T')[0];
+  const weekEnd = fmtDate(new Date(new Date(weekStart).getTime() + 6*86400000));
   const weekRecords = growthRecords.filter(r => r.date >= weekStart && r.date <= weekEnd);
   // 本周利润合计（按下单数计算）
   let sellProfit = 0, zaProfit = 0;
@@ -2552,17 +2559,17 @@ function renderGrowthSummary() {
   const weeks = new Set();
   growthRecords.forEach(r => { weeks.add(getWeekRange(r.date)); });
   const sortedWeeks = Array.from(weeks).sort().reverse();
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayStr();
   const thisWeek = getWeekRange(today);
   if (!weeks.has(thisWeek)) sortedWeeks.unshift(thisWeek);
   const keepVal = sel.value || thisWeek;
   sel.innerHTML = sortedWeeks.map(w => {
-    const end = new Date(new Date(w).getTime() + 6*86400000).toISOString().split('T')[0];
+    const end = fmtDate(new Date(new Date(w).getTime() + 6*86400000));
     return `<option value="${w}" ${w===keepVal?'selected':''}>${w} ~ ${end}</option>`;
   }).join('');
 
   const weekStart = sel.value;
-  const weekEnd = new Date(new Date(weekStart).getTime() + 6*86400000).toISOString().split('T')[0];
+  const weekEnd = fmtDate(new Date(new Date(weekStart).getTime() + 6*86400000));
   const weekRecords = growthRecords.filter(r => r.date >= weekStart && r.date <= weekEnd);
 
   // 本周完成率：截至今天（含）的日历天数内，已打卡天数占比
@@ -2614,8 +2621,8 @@ function changeGrowthMonth(delta) {
 function getMonthRange(offset) {
   const now = new Date();
   const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
-  const start = d.toISOString().split('T')[0];
-  const end = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0];
+  const start = fmtDate(d);
+  const end = fmtDate(new Date(d.getFullYear(), d.getMonth() + 1, 0));
   const label = d.getFullYear() + '年' + (d.getMonth() + 1) + '月';
   return { start, end, label };
 }
@@ -2714,7 +2721,7 @@ function drawProfitChart(months) {
 
 // ==========================================
 function openInventoryModal() {
-  document.getElementById('fInvDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('fInvDate').value = todayStr();
   document.getElementById('fInvProduct').value = ''; document.getElementById('fInvQty').value = ''; document.getElementById('fInvRemark').value = '';
   document.getElementById('inventoryModal').classList.add('show');
 }
@@ -2838,7 +2845,7 @@ try { yunClearBatches = JSON.parse(localStorage.getItem('yun_clear_batches') || 
 function openYunModal(editId) {
   editingYunId = editId || null;
   document.getElementById('yunModalTitle').textContent = editId ? '编辑记录' : '新增记录';
-  document.getElementById('fYunDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('fYunDate').value = todayStr();
   document.getElementById('fYunAmount').value = '';
   document.getElementById('fYunType').value = 'out';
   document.getElementById('fYunSource').value = '微信';
@@ -2923,7 +2930,7 @@ function doYunClear() {
   const batchId = Date.now();
   const batch = {
     id: batchId,
-    clearedAt: new Date().toISOString().split('T')[0],
+    clearedAt: todayStr(),
     fromDate, toDate,
     recordCount: uncleared.length,
     inSum, outSum, net
@@ -3023,7 +3030,7 @@ function syncYunboOrders() {
       // 登记为出账：转给雲，来源燕窝，备注=数量和品种
       yunRecords.push({
         id: Date.now() + idx, // 确保唯一
-        date: o.orderDate || new Date().toISOString().split('T')[0],
+        date: o.orderDate || todayStr(),
         amount: totalAmount,
         type: 'out',
         source: '燕窝',
@@ -3095,7 +3102,7 @@ function updateYunStats() {
 // ==========================================
 function checkBackupReminder() {
   // 每天只弹一次
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayStr();
   const lastReminder = localStorage.getItem(KEY_BACKUP_REMINDER);
   if (lastReminder === today) return;
   
@@ -3108,7 +3115,7 @@ function showBackupReminder(msg) {
   setTimeout(() => {
     const ok = confirm(msg + '\n\n「确定」导出备份  「取消」稍后');
     if (ok) exportAll();
-    else { const lb = localStorage.getItem(KEY_BACKUP); if (lb && Math.floor((new Date()-new Date(lb))/86400000) < 30) localStorage.setItem(KEY_BACKUP, new Date().toISOString().split('T')[0]); }
+    else { const lb = localStorage.getItem(KEY_BACKUP); if (lb && Math.floor((new Date()-new Date(lb))/86400000) < 30) localStorage.setItem(KEY_BACKUP, todayStr()); }
   }, 500);
 }
 
