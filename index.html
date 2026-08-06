@@ -299,6 +299,14 @@
   }
   .calc-label { cursor: help; }
   .directed-tag { display:inline-block; margin-left:3px; padding:0 4px; font-size:9px; line-height:14px; border-radius:4px; background:#E7F1FF; color:#2563EB; border:1px solid #BFD7FF; vertical-align:middle; }
+  .ms-opt { display:flex; align-items:center; gap:8px; padding:5px 6px; border-radius:6px; cursor:pointer; font-size:12px; }
+  .ms-opt:hover { background:var(--bg); }
+  .ms-opt input { margin:0; }
+  .moment-chip { display:inline-flex; align-items:center; gap:5px; padding:3px 9px; background:#E7F1FF; color:#2563EB; border:1px solid #BFD7FF; border-radius:12px; font-size:12px; }
+  .moment-chip b { cursor:pointer; font-weight:700; }
+  .moment-entry { font-size:12px; padding:5px 8px; background:var(--card); border:1px solid var(--border); border-radius:6px; cursor:pointer; }
+  .moment-entry:hover { border-color:var(--primary); }
+  .moment-empty { font-size:11px; color:var(--text-light); }
 </style>
 </head>
 <body>
@@ -630,6 +638,42 @@
         <svg id="growthProfitChart" width="100%" height="320" viewBox="0 0 600 320" style="min-width:100%;"></svg>
       </div>
     </div>
+
+    <!-- 每日朋友圈 -->
+    <div style="background:var(--card);border-radius:10px;padding:16px;box-shadow:var(--shadow);margin-top:14px;">
+      <h3 style="margin:0 0 12px;font-size:14px;">📱 每日朋友圈</h3>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+        <div class="form-group" style="width:150px;margin-bottom:0;"><input type="date" id="fMomentDate" onchange="loadMomentDate()" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
+        <div class="ms-wrap" style="position:relative;">
+          <button type="button" class="btn btn-outline" id="momentMsTrigger" onclick="toggleMomentSelect(event)" style="min-width:170px;text-align:left;">选择品种 ▾</button>
+          <div class="ms-panel" id="momentMsPanel" style="display:none;position:absolute;top:100%;left:0;z-index:30;background:var(--card);border:1px solid var(--border);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.12);width:260px;margin-top:4px;padding:8px;">
+            <input type="text" id="momentMsSearch" placeholder="搜索 / 回车自定义添加" oninput="renderMomentOptions()" onkeydown="if(event.key==='Enter'){event.preventDefault();addMomentCustom();}" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:6px;box-sizing:border-box;">
+            <div id="momentMsOptions" style="max-height:220px;overflow-y:auto;"></div>
+            <div style="display:flex;gap:6px;margin-top:6px;">
+              <input type="text" id="momentCustomInput" placeholder="自定义品种名" style="flex:1;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;box-sizing:border-box;">
+              <button class="btn btn-sm btn-primary" onclick="addMomentCustom()">+ 添加</button>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="saveMoment()">💾 保存打卡</button>
+      </div>
+      <div id="momentSelectedTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;"></div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:160px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;min-height:90px;">
+          <div style="font-size:12px;font-weight:600;color:var(--text-light);margin-bottom:8px;">2个月没发</div>
+          <div id="momentBox2m" style="display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
+        <div style="flex:1;min-width:160px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;min-height:90px;">
+          <div style="font-size:12px;font-weight:600;color:var(--text-light);margin-bottom:8px;">1个月没发</div>
+          <div id="momentBox1m" style="display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
+        <div style="flex:1;min-width:160px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;min-height:90px;">
+          <div style="font-size:12px;font-weight:600;color:var(--text-light);margin-bottom:8px;">1个月内已发</div>
+          <div id="momentBox1i" style="display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- ========== 云账本（yun） ========== -->
@@ -943,6 +987,7 @@ const KEY_COMPARE = 'yw_compare_v1';
 const KEY_ZA = 'yw_za_v1';
 const KEY_GROWTH = 'yw_growth_v1';
 const KEY_YUN = 'yw_yun_v1';
+const KEY_MOMENTS = 'yw_moments_v1';
 const KEY_BACKUP = 'yw_last_backup';
 const KEY_BACKUP_REMINDER = 'yw_backup_reminder_date';
 const BACKUP_INTERVAL = 15;
@@ -953,6 +998,9 @@ let compareData = { suppliers: [], prices: {} }; // 比价独立数据
 let zaOrders = []; // 杂平台独立数据
 let growthRecords = []; // 个人成长打卡数据
 let yunRecords = []; // 云账本数据
+let momentsRecords = []; // 每日朋友圈打卡记录 [{date, items:[...]}]
+let momentCustom = []; // 朋友圈自定义品种
+let momentSelected = []; // 当前未保存的朋友圈勾选
 let editingZaOrderId = null;
 let zaShipTarget = null;
 let editingOrderId = null, editingPurchaseId = null;
@@ -1014,7 +1062,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
 // 通用导入导出
 // ==========================================
 function exportAll() {
-  const data = { orders, purchases, inventoryLog, compareData, zaOrders, growthRecords, yunRecords };
+  const data = { orders, purchases, inventoryLog, compareData, zaOrders, growthRecords, yunRecords, momentsRecords, momentCustom };
   const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1044,12 +1092,16 @@ function importAll(event) {
           if (data.zaOrders) zaOrders = data.zaOrders;
           if (data.growthRecords) growthRecords = data.growthRecords;
           if (data.yunRecords) yunRecords = data.yunRecords;
+          if (data.momentsRecords) momentsRecords = data.momentsRecords;
+          if (data.momentCustom) momentCustom = data.momentCustom;
         } else {
           orders = orders.concat(data.orders || []); purchases = purchases.concat(data.purchases || []);
           inventoryLog = inventoryLog.concat(data.inventoryLog || []);
           if (data.zaOrders) zaOrders = zaOrders.concat(data.zaOrders || []);
           if (data.growthRecords) growthRecords = growthRecords.concat(data.growthRecords || []);
           if (data.yunRecords) yunRecords = yunRecords.concat(data.yunRecords || []);
+          if (data.momentsRecords) momentsRecords = momentsRecords.concat(data.momentsRecords || []);
+          if (data.momentCustom) momentCustom = momentCustom.concat(data.momentCustom || []);
         }
         saveAll(); refreshAll();
       }
@@ -1068,10 +1120,11 @@ function saveAll() {
   localStorage.setItem(KEY_ZA, JSON.stringify(zaOrders));
   localStorage.setItem(KEY_GROWTH, JSON.stringify(growthRecords));
   localStorage.setItem(KEY_YUN, JSON.stringify(yunRecords));
+  localStorage.setItem(KEY_MOMENTS, JSON.stringify({ records: momentsRecords, custom: momentCustom }));
 }
 
 function refreshAll() {
-  renderOrderTable(); renderPurchaseTable(); renderInventoryTable(); renderZaTable(); renderGrowthTable(); renderYunTable();
+  renderOrderTable(); renderPurchaseTable(); renderInventoryTable(); renderZaTable(); renderGrowthTable(); renderYunTable(); renderMoments();
 }
 
 // ==========================================
@@ -1086,6 +1139,7 @@ function init() {
   try { zaOrders = JSON.parse(localStorage.getItem(KEY_ZA) || '[]'); } catch(e) { zaOrders = []; }
   try { growthRecords = JSON.parse(localStorage.getItem(KEY_GROWTH) || '[]'); } catch(e) { growthRecords = []; }
   try { yunRecords = JSON.parse(localStorage.getItem(KEY_YUN) || '[]'); } catch(e) { yunRecords = []; }
+  try { const m = JSON.parse(localStorage.getItem(KEY_MOMENTS) || '{}'); momentsRecords = m.records || []; momentCustom = m.custom || []; } catch(e) { momentsRecords = []; momentCustom = []; }
 
   // 迁移发货记录为多条明细
   migrateShipRecords(orders);
@@ -1104,6 +1158,8 @@ function init() {
   document.getElementById('fInvDate').value = todayStr();
   document.getElementById('fZaDate').value = todayStr();
   document.getElementById('fGrowthDate').value = todayStr();
+  document.getElementById('fMomentDate').value = todayStr();
+  loadMomentDate();
 
   // 初始化品种筛选下拉
   initProductFilter();
@@ -1118,6 +1174,7 @@ function init() {
   updatePurYearFilter();     // 初始填充进货年份下拉
   updateInvProdFilter();     // 初始填充库存品种筛选
   renderGrowthTable();       // 初始化个人成长平台数据
+  renderMoments();           // 初始化每日朋友圈
   checkBackupReminder();
 }
 
@@ -2594,6 +2651,119 @@ function deleteGrowthRecord(date) {
   growthRecords = growthRecords.filter(r => r.date !== date);
   saveAll(); renderGrowthTable();
 }
+
+// ==========================================
+// 每日朋友圈
+// ==========================================
+function getMomentBaseOptions() {
+  // 燕窝全系列 + 花胶/虫草/海参/月子汤/花旗参/干贝
+  const base = (ALL_PRODUCTS.yanwo || []).slice();
+  ['花胶','虫草','海参','月子汤','花旗参','干贝'].forEach(x => { if (!base.includes(x)) base.push(x); });
+  return base;
+}
+function getMomentOptions() {
+  const opts = getMomentBaseOptions();
+  momentCustom.forEach(x => { if (!opts.includes(x)) opts.push(x); });
+  // 历史记录中出现过的品种也要能选（即便后来改名）
+  momentsRecords.forEach(r => (r.items||[]).forEach(it => { if (!opts.includes(it)) opts.push(it); }));
+  return opts;
+}
+function renderMomentOptions() {
+  const box = document.getElementById('momentMsOptions'); if (!box) return;
+  const q = (document.getElementById('momentMsSearch').value || '').trim().toLowerCase();
+  const opts = getMomentOptions().filter(o => !q || o.toLowerCase().includes(q));
+  if (!opts.length) { box.innerHTML = '<div class="moment-empty" style="padding:6px;">无匹配品种</div>'; return; }
+  box.innerHTML = opts.map(o => {
+    const esc = o.replace(/'/g, "\\'");
+    const checked = momentSelected.includes(o) ? 'checked' : '';
+    return `<label class="ms-opt"><input type="checkbox" ${checked} onchange="toggleMomentOption('${esc}')"> <span>${o}</span></label>`;
+  }).join('');
+}
+function toggleMomentSelect(e) {
+  e.stopPropagation();
+  const panel = document.getElementById('momentMsPanel');
+  const show = panel.style.display === 'none';
+  panel.style.display = show ? 'block' : 'none';
+  if (show) { document.getElementById('momentMsSearch').value = ''; renderMomentOptions(); }
+}
+function toggleMomentOption(name) {
+  const i = momentSelected.indexOf(name);
+  if (i >= 0) momentSelected.splice(i, 1); else momentSelected.push(name);
+  updateMomentTrigger(); renderMomentSelectedTags();
+}
+function updateMomentTrigger() {
+  const t = document.getElementById('momentMsTrigger'); if (!t) return;
+  t.textContent = momentSelected.length ? ('已选 ' + momentSelected.length + ' 项 ▾') : '选择品种 ▾';
+}
+function renderMomentSelectedTags() {
+  const box = document.getElementById('momentSelectedTags'); if (!box) return;
+  box.innerHTML = momentSelected.map(name => `<span class="moment-chip">${name} <b onclick="toggleMomentOption('${name.replace(/'/g,"\\'")}')" title="移除">✕</b></span>`).join('');
+}
+function addMomentCustom() {
+  const inp = document.getElementById('momentCustomInput');
+  const sInp = document.getElementById('momentMsSearch');
+  const val = (inp.value || sInp.value || '').trim();
+  if (!val) { alert('请输入自定义品种名'); return; }
+  if (!momentCustom.includes(val)) momentCustom.push(val);
+  if (!momentSelected.includes(val)) momentSelected.push(val);
+  inp.value = ''; sInp.value = '';
+  renderMomentOptions(); updateMomentTrigger(); renderMomentSelectedTags();
+}
+function saveMoment() {
+  const date = document.getElementById('fMomentDate').value;
+  if (!date) { alert('请选择日期'); return; }
+  if (momentSelected.length === 0) { alert('请至少选择一个品种'); return; }
+  const existing = momentsRecords.find(r => r.date === date);
+  if (existing) existing.items = momentSelected.slice();
+  else momentsRecords.push({ date, items: momentSelected.slice() });
+  momentsRecords.sort((a,b) => b.date.localeCompare(a.date));
+  saveAll();
+  momentSelected = [];
+  updateMomentTrigger(); renderMomentSelectedTags();
+  const panel = document.getElementById('momentMsPanel'); if (panel) panel.style.display = 'none';
+  renderMoments();
+}
+function renderMoments() {
+  const box2m = document.getElementById('momentBox2m');
+  const box1m = document.getElementById('momentBox1m');
+  const box1i = document.getElementById('momentBox1i');
+  if (!box2m) return;
+  const today = todayStr();
+  const lastDate = {};
+  momentsRecords.forEach(r => (r.items||[]).forEach(it => {
+    if (!lastDate[it] || r.date > lastDate[it]) lastDate[it] = r.date;
+  }));
+  const rows = Object.keys(lastDate).map(it => {
+    const days = Math.max(0, Math.round((new Date(today+'T00:00:00') - new Date(lastDate[it]+'T00:00:00'))/86400000));
+    return { name: it, days, date: lastDate[it] };
+  });
+  const fill = (el, arr) => {
+    arr.sort((a,b) => a.days - b.days);
+    el.innerHTML = arr.length ? arr.map(r => `<div class="moment-entry" onclick="editMoment('${r.date}')" title="点击载入 ${r.date} 重新编辑">${r.days}天前${r.name}</div>`).join('') : '<div class="moment-empty">—</div>';
+  };
+  fill(box1i, rows.filter(r => r.days <= 30));
+  fill(box1m, rows.filter(r => r.days > 30 && r.days <= 60));
+  fill(box2m, rows.filter(r => r.days > 60));
+}
+function editMoment(date) {
+  const r = momentsRecords.find(x => x.date === date); if (!r) return;
+  document.getElementById('fMomentDate').value = r.date;
+  momentSelected = (r.items||[]).slice();
+  updateMomentTrigger(); renderMomentSelectedTags();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function loadMomentDate() {
+  const date = document.getElementById('fMomentDate').value;
+  const r = momentsRecords.find(x => x.date === date);
+  momentSelected = r ? (r.items||[]).slice() : [];
+  updateMomentTrigger(); renderMomentSelectedTags();
+}
+// 点击空白处关闭朋友圈多选面板
+document.addEventListener('click', function(e){
+  const wrap = document.querySelector('.ms-wrap');
+  const panel = document.getElementById('momentMsPanel');
+  if (wrap && panel && panel.style.display !== 'none' && !wrap.contains(e.target)) panel.style.display = 'none';
+});
 
 function updateGrowthStats() {
   // 统计已保留的卡片数据
