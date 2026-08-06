@@ -2662,9 +2662,11 @@ function deleteGrowthRecord(date) {
 // 每日朋友圈
 // ==========================================
 function getMomentBaseOptions() {
-  // 燕窝全系列 + 花胶/虫草/海参/月子汤/花旗参/干贝
+  // 燕窝全系列 + 花胶/虫草/海参/月子汤/花旗参/干贝 + 其他固定品种
   const base = (ALL_PRODUCTS.yanwo || []).slice();
-  ['花胶','虫草','海参','月子汤','花旗参','干贝'].forEach(x => { if (!base.includes(x)) base.push(x); });
+  ['花胶','虫草','海参','月子汤','花旗参','干贝',
+   '桃胶三件套','红参片','高丽参片','陈皮','麦冬太子参','鲍鱼','玫瑰菊花茶','枸杞','海马','楼上四宝粉','石斛','楼上零食','万宁系列','安宫牛黄丸','阿胶糕'
+  ].forEach(x => { if (!base.includes(x)) base.push(x); });
   return base;
 }
 function getMomentOptions() {
