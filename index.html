@@ -568,8 +568,8 @@
     <div class="table-wrapper"><div class="table-scroll">
       <table>
         <thead><tr>
-          <th class="za-sticky head" style="left:0;width:18px;min-width:18px;max-width:18px;">#</th><th class="za-sticky head" style="left:18px;width:44px;min-width:44px;max-width:44px;">下单日期</th><th class="za-sticky head" style="left:62px;width:46px;min-width:46px;max-width:46px;">客户名</th><th class="za-sticky head" style="left:108px;width:40px;min-width:40px;max-width:40px;">商品名</th>
-          <th class="za-sticky head za-sticky-last" style="left:148px;width:46px;min-width:46px;max-width:46px;text-align:center;">下单数</th><th style="width:54px;">进度</th><th>已发数</th><th class="calc-label" onclick="showCalcTip(event,'待发数 = 下单数 - 已发数')">待发数</th>
+          <th class="za-sticky head" style="left:0;width:18px;min-width:18px;max-width:18px;">#</th><th class="za-sticky head" style="left:18px;width:44px;min-width:44px;max-width:44px;">下单日期</th><th class="za-sticky head" style="left:62px;width:46px;min-width:46px;max-width:46px;">客户名</th>          <th class="za-sticky head" style="left:108px;width:46px;min-width:46px;max-width:46px;">商品名</th>
+          <th class="za-sticky head za-sticky-last" style="left:154px;width:46px;min-width:46px;max-width:46px;text-align:center;">下单数</th><th style="width:54px;">进度</th><th>已发数</th><th class="calc-label" onclick="showCalcTip(event,'待发数 = 下单数 - 已发数')">待发数</th>
           <th>售价</th><th class="calc-label" onclick="showCalcTip(event,'总价 = 下单数 × 售价')">总价</th><th>成本</th><th>运费</th><th class="calc-label" onclick="showCalcTip(event,'利润 = 总价 - 成本 × 下单数 - 运费')">利润</th>
           <th>付款</th><th>备注</th><th>发货日</th><th>操作</th>
         </tr></thead>
@@ -2203,8 +2203,8 @@ function renderZaTable() {
     return `<tr class="${isNewGroup?'order-group-start':'merged-row'}">
       <td class="za-sticky" style="left:0;width:18px;min-width:18px;max-width:18px;">${rowNum}</td><td class="za-sticky" style="left:18px;width:44px;min-width:44px;max-width:44px;">${isNewGroup?(o.orderDate||'-'):''}</td>
       <td class="za-sticky" style="left:62px;width:46px;min-width:46px;max-width:46px;overflow-wrap:break-word;"><span class="order-customer">${isNewGroup?(o.customer||'-'):''}</span></td>
-      <td class="za-sticky" style="left:108px;width:40px;min-width:40px;max-width:40px;font-weight:500;">${item.product||'-'}</td>
-      <td class="za-sticky za-sticky-last" style="left:148px;width:46px;min-width:46px;max-width:46px;font-weight:500;text-align:center;">${item.quantity}</td>
+      <td class="za-sticky" style="left:108px;width:46px;min-width:46px;max-width:46px;font-weight:500;">${item.product||'-'}</td>
+      <td class="za-sticky za-sticky-last" style="left:154px;width:46px;min-width:46px;max-width:46px;font-weight:500;text-align:center;">${item.quantity}</td>
       <td><div class="ship-progress"><div class="bar-bg"><div class="bar-fill ${shipBarClass}" style="width:${shipPct}%;"></div></div><span class="ship-text ${shipTextClass}">${shipLabel}</span></div></td>
       <td style="font-weight:500;text-align:center;">${shipped}</td>
       <td style="font-weight:500;text-align:center;color:${pending>0?'var(--danger)':'var(--text-light)'};">${pending}</td>
