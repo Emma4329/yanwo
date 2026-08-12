@@ -1337,11 +1337,12 @@ function addItemRow(data) {
     <div style="padding-top:20px;"><button class="btn btn-danger btn-sm" onclick="this.closest('.item-row').remove();updateOrderTotal();">✕</button></div>
   `;
   container.appendChild(div);
-  // 定向进货：编辑回显时填充下拉
+  // 定向进货：编辑回显时填充下拉（传入已选值，即使库存为0也保留显示）
   if (data && data.directed) {
     const sel = div.querySelector('.directed-sel');
-    populateDirectedSelect(div);
-    if (sel) sel.value = (data.directed.supplier || '') + '|' + (data.directed.date || '') + '|' + (data.directed.cost || '');
+    const keepVal = (data.directed.supplier || '') + '|' + (data.directed.date || '') + '|' + (data.directed.cost || '');
+    populateDirectedSelect(div, keepVal);
+    if (sel) sel.value = keepVal;
   }
   // 品种切换时处理杂备注 + 自动填定价
   const sel = div.querySelector('select');
@@ -1457,14 +1458,29 @@ function getItemCost(item) {
   return getAvgCost(item.product);
 }
 // 某品种可用的进货批次（含供应商与日期），用于定向进货下拉
-function getDirectedOptions(product) {
+// 只显示剩余库存 > 0 的批次（库存为 0 的已发完，不应再被选中）
+// keepValue: 编辑时传入已选值，即使该批次库存为0也保留（标记 disabled）
+function getDirectedOptions(product, keepValue) {
+  // 先获取 FIFO 扣减后的各批次剩余量
+  const allBatches = getPurchaseBatches();
+  const available = new Set(); // "supplier|date|cost" → 有库存的批次
+  (allBatches[product] || []).forEach(b => {
+    if (b.remaining > 0) {
+      available.add(b.supplier + '|' + b.date + '|' + b.price);
+    }
+  });
+
   const opts = [], seen = new Set();
   const add = (supplier, date, cost) => {
     const key = supplier + '|' + date + '|' + cost;
     if (seen.has(key)) return; seen.add(key);
+    const hasStock = available.has(key);
+    const isKeep = keepValue && key === keepValue;
+    // 只加入库后有库存的，或编辑时需保留的已选值
+    if (!hasStock && !isKeep) return;
     const d = new Date(date + 'T00:00:00');
     const label = (supplier || '?') + ' ' + (d.getMonth() + 1) + '月' + d.getDate() + '日 ¥' + formatNum(cost);
-    opts.push({ value: key, label: label });
+    opts.push({ value: key, label: label, disabled: !hasStock });
   };
   purchases.forEach(p => {
     p.items.forEach(it => {
@@ -1504,14 +1520,20 @@ function toggleDirected(chk) {
   if (chk.checked) { wrap.style.display = ''; populateDirectedSelect(row); }
   else { wrap.style.display = 'none'; const sel = row.querySelector('.directed-sel'); if (sel) sel.innerHTML = ''; }
 }
-// 按品种填充批次下拉
-function populateDirectedSelect(row) {
+// 按品种填充批次下拉（keepValue: 编辑时保留已选值，即使该批次库存为0）
+function populateDirectedSelect(row, keepValue) {
   const sel = row.querySelector('.directed-sel'); if (!sel) return;
   const productSel = row.querySelector('select');
   const product = productSel ? productSel.value : '';
-  const opts = getDirectedOptions(product);
+  const opts = getDirectedOptions(product, keepValue);
   if (!opts.length) { sel.innerHTML = '<option value="">无可选批次</option>'; sel.value = ''; return; }
-  sel.innerHTML = '<option value="">请选择批次</option>' + opts.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
+  let html = '<option value="">请选择批次</option>';
+  opts.forEach(o => {
+    const disabled = o.disabled ? ' disabled' : '';
+    const gray = o.disabled ? ' (已发完)' : '';
+    html += `<option value="${o.value}"${disabled}>${o.label}${gray}</option>`;
+  });
+  sel.innerHTML = html;
 }
 function syncDirected(sel) { /* 选中值将在保存时读取，此处占位以保持 onchange 兼容 */ }
 
