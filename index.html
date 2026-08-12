@@ -723,7 +723,7 @@
     <div class="table-wrapper"><div class="table-scroll">
       <table>
         <thead><tr>
-          <th style="width:32px;">#</th><th style="width:52px;min-width:52px;max-width:52px;">日期</th><th style="width:63px;min-width:63px;max-width:63px;">金额</th><th style="width:52px;min-width:52px;max-width:52px;">方向</th><th>来源</th><th style="width:156px;min-width:156px;max-width:156px;">备注</th><th>清账状态</th><th>操作</th>
+          <th style="width:32px;">#</th><th style="width:52px;min-width:52px;max-width:52px;">日期</th><th style="width:69px;min-width:69px;max-width:69px;">金额</th><th style="width:52px;min-width:52px;max-width:52px;">方向</th><th>来源</th><th style="width:156px;min-width:156px;max-width:156px;">备注</th><th>清账状态</th><th>操作</th>
         </tr></thead>
         <tbody id="yunTableBody"></tbody>
       </table>
@@ -3264,7 +3264,7 @@ function renderYunTable() {
     return `<tr>
       <td>${i + 1}</td>
       <td style="width:52px;min-width:52px;max-width:52px;">${r.date ? fmtMDY(r.date) : '-'}</td>
-      <td style="width:63px;min-width:63px;max-width:63px;font-weight:700;${amtColor}">${isIn ? '+' : '-'}¥${formatNum(r.amount)}</td>
+      <td style="width:69px;min-width:69px;max-width:69px;font-weight:700;${amtColor}">${isIn ? '+' : '-'}¥${formatNum(r.amount)}</td>
       <td style="width:52px;min-width:52px;max-width:52px;">${typeLabel}</td>
       <td>${r.source}</td>
       <td style="max-width:156px;white-space:normal;font-size:10px;color:var(--text-light);">${r.remark || '-'}</td>
