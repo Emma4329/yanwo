@@ -456,7 +456,7 @@
       <table>
         <thead><tr>
           <th style="width:32px;">#</th><th>进货日期</th><th>供应商</th><th style="width:52px;">品种</th>
-          <th>下单数</th><th>进价(元)</th><th>总金额</th><th class="calc-label" onclick="showCalcTip(event,'待入库 = 下单数 - 已入库数')">待入库</th><th>入库状态</th><th>入库日期</th><th>付款人</th><th>备注</th><th>操作</th>
+          <th>下单数</th><th>进价(元)</th><th>总金额</th><th class="calc-label" onclick="showCalcTip(event,'待入库 = 下单数 - 已入库数')">待入库</th><th>入库状态</th><th>入库日期</th><th>付款人</th><th style="width:164px;min-width:164px;max-width:164px;">备注</th><th>操作</th>
         </tr></thead>
         <tbody id="purTableBody"></tbody>
       </table>
@@ -723,7 +723,7 @@
     <div class="table-wrapper"><div class="table-scroll">
       <table>
         <thead><tr>
-          <th style="width:32px;">#</th><th>日期</th><th>金额</th><th>方向</th><th>来源</th><th>备注</th><th>清账状态</th><th>操作</th>
+          <th style="width:32px;">#</th><th>日期</th><th>金额</th><th>方向</th><th>来源</th><th style="width:156px;min-width:156px;max-width:156px;">备注</th><th>清账状态</th><th>操作</th>
         </tr></thead>
         <tbody id="yunTableBody"></tbody>
       </table>
@@ -2030,7 +2030,7 @@ function renderPurchaseTable() {
       <td style="text-align:center;">${item.quantity}</td><td>${formatNum(item.unitPrice)}</td><td style="font-weight:600;color:var(--primary);">${formatNum(item.quantity*item.unitPrice)}</td>
       <td style="text-align:center;">${pendingDisplay}</td><td>${inStatus}</td><td style="font-size:11px;">${inDateText}</td>
       <td style="font-weight:${isNew&&p.payer==='雲博'?'600;color:var(--primary)':'normal'};">${isNew?(p.payer||'hp'):''}</td>
-      <td style="max-width:140px;white-space:normal;font-size:11px;color:var(--text-light);">${isNew?(p.remark||''):''}</td>
+      <td style="max-width:164px;white-space:normal;font-size:11px;color:var(--text-light);">${isNew?(p.remark||''):''}</td>
       <td>${isNew?`<div class="row-actions"><button class="icon-btn" title="编辑" onclick="openPurchaseModal(${p.id})">✏️</button><button class="icon-btn" title="删除" onclick="deletePurchase(${p.id})">🗑️</button></div>`:''}</td>
     </tr>`;
   }).join('');
@@ -3263,11 +3263,11 @@ function renderYunTable() {
     }
     return `<tr>
       <td>${i + 1}</td>
-      <td>${r.date}</td>
+      <td>${r.date ? fmtMDY(r.date) : '-'}</td>
       <td style="font-weight:700;${amtColor}">${isIn ? '+' : '-'}¥${formatNum(r.amount)}</td>
       <td>${typeLabel}</td>
       <td>${r.source}</td>
-      <td style="max-width:120px;white-space:normal;font-size:10px;color:var(--text-light);">${r.remark || '-'}</td>
+      <td style="max-width:156px;white-space:normal;font-size:10px;color:var(--text-light);">${r.remark || '-'}</td>
       <td>${clearedHtml}</td>
       <td><div class="row-actions">
         <button class="icon-btn" title="编辑" onclick="openYunModal(${r.id})">✏️</button>
