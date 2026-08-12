@@ -408,7 +408,7 @@
           <th class="za-sticky head" style="left:0;width:18px;min-width:18px;max-width:18px;">#</th><th class="za-sticky head" style="left:18px;width:50px;min-width:50px;max-width:50px;">下单日期</th><th class="za-sticky head" style="left:68px;width:46px;min-width:46px;max-width:46px;">客户名</th><th class="za-sticky head" style="left:114px;width:40px;min-width:40px;max-width:40px;">品种</th>
           <th class="za-sticky head za-sticky-last" style="left:154px;width:46px;min-width:46px;max-width:46px;text-align:center;">下单数</th><th style="width:54px;">进度</th><th>已发数</th><th class="calc-label" onclick="showCalcTip(event,'待发数 = 下单数 - 已发数')">待发数</th>
           <th>售价</th><th class="calc-label" onclick="showCalcTip(event,'总价 = 下单数 × 售价')">总价</th><th>成本</th><th>运费</th><th class="calc-label" onclick="showCalcTip(event,'利润 = 售价 × 已发数 - FIFO实际成本 - 运费')">利润</th>
-          <th style="width:72px;min-width:72px;max-width:72px;">付款</th><th>关联品种</th><th style="width:132px;min-width:132px;max-width:132px;">备注</th><th>发货日</th><th>操作</th>
+          <th style="width:72px;min-width:72px;max-width:72px;">付款</th><th>关联品种</th><th>发货日</th><th style="width:132px;min-width:132px;max-width:132px;">备注</th><th>操作</th>
         </tr></thead>
         <tbody id="orderTableBody"></tbody>
       </table>
@@ -571,7 +571,7 @@
           <th class="za-sticky head" style="left:0;width:18px;min-width:18px;max-width:18px;">#</th><th class="za-sticky head" style="left:18px;width:50px;min-width:50px;max-width:50px;">下单日期</th><th class="za-sticky head" style="left:68px;width:46px;min-width:46px;max-width:46px;">客户名</th>          <th class="za-sticky head" style="left:114px;width:46px;min-width:46px;max-width:46px;">商品名</th>
           <th class="za-sticky head za-sticky-last" style="left:160px;width:46px;min-width:46px;max-width:46px;text-align:center;">下单数</th><th style="width:54px;">进度</th><th>已发数</th><th class="calc-label" onclick="showCalcTip(event,'待发数 = 下单数 - 已发数')">待发数</th>
           <th>售价</th><th class="calc-label" onclick="showCalcTip(event,'总价 = 下单数 × 售价')">总价</th><th>成本</th><th>运费</th><th class="calc-label" onclick="showCalcTip(event,'利润 = 总价 - 成本 × 下单数 - 运费')">利润</th>
-          <th style="width:72px;min-width:72px;max-width:72px;">付款</th><th style="width:132px;min-width:132px;max-width:132px;">备注</th><th>发货日</th><th>操作</th>
+          <th style="width:72px;min-width:72px;max-width:72px;">付款</th><th>发货日</th><th style="width:132px;min-width:132px;max-width:132px;">备注</th><th>操作</th>
         </tr></thead>
         <tbody id="zaTableBody"></tbody>
       </table>
@@ -1708,8 +1708,8 @@ function renderOrderTable() {
       <td style="font-weight:600;${profitClass}text-align:center;">${shipped>0&&itemCost>0?formatNum(profit):'-'}</td>
       <td style="width:72px;min-width:72px;max-width:72px;">${isNewGroup?`<span class="badge ${o.payment==='已结清'?'badge-paid':'badge-deposit'}">${o.payment}</span>${depositInfo}`:''}</td>
       <td style="max-width:100px;white-space:normal;font-size:9px;color:var(--text-light);">${isNewGroup && o.items.length > 1 ? o.items.filter((it,idx) => idx !== r.itemIndex).map(it => { const remain = it.quantity - (it.shipped||0); return remain > 0 ? `${remain}两${it.product}` : ''; }).filter(s => s).join('<br>') : ''}</td>
-      <td style="max-width:132px;white-space:normal;font-size:10px;color:var(--text-light);">${isNewGroup?(o.remark||''):''}</td>
       <td style="font-size:11px;">${formatShipRecords(item)}</td>
+      <td style="max-width:132px;white-space:normal;font-size:10px;color:var(--text-light);">${isNewGroup?(o.remark||''):''}</td>
       <td><div class="row-actions">
         <button class="icon-btn" title="发货" onclick="openShipModal(${o.id},${r.itemIndex})" style="font-size:16px;">📦</button>
         ${isNewGroup?`${o.payment==='定金'?`<button class="icon-btn" title="结清" onclick="markPaid(${o.id})">✅</button>`:''}<button class="icon-btn" title="编辑" onclick="openOrderModal(${o.id})">✏️</button><button class="icon-btn" title="删除" onclick="deleteOrder(${o.id})">🗑️</button>`:''}
@@ -2221,8 +2221,8 @@ function renderZaTable() {
       <td style="text-align:center;">${item.freight>0?formatNum(item.freight):'-'}</td>
       <td style="font-weight:600;color:var(--success);text-align:center;">${(item.cost || 0) > 0 ? formatNum(subTotal - (item.cost || 0) * item.quantity - (item.freight || 0)) : '-'}</td>
       <td style="width:72px;min-width:72px;max-width:72px;">${isNewGroup?`<span class="badge ${o.payment==='已结清'?'badge-paid':'badge-deposit'}">${o.payment}</span>${depositInfo}`:''}</td>
-      <td style="max-width:132px;white-space:normal;font-size:10px;color:var(--text-light);">${isNewGroup?(o.remark||''):''}</td>
       <td style="font-size:11px;">${formatShipRecords(item)}</td>
+      <td style="max-width:132px;white-space:normal;font-size:10px;color:var(--text-light);">${isNewGroup?(o.remark||''):''}</td>
       <td><div class="row-actions">
         <button class="icon-btn" title="发货" onclick="openZaShipModal(${o.id},${r.itemIndex})" style="font-size:16px;">📦</button>
         ${isNewGroup?`${o.payment==='定金'?`<button class="icon-btn" title="结清" onclick="markZaPaid(${o.id})">✅</button>`:''}<button class="icon-btn" title="编辑" onclick="openZaModal(${o.id})">✏️</button><button class="icon-btn" title="删除" onclick="deleteZaOrder(${o.id})">🗑️</button>`:''}
