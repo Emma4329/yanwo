@@ -1034,6 +1034,13 @@ function formatShipDateShort(dateStr) {
   if (parts.length !== 3) return dateStr;
   return parseInt(parts[1]) + '月' + parseInt(parts[2]) + '日';
 }
+// 显示用：年-月-日 → 月-日-年（仅改展示，存储仍为 YYYY-MM-DD 以保证按年筛选/排序正确）
+function fmtMDY(dateStr) {
+  if (!dateStr) return dateStr;
+  const parts = ('' + dateStr).split('-');
+  if (parts.length !== 3) return dateStr;
+  return `${parts[1]}-${parts[2]}-${parts[0]}`;
+}
 function productSelectHTML(selected, cls) {
   let h = `<select class="${cls||''}" onchange="${cls==='pur-product-sel'?'onPurProductChange(this);':''}updatePurTotal();" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;">`;
   h += '<option value="">请选择</option>';
@@ -1221,7 +1228,7 @@ function formatShipRecords(item) {
   const unit = isYanwo ? '两' : '个';
   return recs.map(r => {
     const q = parseFloat(r.qty) || 0;
-    const d = r.date || '';
+    const d = r.date ? fmtMDY(r.date) : '';
     return `<div style="line-height:1.6;font-size:11px;white-space:nowrap;">${q}${unit} ${d}</div>`;
   }).join('');
 }
@@ -1687,7 +1694,7 @@ function renderOrderTable() {
     const profitClass = profit >= 0 ? 'color:var(--success);' : 'color:var(--danger);';
     const depositInfo = (o.payment==='定金'&&o.deposit>0) ? `<div style="font-size:9px;color:var(--text-light);">定金 ¥${formatNum(o.deposit)}</div>` : '';
     return `<tr class="${isNewGroup?'order-group-start':'merged-row'}">
-      <td class="za-sticky" style="left:0;width:18px;min-width:18px;max-width:18px;">${rowNum}</td><td class="za-sticky" style="left:18px;width:44px;min-width:44px;max-width:44px;">${isNewGroup?(o.orderDate||'-'):''}</td>
+      <td class="za-sticky" style="left:0;width:18px;min-width:18px;max-width:18px;">${rowNum}</td><td class="za-sticky" style="left:18px;width:44px;min-width:44px;max-width:44px;">${isNewGroup?(o.orderDate?fmtMDY(o.orderDate):'-'):''}</td>
       <td class="za-sticky" style="left:62px;width:46px;min-width:46px;max-width:46px;overflow-wrap:break-word;"><span class="order-customer">${isNewGroup?(o.customer||'-'):''}</span></td>
       <td class="za-sticky" style="left:108px;width:40px;min-width:40px;max-width:40px;overflow-wrap:break-word;"><span class="product-tag cat-${PRODUCT_CATEGORY[item.product]||'yanwo'}">${item.product||'-'}</span>${item.product==='杂'&&item.miscNote?`<div style="font-size:9px;color:var(--text-light);margin-top:1px;">${item.miscNote}</div>`:''}</td>
       <td class="za-sticky za-sticky-last" style="left:148px;width:46px;min-width:46px;max-width:46px;font-weight:500;text-align:center;">${item.quantity}</td>
@@ -1994,9 +2001,9 @@ function renderPurchaseTable() {
     const pendingDisplay = pendingQty > 0 ? `<span style="color:var(--danger);font-weight:600;">${pendingQty}</span>` : '<span style="color:var(--text-light);">0</span>';
     const inStatus = totalIn >= item.quantity ? '<span style="color:var(--success);">✓已入库</span>' 
       : (totalIn > 0 ? `<span style="color:var(--warning);">${totalIn}/${item.quantity}</span>` : '<span style="color:var(--danger);">待入库</span>');
-    const inDateText = inRecords.length > 0 ? inRecords.map(r => r.date).filter(d=>d).join('<br>') : '<span style="color:var(--text-light);">-</span>';
+    const inDateText = inRecords.length > 0 ? inRecords.map(r => r.date ? fmtMDY(r.date) : '').filter(d=>d).join('<br>') : '<span style="color:var(--text-light);">-</span>';
     return `<tr class="${isNew?'order-group-start':'merged-row'}">
-      <td>${rowNum}</td><td>${isNew?(p.date||'-'):''}</td><td style="font-weight:${isNew?'600':'normal'};">${isNew?(p.supplier||'-'):''}</td>
+      <td>${rowNum}</td><td>${isNew?(p.date?fmtMDY(p.date):'-'):''}</td><td style="font-weight:${isNew?'600':'normal'};">${isNew?(p.supplier||'-'):''}</td>
       <td style="max-width:52px;overflow-wrap:break-word;"><span class="product-tag cat-${PRODUCT_CATEGORY[item.product]||'yanwo'}">${item.product}</span></td>
       <td style="text-align:center;">${item.quantity}</td><td>${formatNum(item.unitPrice)}</td><td style="font-weight:600;color:var(--primary);">${formatNum(item.quantity*item.unitPrice)}</td>
       <td style="text-align:center;">${pendingDisplay}</td><td>${inStatus}</td><td style="font-size:11px;">${inDateText}</td>
@@ -2201,7 +2208,7 @@ function renderZaTable() {
     const isNewGroup = (o.id !== lastOrderId); lastOrderId = o.id; rowNum++;
     const depositInfo = (o.payment==='定金'&&o.deposit>0) ? `<div style="font-size:9px;color:var(--text-light);">定金 ¥${formatNum(o.deposit)}</div>` : '';
     return `<tr class="${isNewGroup?'order-group-start':'merged-row'}">
-      <td class="za-sticky" style="left:0;width:18px;min-width:18px;max-width:18px;">${rowNum}</td><td class="za-sticky" style="left:18px;width:44px;min-width:44px;max-width:44px;">${isNewGroup?(o.orderDate||'-'):''}</td>
+      <td class="za-sticky" style="left:0;width:18px;min-width:18px;max-width:18px;">${rowNum}</td><td class="za-sticky" style="left:18px;width:44px;min-width:44px;max-width:44px;">${isNewGroup?(o.orderDate?fmtMDY(o.orderDate):'-'):''}</td>
       <td class="za-sticky" style="left:62px;width:46px;min-width:46px;max-width:46px;overflow-wrap:break-word;"><span class="order-customer">${isNewGroup?(o.customer||'-'):''}</span></td>
       <td class="za-sticky" style="left:108px;width:46px;min-width:46px;max-width:46px;font-weight:500;">${item.product||'-'}</td>
       <td class="za-sticky za-sticky-last" style="left:154px;width:46px;min-width:46px;max-width:46px;font-weight:500;text-align:center;">${item.quantity}</td>
