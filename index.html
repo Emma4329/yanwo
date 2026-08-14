@@ -2234,9 +2234,15 @@ function openCompareDiff() {
   const selA = document.getElementById('cmpA'), selB = document.getElementById('cmpB'), selC = document.getElementById('cmpC');
   const opts = suppliers.map((s,i) => `<option value="${i}">${s}</option>`).join('');
   selA.innerHTML = opts; selB.innerHTML = opts; selC.innerHTML = opts;
-  selA.value = '0';
-  selB.value = suppliers.length > 1 ? '1' : '0';
-  selC.value = suppliers.length > 2 ? '2' : '0';
+  // 记忆上次选定：按供应商名匹配索引（供应商增删/重排后仍正确）
+  const saved = compareData.diffSel || {};
+  const idxOf = name => { const i = suppliers.indexOf(name); return i >= 0 ? i : -1; };
+  let ia = idxOf(saved.a); if (ia < 0) ia = 0;
+  let ib = idxOf(saved.b); if (ib < 0) ib = (suppliers.length > 1 ? 1 : 0);
+  let ic = idxOf(saved.c); if (ic < 0) ic = (suppliers.length > 2 ? 2 : 0);
+  selA.value = String(ia);
+  selB.value = String(ib);
+  selC.value = String(ic);
   document.getElementById('compareDiffModal').classList.add('show');
   renderCompareDiff();
 }
@@ -2277,6 +2283,9 @@ function renderCompareDiff() {
     </tr>`;
   }).join('');
   document.getElementById('compareDiffBody').innerHTML = rows;
+  // 记忆当前选定，供下次打开恢复
+  compareData.diffSel = { a, b, c };
+  saveAll();
 }
 
 // ==========================================
