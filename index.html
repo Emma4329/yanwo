@@ -512,7 +512,7 @@
     <div class="page-header">
       <div>
         <h1>📊 比价系统</h1>
-        <div class="sub">供应商进价对比 · 手动录入</div>
+        <div class="sub">供应商进价对比</div>
       </div>
       <div class="header-actions">
         <button class="btn btn-primary" onclick="addCompareSupplier()">➕ 添加供应商列</button>
@@ -938,26 +938,29 @@
 </div></div>
 
 <!-- ====== 比价弹窗 ====== -->
-<div class="modal-overlay" id="compareDiffModal"><div class="modal" style="max-width:480px;">
+<div class="modal-overlay" id="compareDiffModal"><div class="modal" style="max-width:540px;">
   <div class="modal-header"><h2>⚖️ 比价</h2><button class="modal-close" onclick="closeCompareDiff()">✕</button></div>
   <div class="modal-body">
     <div class="form-row">
-      <div class="form-group flex1"><label>供应商 A（左）</label><select id="cmpA" onchange="renderCompareDiff()" style="width:100%;"></select></div>
-      <div class="form-group flex1"><label>供应商 B（右）</label><select id="cmpB" onchange="renderCompareDiff()" style="width:100%;"></select></div>
+      <div class="form-group flex1"><label>供应商 A</label><select id="cmpA" onchange="renderCompareDiff()" style="width:100%;"></select></div>
+      <div class="form-group flex1"><label>供应商 B</label><select id="cmpB" onchange="renderCompareDiff()" style="width:100%;"></select></div>
+      <div class="form-group flex1"><label>供应商 C</label><select id="cmpC" onchange="renderCompareDiff()" style="width:100%;"></select></div>
     </div>
     <div class="table-wrapper"><div class="table-scroll" style="max-height:52vh;">
       <table>
         <thead><tr>
           <th style="width:96px;">品种</th>
-          <th id="cmpHeadA" style="min-width:84px;">A价</th>
-          <th id="cmpHeadB" style="min-width:84px;">B价</th>
-          <th style="min-width:84px;">差价（左-右）</th>
+          <th id="cmpHeadA" style="min-width:72px;">A价</th>
+          <th id="cmpHeadB" style="min-width:72px;">B价</th>
+          <th id="cmpHeadC" style="min-width:72px;">C价</th>
+          <th style="min-width:84px;">差价(A-B)</th>
+          <th style="min-width:84px;">差价(A-C)</th>
         </tr></thead>
         <tbody id="compareDiffBody"></tbody>
       </table>
     </div></div>
   </div>
-  <div class="modal-footer"><div id="compareDiffSummary" style="font-size:11px;color:var(--text-light);"></div><div class="modal-footer-right"><button class="btn btn-secondary" onclick="closeCompareDiff()">关闭</button></div></div>
+  <div class="modal-footer"><div class="modal-footer-right"><button class="btn btn-secondary" onclick="closeCompareDiff()">关闭</button></div></div>
 </div></div>
 
 <script>
@@ -2228,11 +2231,12 @@ function updateComparePrice(prod, supplier, val) {
 function openCompareDiff() {
   const suppliers = compareData.suppliers || [];
   if (suppliers.length < 2) { alert('请先在「比价系统」添加至少两个供应商'); return; }
-  const selA = document.getElementById('cmpA'), selB = document.getElementById('cmpB');
+  const selA = document.getElementById('cmpA'), selB = document.getElementById('cmpB'), selC = document.getElementById('cmpC');
   const opts = suppliers.map((s,i) => `<option value="${i}">${s}</option>`).join('');
-  selA.innerHTML = opts; selB.innerHTML = opts;
+  selA.innerHTML = opts; selB.innerHTML = opts; selC.innerHTML = opts;
   selA.value = '0';
   selB.value = suppliers.length > 1 ? '1' : '0';
+  selC.value = suppliers.length > 2 ? '2' : '0';
   document.getElementById('compareDiffModal').classList.add('show');
   renderCompareDiff();
 }
@@ -2244,35 +2248,35 @@ function renderCompareDiff() {
   const prices = compareData.prices || {};
   const ia = parseInt(document.getElementById('cmpA').value, 10);
   const ib = parseInt(document.getElementById('cmpB').value, 10);
-  if (isNaN(ia) || isNaN(ib)) return;
-  const a = suppliers[ia], b = suppliers[ib];
+  const ic = parseInt(document.getElementById('cmpC').value, 10);
+  if (isNaN(ia) || isNaN(ib) || isNaN(ic)) return;
+  const a = suppliers[ia], b = suppliers[ib], c = suppliers[ic];
   document.getElementById('cmpHeadA').textContent = a || 'A';
   document.getElementById('cmpHeadB').textContent = b || 'B';
-  let totalA = 0, totalB = 0, cmpCount = 0;
+  document.getElementById('cmpHeadC').textContent = c || 'C';
   const rows = ALL_PRODUCT_LIST.map(prod => {
     const rawA = prices[prod] && prices[prod][a];
     const rawB = prices[prod] && prices[prod][b];
+    const rawC = prices[prod] && prices[prod][c];
     const va = (rawA !== undefined && rawA !== '' && !isNaN(parseFloat(rawA))) ? parseFloat(rawA) : NaN;
     const vb = (rawB !== undefined && rawB !== '' && !isNaN(parseFloat(rawB))) ? parseFloat(rawB) : NaN;
-    if (!isNaN(va)) totalA += va;
-    if (!isNaN(vb)) totalB += vb;
-    let diffHtml = '<td style="color:var(--text-light);text-align:center;">-</td>';
-    if (!isNaN(va) && !isNaN(vb)) {
-      cmpCount++;
-      const diff = Math.abs(va - vb);
-      diffHtml = `<td style="text-align:center;font-weight:600;color:var(--text);">${formatNum(diff)}</td>`;
-    }
+    const vc = (rawC !== undefined && rawC !== '' && !isNaN(parseFloat(rawC))) ? parseFloat(rawC) : NaN;
+    const diffAB = (!isNaN(va) && !isNaN(vb))
+      ? `<td style="text-align:center;font-weight:600;color:var(--text);">${formatNum(Math.abs(va-vb))}</td>`
+      : '<td style="color:var(--text-light);text-align:center;">-</td>';
+    const diffAC = (!isNaN(va) && !isNaN(vc))
+      ? `<td style="text-align:center;font-weight:600;color:var(--text);">${formatNum(Math.abs(va-vc))}</td>`
+      : '<td style="color:var(--text-light);text-align:center;">-</td>';
     return `<tr>
       <td style="max-width:96px;overflow-wrap:break-word;"><span class="product-tag cat-${PRODUCT_CATEGORY[prod]||'yanwo'}">${prod}</span></td>
       <td style="text-align:center;">${isNaN(va)?'-':formatNum(va)}</td>
       <td style="text-align:center;">${isNaN(vb)?'-':formatNum(vb)}</td>
-      ${diffHtml}
+      <td style="text-align:center;">${isNaN(vc)?'-':formatNum(vc)}</td>
+      ${diffAB}
+      ${diffAC}
     </tr>`;
   }).join('');
   document.getElementById('compareDiffBody').innerHTML = rows;
-  document.getElementById('compareDiffSummary').textContent = cmpCount > 0
-    ? `可比 ${cmpCount} 个品种 · ${a}合计 ¥${formatNum(totalA)}，${b}合计 ¥${formatNum(totalB)}，差额 ¥${formatNum(Math.abs(totalA-totalB))}`
-    : '两个供应商暂时没有共同有价的品种';
 }
 
 // ==========================================
