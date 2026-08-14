@@ -516,7 +516,7 @@
       </div>
       <div class="header-actions">
         <button class="btn btn-primary" onclick="addCompareSupplier()">➕ 添加供应商列</button>
-        <button class="btn btn-outline" onclick="openCompareDiff()">⚖️ 比价</button>
+        <button class="btn btn-primary" onclick="openCompareDiff()">⚖️ 比价</button>
       </div>
     </div>
 
@@ -951,7 +951,7 @@
           <th style="width:96px;">品种</th>
           <th id="cmpHeadA" style="min-width:84px;">A价</th>
           <th id="cmpHeadB" style="min-width:84px;">B价</th>
-          <th style="min-width:84px;">差价</th>
+          <th style="min-width:84px;">差价（左-右）</th>
         </tr></thead>
         <tbody id="compareDiffBody"></tbody>
       </table>
@@ -2260,10 +2260,7 @@ function renderCompareDiff() {
     if (!isNaN(va) && !isNaN(vb)) {
       cmpCount++;
       const diff = Math.abs(va - vb);
-      let tag = '持平', color = 'var(--text-light)';
-      if (va < vb) { tag = a + '省' + formatNum(diff); color = 'var(--success)'; }
-      else if (vb < va) { tag = b + '省' + formatNum(diff); color = 'var(--success)'; }
-      diffHtml = `<td style="text-align:center;font-weight:600;color:${color};">${formatNum(diff)}<div style="font-size:9px;font-weight:400;">${tag}</div></td>`;
+      diffHtml = `<td style="text-align:center;font-weight:600;color:var(--text);">${formatNum(diff)}</td>`;
     }
     return `<tr>
       <td style="max-width:96px;overflow-wrap:break-word;"><span class="product-tag cat-${PRODUCT_CATEGORY[prod]||'yanwo'}">${prod}</span></td>
