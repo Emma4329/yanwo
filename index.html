@@ -163,10 +163,16 @@
   /* 库存平台 / 比价(同行)平台：表格内部滚动，表头(thead)吸顶锁定，滚动时表头始终可见 */
   #page-inventory .table-scroll,
   #page-compare .table-scroll { max-height: calc(100vh - 220px); overflow: auto; }
+  #page-orders .table-scroll,
+  #page-za .table-scroll { max-height: calc(100vh - 280px); overflow: auto; }
   #page-inventory .table-scroll thead,
-  #page-compare .table-scroll thead { position: sticky; top: 0; z-index: 5; background: var(--bg); }
+  #page-compare .table-scroll thead,
+  #page-orders .table-scroll thead,
+  #page-za .table-scroll thead { position: sticky; top: 0; z-index: 5; background: var(--bg); }
   #page-inventory .table-scroll thead th,
-  #page-compare .table-scroll thead th { background: var(--bg); }
+  #page-compare .table-scroll thead th,
+  #page-orders .table-scroll thead th,
+  #page-za .table-scroll thead th { background: var(--bg); }
   #compareDiffModal .table-scroll thead { position: sticky; top: 0; z-index: 5; background: var(--bg); }
   #compareDiffModal .table-scroll thead th { background: var(--bg); }
   table { width: 100%; border-collapse: collapse; font-size: 12px; }
