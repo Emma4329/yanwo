@@ -1451,15 +1451,29 @@ function getPurchaseBatches() {
     if (!batches[b.product]) batches[b.product] = [];
     batches[b.product].push(b);
   });
-  // 按接单已发数扣减（先进先出）
-  // 汇总每个品种的总已发数
+  // 扣减分两步：
+  // ① 定向进货的已发数 → 从指定批次单独扣（不进FIFO池）
+  orders.forEach(o => {
+    o.items.forEach(item => {
+      if (!item.directed || !(item.shipped > 0)) return;
+      const key = (item.directed.supplier || '') + '|' + (item.directed.date || '') + '|' + (item.directed.cost || '');
+      const prodBatches = batches[item.product] || [];
+      for (const b of prodBatches) {
+        if ((b.supplier + '|' + b.date + '|' + b.price) === key && b.remaining > 0) {
+          b.remaining = Math.max(0, b.remaining - item.shipped);
+          break; // 只扣匹配的那一个批次
+        }
+      }
+    });
+  });
+  // ② 非定向订单的已发数 → 按FIFO从剩余池扣减
   const shippedByProduct = {};
   orders.forEach(o => {
     o.items.forEach(item => {
+      if (item.directed) return; // 定向的已在①中扣过
       shippedByProduct[item.product] = (shippedByProduct[item.product] || 0) + (item.shipped || 0);
     });
   });
-  // 扣减
   Object.keys(batches).forEach(product => {
     let toDeduct = shippedByProduct[product] || 0;
     for (const b of batches[product]) {
@@ -1506,8 +1520,9 @@ function getDirectedOptions(product, keepValue) {
   // 先获取 FIFO 扣减后的各批次剩余量
   const allBatches = getPurchaseBatches();
   const available = new Set(); // "supplier|date|cost" → 有库存的批次
+  const EPS = 0.001; // 浮点容差，小于此值视为无库存
   (allBatches[product] || []).forEach(b => {
-    if (b.remaining > 0) {
+    if (b.remaining > EPS) {
       available.add(b.supplier + '|' + b.date + '|' + b.price);
     }
   });
