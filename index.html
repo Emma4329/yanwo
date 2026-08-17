@@ -1210,6 +1210,9 @@ function init() {
   migrateShipRecords(orders);
   migrateShipRecords(zaOrders);
 
+  // 迁移：冻结订单成本（历史未填成本的订单，按原始批次均价补入 item.cost）
+  if (migrateOrderCost(orders)) saveAll();
+
   if (orders.length === 0 && purchases.length === 0) {
     orders = [{ id: Date.now(), orderDate: todayStr(), customer: '示例客户', payment: '定金', deposit: 800, remark: '示例数据，可删除',
       items: [{ product: '珍品天盏', quantity: 10, unitPrice: 88, cost: 0, shipped: 5, shipDate: '' }, { product: '贡品官燕盏', quantity: 5, unitPrice: 120, cost: 0, shipped: 0, shipDate: '' }]
@@ -1256,6 +1259,17 @@ function migrateShipRecords(arr) {
 }
 function recomputeShipped(item) {
   item.shipped = (item.shipRecords || []).reduce((s, r) => s + (parseFloat(r.qty) || 0), 0);
+}
+// 迁移：把缺失成本的订单项冻结写入 item.cost（基于原始批次均价或定向成本），避免发货后成本消失
+function migrateOrderCost(arr) {
+  let changed = false;
+  (arr || []).forEach(o => (o.items || []).forEach(item => {
+    if (!(item.cost > 0)) {
+      const c = getItemCost(item);
+      if (c > 0) { item.cost = c; changed = true; }
+    }
+  }));
+  return changed;
 }
 function getLatestShipDate(item) {
   const dates = (item.shipRecords || []).map(r => r.date).filter(d => d).sort();
@@ -1511,14 +1525,28 @@ function getAvgCost(product) {
   queue.forEach(b => { if (b.remaining > 0) { totalQty += b.remaining; totalCost += b.remaining * b.price; } });
   return totalQty > 0 ? totalCost / totalQty : 0;
 }
-// 订单某品种的实际成本：优先用手动录入成本(不受后续库存变动影响)，其次定向进货成本，最后库存均价
+// 获取某品种基于「原始进货批次」(不随发货扣减变化)的加权平均成本
+// 用于订单成本冻结：即使该品种库存已发完，也能稳定给出下单时的参考成本
+function getInitAvgCost(product) {
+  let totalQty = 0, totalCost = 0;
+  purchases.forEach(p => p.items.forEach(item => {
+    if (item.product !== product) return;
+    const inRecords = item.inRecords || [];
+    const batches = inRecords.length > 0
+      ? inRecords.map(r => ({ qty: r.qty, price: item.unitPrice }))
+      : [{ qty: item.quantity, price: item.unitPrice }];
+    batches.forEach(b => { if (b.qty > 0) { totalQty += b.qty; totalCost += b.qty * b.price; } });
+  }));
+  return totalQty > 0 ? totalCost / totalQty : 0;
+}
+// 订单某品种的实际成本：优先用手动录入成本(不受后续库存变动影响)，其次定向进货成本，最后基于原始批次的均价
 function getItemCost(item) {
   // 优先：订单创建/编辑时手动录入的成本（持久化存储，发货后不变）
   if ((item.cost || 0) > 0) return item.cost;
   // 其次：定向进货的批次进价
   if (item.directed && (item.directed.cost || 0) > 0) return item.directed.cost;
-  // 最后：当前库存加权平均成本（仅作参考）
-  return getAvgCost(item.product);
+  // 最后：基于原始进货批次的加权平均成本（即使库存已发完也稳定，不会变0）
+  return getInitAvgCost(item.product);
 }
 // 某品种可用的进货批次（含供应商与日期），用于定向进货下拉
 // 只显示剩余库存 > 0 的批次（库存为 0 的已发完，不应再被选中）
@@ -1616,6 +1644,8 @@ function saveOrder() {
     const miscNoteEl = row.querySelector('.misc-note input'), miscNote = miscNoteEl ? miscNoteEl.value.trim() : '';
     if (!product || quantity <= 0 || unitPrice <= 0) { valid = false; return; }
     const item = { product, quantity, unitPrice, cost, freight, shipped: 0, shipDate: '', shipRecords: [] };
+    // 若未手动录入成本，则按原始批次均价冻结，避免后续发货扣减库存后成本消失
+    if (!(cost > 0)) item.cost = getItemCost(item);
     if (product === '杂' && miscNote) item.miscNote = miscNote;
     // 定向进货：读取选中的批次
     const chk = row.querySelector('.directed-chk');
