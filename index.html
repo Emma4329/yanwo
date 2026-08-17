@@ -1511,9 +1511,13 @@ function getAvgCost(product) {
   queue.forEach(b => { if (b.remaining > 0) { totalQty += b.remaining; totalCost += b.remaining * b.price; } });
   return totalQty > 0 ? totalCost / totalQty : 0;
 }
-// 订单某品种的实际成本：定向进货则用之，否则用库存均价（原本算法）
+// 订单某品种的实际成本：优先用手动录入成本(不受后续库存变动影响)，其次定向进货成本，最后库存均价
 function getItemCost(item) {
+  // 优先：订单创建/编辑时手动录入的成本（持久化存储，发货后不变）
+  if ((item.cost || 0) > 0) return item.cost;
+  // 其次：定向进货的批次进价
   if (item.directed && (item.directed.cost || 0) > 0) return item.directed.cost;
+  // 最后：当前库存加权平均成本（仅作参考）
   return getAvgCost(item.product);
 }
 // 某品种可用的进货批次（含供应商与日期），用于定向进货下拉
