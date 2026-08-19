@@ -706,6 +706,16 @@
       </div>
     </div>
 
+    <!-- 燕窝和杂货已复查 -->
+    <div style="background:var(--card);border-radius:10px;padding:16px;box-shadow:var(--shadow);margin-top:14px;">
+      <h3 style="margin:0 0 12px;font-size:14px;">🧾 燕窝和杂货已复查</h3>
+      <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;">
+        <div class="form-group" style="width:180px;margin-bottom:0;"><input type="date" id="fReviewDate" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:12px;"></div>
+        <button class="btn btn-primary" onclick="saveReviewCheckin()" style="height:40px;">💾 保存打卡</button>
+      </div>
+      <div id="reviewList" style="margin-top:12px;display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+
   </div>
 
   <!-- ========== 云账本（yun） ========== -->
@@ -1046,6 +1056,7 @@ const KEY_ZA = 'yw_za_v1';
 const KEY_GROWTH = 'yw_growth_v1';
 const KEY_YUN = 'yw_yun_v1';
 const KEY_MOMENTS = 'yw_moments_v1';
+const KEY_REVIEW = 'yw_review_v1';
 const KEY_BACKUP = 'yw_last_backup';
 const KEY_BACKUP_REMINDER = 'yw_backup_reminder_date';
 const BACKUP_INTERVAL = 15;
@@ -1057,6 +1068,7 @@ let zaOrders = []; // 杂平台独立数据
 let growthRecords = []; // 个人成长打卡数据
 let yunRecords = []; // 云账本数据
 let momentsRecords = []; // 每日朋友圈打卡记录 [{date, items:[...]}]
+let reviewRecords = []; // 燕窝和杂货已复查打卡记录 [{date:'YYYY-MM-DD', ts}]
 let momentCustom = []; // 朋友圈自定义品种
 let momentSelected = []; // 当前未保存的朋友圈勾选
 let editingZaOrderId = null;
@@ -1086,6 +1098,13 @@ function fmtMDY(dateStr) {
   if (parts.length !== 3) return dateStr;
   return `${parts[1]}-${parts[2]}-${parts[0]}`;
 }
+// 显示用：YYYY-MM-DD → 2026年8月1日
+function cnDate(dateStr) {
+  if (!dateStr) return dateStr;
+  const p = ('' + dateStr).split('-');
+  if (p.length !== 3) return dateStr;
+  return `${p[0]}年${parseInt(p[1])}月${parseInt(p[2])}日`;
+}
 function productSelectHTML(selected, cls) {
   let h = `<select class="${cls||''}" onchange="${cls==='pur-product-sel'?'onPurProductChange(this);':''}updatePurTotal();" style="width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;">`;
   h += '<option value="">请选择</option>';
@@ -1113,6 +1132,9 @@ document.querySelectorAll('.nav-item').forEach(item => {
       // 每次打开学习平台都把打卡日期设为今天
       var gd = document.getElementById('fGrowthDate');
       if (gd) gd.value = todayStr();
+      var rd = document.getElementById('fReviewDate');
+      if (rd) rd.value = todayStr();
+      renderReviewCheckin();
     }
     if (this.dataset.page === 'orders') renderOrderTable();
     if (this.dataset.page === 'purchase') renderPurchaseTable();
@@ -1127,7 +1149,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
 // 通用导入导出
 // ==========================================
 function exportAll() {
-  const data = { orders, purchases, inventoryLog, compareData, zaOrders, growthRecords, yunRecords, momentsRecords, momentCustom };
+  const data = { orders, purchases, inventoryLog, compareData, zaOrders, growthRecords, yunRecords, momentsRecords, momentCustom, reviewRecords };
   const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1159,6 +1181,7 @@ function importAll(event) {
           if (data.yunRecords) yunRecords = data.yunRecords;
           if (data.momentsRecords) momentsRecords = data.momentsRecords;
           if (data.momentCustom) momentCustom = data.momentCustom;
+          if (data.reviewRecords) reviewRecords = data.reviewRecords;
         } else {
           orders = orders.concat(data.orders || []); purchases = purchases.concat(data.purchases || []);
           inventoryLog = inventoryLog.concat(data.inventoryLog || []);
@@ -1167,6 +1190,7 @@ function importAll(event) {
           if (data.yunRecords) yunRecords = yunRecords.concat(data.yunRecords || []);
           if (data.momentsRecords) momentsRecords = momentsRecords.concat(data.momentsRecords || []);
           if (data.momentCustom) momentCustom = momentCustom.concat(data.momentCustom || []);
+          if (data.reviewRecords) reviewRecords = reviewRecords.concat(data.reviewRecords || []);
         }
         saveAll(); refreshAll();
       }
@@ -1186,6 +1210,7 @@ function saveAll() {
   localStorage.setItem(KEY_GROWTH, JSON.stringify(growthRecords));
   localStorage.setItem(KEY_YUN, JSON.stringify(yunRecords));
   localStorage.setItem(KEY_MOMENTS, JSON.stringify({ records: momentsRecords, custom: momentCustom }));
+  localStorage.setItem(KEY_REVIEW, JSON.stringify(reviewRecords));
 }
 
 function refreshAll() {
@@ -1205,6 +1230,7 @@ function init() {
   try { growthRecords = JSON.parse(localStorage.getItem(KEY_GROWTH) || '[]'); } catch(e) { growthRecords = []; }
   try { yunRecords = JSON.parse(localStorage.getItem(KEY_YUN) || '[]'); } catch(e) { yunRecords = []; }
   try { const m = JSON.parse(localStorage.getItem(KEY_MOMENTS) || '{}'); momentsRecords = m.records || []; momentCustom = m.custom || []; } catch(e) { momentsRecords = []; momentCustom = []; }
+  try { reviewRecords = JSON.parse(localStorage.getItem(KEY_REVIEW) || '[]'); } catch(e) { reviewRecords = []; }
 
   // 迁移发货记录为多条明细
   migrateShipRecords(orders);
@@ -1243,6 +1269,7 @@ function init() {
   updateInvProdFilter();     // 初始填充库存品种筛选
   renderGrowthTable();       // 初始化个人成长平台数据
   renderMoments();           // 初始化每日朋友圈
+  renderReviewCheckin();     // 初始化燕窝和杂货已复查打卡
   checkBackupReminder();
 }
 
@@ -2933,6 +2960,33 @@ function saveMoment() {
   updateMomentTrigger(); renderMomentSelectedTags();
   const panel = document.getElementById('momentMsPanel'); if (panel) panel.style.display = 'none';
   renderMoments();
+}
+// 燕窝和杂货已复查打卡
+function saveReviewCheckin() {
+  const d = document.getElementById('fReviewDate');
+  const date = (d && d.value) ? d.value : todayStr();
+  if (!date) { alert('请选择复查日期'); return; }
+  // 同一天重复打卡则更新时间戳，不重复添加
+  const existing = reviewRecords.find(r => r.date === date);
+  if (existing) existing.ts = Date.now();
+  else reviewRecords.push({ date, ts: Date.now() });
+  saveAll();
+  renderReviewCheckin();
+}
+function renderReviewCheckin() {
+  const box = document.getElementById('reviewList');
+  if (!box) return;
+  if (!reviewRecords || !reviewRecords.length) {
+    box.innerHTML = '<div style="font-size:12px;color:var(--text-light);">暂无复查打卡记录</div>';
+    return;
+  }
+  // 按日期倒序，仅保留最近 3 次
+  const list = reviewRecords.slice().sort((a,b) => b.date.localeCompare(a.date)).slice(0,3);
+  box.innerHTML = list.map(r => `
+    <div style="display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px;">
+      <span style="color:var(--success);font-weight:700;">✓</span>
+      <span style="font-size:13px;">${cnDate(r.date)}前，已核对。</span>
+    </div>`).join('');
 }
 function renderMoments() {
   const box2m = document.getElementById('momentBox2m');
