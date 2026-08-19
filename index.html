@@ -611,6 +611,16 @@
       </div>
     </div>
 
+    <!-- 每日激励 -->
+    <div style="background:var(--card);border-radius:10px;padding:16px;box-shadow:var(--shadow);margin-bottom:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <h3 style="margin:0;font-size:14px;">💡 每日激励</h3>
+        <span id="quoteDate" style="font-size:11px;color:var(--text-light);"></span>
+      </div>
+      <div style="font-size:15px;line-height:1.7;font-weight:600;color:var(--text);">“<span id="quoteText"></span>”</div>
+      <div style="text-align:right;font-size:12px;color:var(--text-light);margin-top:8px;">—— <span id="quoteSource"></span></div>
+    </div>
+
     <!-- 每日打卡区 -->
     <div style="background:var(--card);border-radius:10px;padding:16px;box-shadow:var(--shadow);margin-bottom:14px;">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
@@ -1135,6 +1145,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
       var rd = document.getElementById('fReviewDate');
       if (rd) rd.value = todayStr();
       renderReviewCheckin();
+      renderDailyQuote();
     }
     if (this.dataset.page === 'orders') renderOrderTable();
     if (this.dataset.page === 'purchase') renderPurchaseTable();
@@ -1270,6 +1281,7 @@ function init() {
   renderGrowthTable();       // 初始化个人成长平台数据
   renderMoments();           // 初始化每日朋友圈
   renderReviewCheckin();     // 初始化燕窝和杂货已复查打卡
+  renderDailyQuote();        // 初始化每日激励语
   checkBackupReminder();
 }
 
@@ -2960,6 +2972,49 @@ function saveMoment() {
   updateMomentTrigger(); renderMomentSelectedTags();
   const panel = document.getElementById('momentMsPanel'); if (panel) panel.style.display = 'none';
   renderMoments();
+}
+// 每日激励语（人民日报风格鼓励语，按日期循环取一句）
+const DAILY_QUOTES = [
+  { text: '所谓运气，不过是机会碰巧撞到了努力。', source: '人民日报' },
+  { text: '世上没有白走的路，每一步都算数。', source: '人民日报' },
+  { text: '星光不问赶路人，时光不负有心人。', source: '人民日报' },
+  { text: '与其担心未来，不如努力现在。', source: '人民日报' },
+  { text: '所有的惊艳，都来自长久的准备；所有的幸运，都源自不懈的努力。', source: '人民日报' },
+  { text: '不要为模糊的未来担忧，只为清清楚楚的现在努力。', source: '人民日报' },
+  { text: '生活原本沉闷，但跑起来就有风。', source: '人民日报' },
+  { text: '看似不起眼的日复一日，会在将来的某一天，突然让你看到坚持的意义。', source: '人民日报' },
+  { text: '你现在的努力，是为了以后有更多选择的权利。', source: '人民日报' },
+  { text: '把每一件简单的事做好，就是不简单；把每一件平凡的事做好，就是不平凡。', source: '人民日报' },
+  { text: '追光的人，终会光芒万丈。', source: '人民日报' },
+  { text: '没有凭空而来的成绩，只有持之以恒的努力。', source: '人民日报' },
+  { text: '今天的汗水，是明天成功的铺垫。', source: '人民日报' },
+  { text: '别让未来的你，讨厌现在不努力的自己。', source: '人民日报' },
+  { text: '乾坤未定，你我皆是黑马。', source: '人民日报' },
+  { text: '不是因为看到希望才去坚持，而是坚持了才会看到希望。', source: '人民日报' },
+  { text: '请你务必，一而再，再而三，千千万万次，救自己于这世间水火。', source: '人民日报' },
+  { text: '愿你纵踩淤泥，也要心向光明。', source: '人民日报' },
+  { text: '你多学一样本事，就少说一句求人的话。', source: '人民日报' },
+  { text: '真正厉害的人，从来不急着要结果，而是把过程走踏实。', source: '人民日报' },
+  { text: '熬过无人问津的日子，才有诗和远方。', source: '人民日报' },
+  { text: '你只管努力，剩下的交给时间。', source: '人民日报' },
+  { text: '看似山穷水尽，往往转机就在下一个路口。', source: '人民日报' },
+  { text: '把平凡的事做到极致，便是不凡。', source: '人民日报' }
+];
+function getDailyQuote(dateStr) {
+  const key = dateStr || todayStr();
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  return DAILY_QUOTES[h % DAILY_QUOTES.length];
+}
+function renderDailyQuote() {
+  const t = document.getElementById('quoteText');
+  const s = document.getElementById('quoteSource');
+  const d = document.getElementById('quoteDate');
+  if (!t) return;
+  const q = getDailyQuote(todayStr());
+  t.textContent = q.text;
+  if (s) s.textContent = q.source;
+  if (d) d.textContent = cnDate(todayStr());
 }
 // 燕窝和杂货已复查打卡
 function saveReviewCheckin() {
