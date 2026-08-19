@@ -2973,6 +2973,11 @@ function saveReviewCheckin() {
   saveAll();
   renderReviewCheckin();
 }
+function deleteReviewCheckin(date) {
+  reviewRecords = reviewRecords.filter(r => r.date !== date);
+  saveAll();
+  renderReviewCheckin();
+}
 function renderReviewCheckin() {
   const box = document.getElementById('reviewList');
   if (!box) return;
@@ -2983,9 +2988,12 @@ function renderReviewCheckin() {
   // 按日期倒序，仅保留最近 3 次
   const list = reviewRecords.slice().sort((a,b) => b.date.localeCompare(a.date)).slice(0,3);
   box.innerHTML = list.map(r => `
-    <div style="display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px;">
-      <span style="color:var(--success);font-weight:700;">✓</span>
-      <span style="font-size:13px;">${cnDate(r.date)}前，已核对。</span>
+    <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="color:var(--success);font-weight:700;">✓</span>
+        <span style="font-size:13px;">${cnDate(r.date)}前，已核对。</span>
+      </div>
+      <button class="icon-btn" title="删除" onclick="deleteReviewCheckin('${r.date}')" style="font-size:15px;">❌</button>
     </div>`).join('');
 }
 function renderMoments() {
