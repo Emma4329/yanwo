@@ -698,18 +698,14 @@
         <button class="btn btn-primary" onclick="saveMoment()">💾 保存打卡</button>
       </div>
       <div id="momentSelectedTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;"></div>
-      <div style="display:flex;gap:12px;flex-wrap:wrap;">
-        <div style="flex:1;min-width:160px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;min-height:270px;">
-          <div style="font-size:12px;font-weight:600;color:var(--text-light);margin-bottom:8px;">2个月没发</div>
-          <div id="momentBox2m" class="moment-scroll" style="display:flex;flex-direction:column;gap:6px;max-height:210px;overflow-y:auto;"></div>
-        </div>
-        <div style="flex:1;min-width:160px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;min-height:270px;">
+      <div style="display:flex;gap:10px;flex-wrap:nowrap;">
+        <div style="flex:1;min-width:0;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;min-height:240px;">
           <div style="font-size:12px;font-weight:600;color:var(--text-light);margin-bottom:8px;">1个月没发</div>
-          <div id="momentBox1m" class="moment-scroll" style="display:flex;flex-direction:column;gap:6px;max-height:210px;overflow-y:auto;"></div>
+          <div id="momentBox1m" class="moment-scroll" style="display:flex;flex-direction:column;gap:6px;max-height:190px;overflow-y:auto;"></div>
         </div>
-        <div style="flex:1;min-width:160px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;min-height:270px;">
+        <div style="flex:1;min-width:0;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;min-height:240px;">
           <div style="font-size:12px;font-weight:600;color:var(--text-light);margin-bottom:8px;">1个月内已发</div>
-          <div id="momentBox1i" class="moment-scroll" style="display:flex;flex-direction:column;gap:6px;max-height:210px;overflow-y:auto;"></div>
+          <div id="momentBox1i" class="moment-scroll" style="display:flex;flex-direction:column;gap:6px;max-height:190px;overflow-y:auto;"></div>
         </div>
       </div>
     </div>
@@ -3114,10 +3110,9 @@ function renderReviewCheckin() {
     </div>`).join('');
 }
 function renderMoments() {
-  const box2m = document.getElementById('momentBox2m');
   const box1m = document.getElementById('momentBox1m');
   const box1i = document.getElementById('momentBox1i');
-  if (!box2m) return;
+  if (!box1m || !box1i) return;
   const today = todayStr();
   const lastDate = {};
   momentsRecords.forEach(r => (r.items||[]).forEach(it => {
@@ -3133,7 +3128,6 @@ function renderMoments() {
   };
   fill(box1i, rows.filter(r => r.days <= 30));
   fill(box1m, rows.filter(r => r.days > 30 && r.days <= 60));
-  fill(box2m, rows.filter(r => r.days > 60));
 }
 function editMoment(date) {
   const r = momentsRecords.find(x => x.date === date); if (!r) return;
