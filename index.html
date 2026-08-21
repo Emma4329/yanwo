@@ -3127,7 +3127,7 @@ function renderMoments() {
     el.innerHTML = arr.length ? arr.map(r => `<div class="moment-entry" onclick="editMoment('${r.date}')" title="点击载入 ${r.date} 重新编辑">${r.days}天前${r.name}</div>`).join('') : '<div class="moment-empty">—</div>';
   };
   fill(box1i, rows.filter(r => r.days <= 30));
-  fill(box1m, rows.filter(r => r.days > 30 && r.days <= 60));
+  fill(box1m, rows.filter(r => r.days > 30));
 }
 function editMoment(date) {
   const r = momentsRecords.find(x => x.date === date); if (!r) return;
